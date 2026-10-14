@@ -7,7 +7,7 @@ DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
 
 def load_data():
-    frame = pd.read_csv(DATA_DIR / "barangays.csv")
+    frame = pd.read_csv(DATA_DIR / "barangays.csv", dtype={"id": str, "psgc": str})
     if len(frame) == 0 or frame.id.duplicated().any():
         raise ValueError("Barangay CSV must have unique IDs and at least one row.")
     if frame.population.isna().any() or (frame.population <= 0).any():

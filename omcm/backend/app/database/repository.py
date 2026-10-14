@@ -82,4 +82,4 @@ def save_boundaries(payload):
 def get_boundaries():
     with connect() as db:
         row = db.execute("SELECT payload,updated_at FROM boundaries WHERE id=1").fetchone()
-    return dict(geojson=json.loads(row["payload"]), updated_at=row["updated_at"], source="Administrator-supplied boundaries; provenance must be verified by the LGU") if row else dict(geojson=None, source="Synthetic markers only; no official boundaries supplied")
+    return dict(geojson=json.loads(row["payload"]), updated_at=row["updated_at"], source="Administrator-supplied boundaries; provenance must be verified by the LGU") if row else dict(geojson=None, source="Bundled real Laguna barangay boundaries (2023 PSGC snapshot); municipalities available as fallback")

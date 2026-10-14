@@ -27,6 +27,22 @@ def test_missing_data_is_visible():
     assert 0 <= b["score"] <= 100
 
 
+def test_geographic_identifiers_survive_scoring():
+    from app.models.results import RiskResult
+    frame, network, metadata = load_data()
+    frame["psgc"] = None
+    frame["municipality"] = None
+    frame["geography_level"] = None
+    frame.loc[0, ["psgc", "municipality", "geography_level"]] = ["0403401001", "Alaminos", "barangay"]
+    scores = calculate_scores(frame, network, travel_times(road_graph(frame, network)), Weights())
+    response = RiskResult(barangays=scores, metadata=metadata).model_dump(exclude_none=True)
+    first = next(b for b in response["barangays"] if b["id"] == frame.iloc[0].id)
+    assert first["psgc"] == "0403401001"
+    assert first["municipality"] == "Alaminos"
+    assert first["geography_level"] == "barangay"
+    assert "psgc" not in next(b for b in response["barangays"] if b["id"] == frame.iloc[1].id)
+
+
 @pytest.mark.parametrize("count", [0, 1, 3, 8])
 def test_capacity_unique_and_reachable(count):
     request = PlacementRequest(clinic_count=count, capacity=70, max_travel_minutes=10, flooded_sites=["S01"])

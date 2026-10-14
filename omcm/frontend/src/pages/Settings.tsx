@@ -145,9 +145,10 @@ export function Settings() {
               Supply GeoJSON boundaries
             </h3>
             <p>
-              Upload valid Polygon/MultiPolygon features with a
-              properties.barangay_id matching the backend CSV. The LGU must
-              verify geographic provenance.
+              Real Laguna boundaries are bundled with the application. Upload
+              verified WGS84 Polygon/MultiPolygon features with Laguna PSGC codes
+              (psgc, adm4_psgc, or adm3_psgc) and area names to replace them.
+              Legacy uploads without geographic identifiers are not displayed.
             </p>
             <label className="file-label">
               {uploading ? "Validating upload…" : "Choose GeoJSON file"}
@@ -170,7 +171,7 @@ export function Settings() {
                       await api<BoundaryData>("/boundaries", { geojson }),
                     );
                     setMessage(
-                      "Boundaries validated and loaded. View them on Healthcare Risk Map.",
+                      "Boundary upload saved. Real Laguna features with PSGC identifiers appear on Healthcare Risk Map.",
                     );
                   } catch (error) {
                     setError((error as Error).message);

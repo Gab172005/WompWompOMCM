@@ -49,6 +49,15 @@ def calculate_scores(frame, network, times, weights: Weights, outbreaks=(), mult
                            explanation=f"{row['name']} has {score:.0f}/100 illustrative need, driven by " + ", ".join(FACTORS[k] for k in top) + ".",
                            recommended_services=services, warnings=warnings, synthetic=True))
     output.sort(key=lambda b: (-b["score"], b["id"]))
+    # Preserve optional stable geographic identifiers without changing scoring.
+    geographic_fields = ("psgc", "municipality", "geography_level")
+    rows_by_id = {row["id"]: row for row in frame.to_dict("records")}
+    for barangay in output:
+        row = rows_by_id[barangay["id"]]
+        for field in geographic_fields:
+            value = row.get(field)
+            if value is not None and not (isinstance(value, float) and math.isnan(value)):
+                barangay[field] = str(value)
     for i, barangay in enumerate(output):
         barangay["rank"] = i + 1
     return output

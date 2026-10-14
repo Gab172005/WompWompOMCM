@@ -1,0 +1,17 @@
+{
+  "source": "https://github.com/faeldon/philippines-json-maps",
+  "commit": "8eeead560246863c8c820c31ca6fbca81a279477",
+  "snapshot": "2023",
+  "resolution": "hires (upstream 10% simplification)",
+  "license": "MIT",
+  "files": {
+    "laguna_barangays.geojson": {
+      "features": 681,
+      "sha256": "85af3374e8bbae4da9b250960c46a18f01d17df0802360d406d9d262c384f961"
+    },
+    "laguna_municipalities.geojson": {
+      "features": 30,
+      "sha256": "9124d1abb91eb479be4b6c0a4b43976bd8a0cf648e6321b50d2f9f4a8bf1cbc9"
+    }
+  }
+}

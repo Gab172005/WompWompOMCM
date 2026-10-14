@@ -35,7 +35,7 @@ export function Overview() {
                 <MapPinned size={18} />
                 Community healthcare need
               </h3>
-              <p>Explore synthetic pilot locations and their priorities</p>
+              <p>Explore real Laguna boundaries and matched healthcare records</p>
             </div>
             <Link to="/risk" className="text-link">
               Open map

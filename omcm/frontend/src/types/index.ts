@@ -4,6 +4,9 @@ export type Factor =
 export type Weights = Record<Factor, number>;
 export interface Barangay {
   id: string;
+  psgc?: string;
+  municipality?: string;
+  geography_level?: "barangay" | "municipality";
   name: string;
   lat: number;
   lng: number;

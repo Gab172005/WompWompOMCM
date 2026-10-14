@@ -45,6 +45,19 @@ def test_boundaries(client, auth):
     assert client.post("/api/boundaries", json=data, auth=auth).status_code == 422
 
 
+def test_real_laguna_boundary_upload(client, auth):
+    from pathlib import Path
+    import json
+    path = Path(__file__).resolve().parents[2] / "frontend/public/data/geo/laguna_barangays.geojson"
+    boundaries = json.loads(path.read_text(encoding="utf-8"))
+    assert client.post("/api/boundaries", json={"geojson": boundaries}, auth=auth).status_code == 200
+    loaded = client.get("/api/boundaries").json()["geojson"]
+    assert len(loaded["features"]) == 681
+    assert loaded["features"][0]["geometry"] == boundaries["features"][0]["geometry"]
+    boundaries["features"][0]["properties"]["adm4_psgc"] = 123456789
+    assert client.post("/api/boundaries", json={"geojson": boundaries}, auth=auth).status_code == 422
+
+
 def test_emergency_validation_and_missing_plan(client, auth):
     payload = dict(plan_id="nonexistent", deployment_date=(today()+timedelta(days=1)).isoformat())
     assert client.post("/api/schedules/approve", json=payload, auth=auth).status_code == 404

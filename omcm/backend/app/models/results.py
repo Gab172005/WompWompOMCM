@@ -18,6 +18,9 @@ class Metadata(BaseModel):
 
 class BarangayResult(BaseModel):
     id: str
+    psgc: str | None = None
+    municipality: str | None = None
+    geography_level: Literal["barangay", "municipality"] | None = None
     name: str
     population: Annotated[int, Field(gt=0)]
     lat: float

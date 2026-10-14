@@ -52,6 +52,21 @@ async function ready(url, server) {
   }
   throw new Error(`Test server timed out: ${server.log()}`);
 }
+async function insideArea(selector) {
+  return page.locator(selector).evaluate((path) => {
+    const bounds = path.getBBox();
+    for (const x of [.5, .35, .65, .2, .8]) {
+      for (const y of [.5, .35, .65, .2, .8]) {
+        const local = new DOMPoint(bounds.x + bounds.width * x, bounds.y + bounds.height * y);
+        if (path.isPointInFill(local)) {
+          const screen = local.matrixTransform(path.getScreenCTM());
+          return { x: screen.x, y: screen.y };
+        }
+      }
+    }
+    throw new Error("Could not find interior of real Laguna area");
+  });
+}
 try {
   const apiServer = start(
     python,
@@ -94,9 +109,9 @@ try {
   await page
     .getByRole("heading", { name: "Better care. Within reach." })
     .waitFor();
-  await page.locator("path.barangay-marker").nth(19).waitFor();
+  await page.locator("path.barangay-marker").nth(680).waitFor();
   assert.equal(
-    (await page.locator("path.barangay-marker").count()) === 20,
+    (await page.locator("path.barangay-marker").count()) === 681,
     true,
   );
   await mkdir("test-results", { recursive: true });
@@ -105,13 +120,16 @@ try {
     path: "test-results/overview-desktop.png",
     fullPage: true,
   });
-  await page.locator("path.barangay-marker").first().click();
+  assert.equal(await page.locator('path.barangay-marker[fill="#D1D5DB"]').count(), 681);
+  const delCarmen = await insideArea("path.area-403401001");
+  await page.mouse.move(delCarmen.x, delCarmen.y);
   await page.locator(".risk-hover").waitFor();
-  assert.match(await page.locator(".risk-hover").innerText(), /Healthcare need: .*\/100/);
+  assert.match(await page.locator(".risk-hover").innerText(), /Del Carmen, Alaminos.*Healthcare need: No data/s);
+  await page.mouse.click(delCarmen.x, delCarmen.y);
   await page.locator(".map-detail").waitFor();
   assert.match(
     await page.locator(".map-detail").innerText(),
-    /SYNTHETIC BARANGAY/,
+    /LAGUNA BARANGAY.*403401001.*Del Carmen.*No data/s,
   );
   await page.getByRole("button", { name: "Close barangay details" }).click();
   await page
@@ -196,13 +214,12 @@ try {
   await page.getByLabel("Map layer", { exact: true }).selectOption("flood");
   const expectedFill = (value) => value >= 70 ? "#7F1D1D" : value >= 50 ? "#DC2626"
     : value >= 30 ? "#F87171" : value >= 15 ? "#FCBABA" : "#FEE5E5";
-  const sortedBarangays = [...scores.barangays].sort((a, b) => a.id.localeCompare(b.id));
   const polygonFills = () => page.locator("path.barangay-marker").evaluateAll(
     (paths) => paths.map((path) => path.getAttribute("fill")),
   );
-  assert.deepEqual(await polygonFills(), sortedBarangays.map((b) => expectedFill(b.factors.flood)));
+  assert.deepEqual(await polygonFills(), Array(681).fill("#D1D5DB"));
   await page.getByLabel("Map layer", { exact: true }).selectOption("score");
-  assert.deepEqual(await polygonFills(), sortedBarangays.map((b) => expectedFill(b.score)));
+  assert.deepEqual(await polygonFills(), Array(681).fill("#D1D5DB"));
   assert.equal(await page.locator("tbody tr").count(), 20);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Open navigation" }).click();
@@ -238,6 +255,39 @@ try {
     path: "test-results/public-mobile.png",
     fullPage: true,
   });
+  // Test-only alias; shipped mapping remains empty. Values come from the API.
+  await page.route("**/data/geo/laguna_record_mapping.json", (route) => route.fulfill({
+    json: { "403401001": "B01" },
+  }));
+  await page.setViewportSize({ width: 1440, height: 1080 });
+  await page.goto("http://127.0.0.1:5174");
+  const initial = await (await fetch("http://127.0.0.1:8001/api/barangays")).json();
+  await page.locator("path.barangay-marker").nth(680).waitFor();
+  const firstRegion = page.locator("path.area-403401001");
+  assert.equal(await firstRegion.getAttribute("fill"), expectedFill(initial.barangays.find((b) => b.id === "B01").score));
+  const mappedPoint = await insideArea("path.area-403401001");
+  await page.mouse.click(mappedPoint.x, mappedPoint.y);
+  assert.match(await page.locator(".map-detail").innerText(), /Del Carmen.*Healthcare record: Demo Lakeside/s);
+  assert.match(await page.locator(".map-detail").innerText(), /3,400/);
+  await page.getByRole("button", { name: "Close barangay details" }).click();
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: /Sign in/ }).first().click();
+  await page.getByLabel("Username", { exact: true }).fill(username);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  const recalculated = page.waitForResponse((response) => response.url().endsWith("/api/risk/calculate") && response.request().method() === "POST"
+    && JSON.parse(response.request().postData()).disease === 31);
+  await page.waitForFunction(() => !document.querySelector("#weight-disease").disabled);
+  await page.getByRole("slider", { name: /Disease burden/ }).focus();
+  await page.getByRole("slider", { name: /Disease burden/ }).press("ArrowRight");
+  const live = await (await recalculated).json();
+  await page.getByRole("link", { name: "Healthcare Risk Map", exact: true }).click();
+  await page.locator("path.barangay-marker").nth(680).waitFor();
+  const b01 = live.barangays.find((b) => b.id === "B01");
+  assert.equal(await page.locator("path.area-403401001").getAttribute("fill"), expectedFill(b01.score));
+  await page.getByLabel("Map layer", { exact: true }).selectOption("flood");
+  assert.equal(await page.locator("path.area-403401001").getAttribute("fill"), expectedFill(b01.factors.flood));
+  assert.equal(await page.locator('path.barangay-marker[fill="#D1D5DB"]').count(), 680);
   assert.deepEqual(errors, []);
   console.log(
     "PASS: map detail, server authentication, optimization, approval/public schedule, flood/shortage simulation, schedule isolation, weight recalculation, navigation, responsive layout, and no browser runtime errors.",

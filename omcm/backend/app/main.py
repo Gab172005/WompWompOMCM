@@ -170,16 +170,25 @@ def boundaries():
 def upload_boundaries(request: BoundaryRequest, actor=Depends(require_admin)):
     data = request.geojson
     valid_ids = set(load_data()[0].id)
-    if data.get("type") != "FeatureCollection" or not isinstance(data.get("features"), list) or not 1 <= len(data["features"]) <= len(valid_ids):
-        raise HTTPException(422, "Supply a GeoJSON FeatureCollection with 1–20 Polygon or MultiPolygon features.")
+    if data.get("type") != "FeatureCollection" or not isinstance(data.get("features"), list) or not 1 <= len(data["features"]) <= 2000:
+        raise HTTPException(422, "Supply a GeoJSON FeatureCollection with 1–2000 Polygon or MultiPolygon features.")
     seen = set()
     try:
         for feature in data["features"]:
             if feature.get("type") != "Feature":
                 raise ValueError("Each item must be a GeoJSON Feature.")
-            bid = feature.get("properties", {}).get("barangay_id")
-            if bid not in valid_ids or bid in seen:
-                raise ValueError("Each feature needs a unique properties.barangay_id matching the CSV.")
+            properties = feature.get("properties", {})
+            code = properties.get("psgc", properties.get("area_id", properties.get("adm4_psgc", properties.get("adm3_psgc"))))
+            bid = str(code).lstrip("0") if code is not None else properties.get("barangay_id")
+            if code is not None:
+                if not isinstance(code, (str, int)) or not bid.isdigit() or len(bid) != 9 or not bid.startswith("4034"):
+                    raise ValueError("Geographic identifiers must be Laguna PSGC codes.")
+                if not (properties.get("name") or properties.get("adm4_en") or properties.get("adm3_en")) or properties.get("demonstration"):
+                    raise ValueError("Real boundary features require an area name and cannot be demonstration geometry.")
+            elif bid not in valid_ids:
+                raise ValueError("Each legacy feature needs a properties.barangay_id matching the CSV.")
+            if bid in seen:
+                raise ValueError("Each boundary needs a unique geographic identifier.")
             seen.add(bid)
             geometry = feature["geometry"]
             if geometry["type"] not in ("Polygon", "MultiPolygon"):
@@ -198,6 +207,8 @@ def upload_boundaries(request: BoundaryRequest, actor=Depends(require_admin)):
                         points += 1
                         if len(position) < 2 or not all(isinstance(v, (float, int)) and not isinstance(v, bool) and math.isfinite(v) for v in position[:2]) or not (-180 <= position[0] <= 180 and -90 <= position[1] <= 90):
                             raise ValueError("Coordinates must be valid finite longitude/latitude positions.")
+                        if code is not None and not (120.8 <= position[0] <= 121.8 and 13.8 <= position[1] <= 14.7):
+                            raise ValueError("Laguna boundaries must use WGS84 coordinates within the province vicinity.")
             if points > 20000:
                 raise ValueError("Simplify features to at most 20,000 positions each.")
     except (KeyError, TypeError, IndexError, ValueError) as error:
