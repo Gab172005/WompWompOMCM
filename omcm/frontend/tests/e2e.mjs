@@ -106,6 +106,8 @@ try {
     fullPage: true,
   });
   await page.locator("path.barangay-marker").first().click();
+  await page.locator(".risk-hover").waitFor();
+  assert.match(await page.locator(".risk-hover").innerText(), /Healthcare need: .*\/100/);
   await page.locator(".map-detail").waitFor();
   assert.match(
     await page.locator(".map-detail").innerText(),
@@ -192,6 +194,15 @@ try {
     .getByRole("link", { name: "Healthcare Risk Map", exact: true })
     .click();
   await page.getByLabel("Map layer", { exact: true }).selectOption("flood");
+  const expectedFill = (value) => value >= 70 ? "#7F1D1D" : value >= 50 ? "#DC2626"
+    : value >= 30 ? "#F87171" : value >= 15 ? "#FCBABA" : "#FEE5E5";
+  const sortedBarangays = [...scores.barangays].sort((a, b) => a.id.localeCompare(b.id));
+  const polygonFills = () => page.locator("path.barangay-marker").evaluateAll(
+    (paths) => paths.map((path) => path.getAttribute("fill")),
+  );
+  assert.deepEqual(await polygonFills(), sortedBarangays.map((b) => expectedFill(b.factors.flood)));
+  await page.getByLabel("Map layer", { exact: true }).selectOption("score");
+  assert.deepEqual(await polygonFills(), sortedBarangays.map((b) => expectedFill(b.score)));
   assert.equal(await page.locator("tbody tr").count(), 20);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Open navigation" }).click();

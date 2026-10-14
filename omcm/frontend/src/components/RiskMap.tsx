@@ -1,19 +1,21 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   MapContainer,
   TileLayer,
-  CircleMarker,
   Popup,
   Marker,
   Polyline,
   GeoJSON,
+  useMap,
 } from "react-leaflet";
-import { divIcon } from "leaflet";
+import { divIcon, geoJSON, Path } from "leaflet";
+import type { FeatureCollection } from "geojson";
+import { demonstrationBoundaries, riskColor, riskScale } from "./choropleth";
 import type { Feature } from "geojson";
 import { Hospital as HospitalIcon, MapPin, Navigation, X } from "lucide-react";
 import { useOMCM } from "../services/store";
 import type { Barangay, Clinic, Factor } from "../types";
-import { colors, NeedBadge, number } from "./ui";
+import { NeedBadge, number } from "./ui";
 const icon = (kind: "hospital" | "site" | "clinic") =>
   divIcon({
     className: `map-symbol ${kind}`,
@@ -28,8 +30,21 @@ const icon = (kind: "hospital" | "site" | "clinic") =>
     // The geographic coordinate remains the exact supplied site/hospital coordinate.
     iconAnchor: kind === "hospital" ? [-8, 32] : kind === "clinic" ? [37, -8] : [32, -8],
   });
-const level = (n: number) =>
-  n >= 70 ? "Critical" : n >= 50 ? "High" : n >= 30 ? "Moderate" : "Low";
+function FitTerritories({ data }: { data: FeatureCollection }) {
+  const map = useMap();
+  useEffect(() => {
+    const bounds = geoJSON(data).getBounds();
+    const fit = () => {
+      map.invalidateSize();
+      if (bounds.isValid()) map.fitBounds(bounds, { paddingTopLeft: [28, 65], paddingBottomRight: [28, 28], maxZoom: 13, animate: false });
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(map.getContainer());
+    return () => observer.disconnect();
+  }, [map, data]);
+  return null;
+}
 export function RiskMap({
   clinics,
   data,
@@ -59,20 +74,21 @@ export function RiskMap({
   } = useOMCM();
   const barangays = data ?? currentBarangays;
   const [filter, setFilter] = useState<Factor | "score">("score"),
-    [selected, setSelected] = useState<Barangay | null>(null),
+    [selectedId, setSelectedId] = useState<string | null>(null),
+    [showFacilities, setShowFacilities] = useState(publicMode || showRoads),
     [tilesUnavailable, setTilesUnavailable] = useState(false);
   const shownClinics = clinics ?? plan?.optimized.clinics ?? [];
   const byId = useMemo(
     () => Object.fromEntries(barangays.map((b) => [b.id, b])),
     [barangays],
   );
-  function mapColor(b: Barangay) {
-    return colors[
-      level(
-        filter === "score" ? b.score : b.factors[filter],
-      ) as keyof typeof colors
-    ];
-  }
+  const selected = selectedId ? byId[selectedId] : null;
+  const locations = useMemo(() => barangays.map(({ id, name, lat, lng }) => ({ id, name, lat, lng })).sort((a, b) => a.id.localeCompare(b.id)), [barangays]);
+  const locationKey = JSON.stringify(locations);
+  const territoryData = useMemo(() => boundaries.geojson ?? demonstrationBoundaries(JSON.parse(locationKey)), [boundaries.geojson, locationKey]);
+  const valueOf = (b?: Barangay) => b ? filter === "score" ? b.score : b.factors[filter] : undefined;
+  const layerName = filter === "score" ? "Healthcare need" : filter === "disease" ? "Disease risk" : filter === "vulnerability" ? "Population vulnerability" : filter === "flood" ? "Flood exposure" : "Hospital inaccessibility";
+  const layerKey = JSON.stringify([territoryData, filter, barangays.map((b) => [b.id, b.score, b.factors])]);
   return (
     <div className="map-shell">
       {!publicMode && (
@@ -84,6 +100,7 @@ export function RiskMap({
           <label className="sr-only" htmlFor="map-layer">
             Map layer
           </label>
+          <button className="map-overlay-toggle" aria-pressed={showFacilities} onClick={() => setShowFacilities(!showFacilities)}>Facilities {showFacilities ? "on" : "off"}</button>
           <select
             id="map-layer"
             value={filter}
@@ -100,57 +117,58 @@ export function RiskMap({
       <MapContainer
         center={[14.215, 121.208]}
         zoom={11}
-        scrollWheelZoom={false}
-        className="risk-map"
+        zoomSnap={0.1}
+        scrollWheelZoom={true}
+        className={`risk-map ${publicMode ? "" : "choropleth-map"}`}
       >
-        <TileLayer
+        {publicMode && <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           eventHandlers={{ tileerror: () => setTilesUnavailable(true) }}
-        />
-        {!publicMode && boundaries.geojson && (
+        />}
+        {!publicMode && <>
+          <FitTerritories data={territoryData} />
           <GeoJSON
-            key={`${boundaries.updated_at}-${filter}`}
-            data={boundaries.geojson}
-            style={(feature) => {
-              const b = byId[feature?.properties?.barangay_id];
-              return {
-                color: b ? mapColor(b) : "#8297a3",
-                weight: 2,
-                fillOpacity: 0.25,
-              };
-            }}
+            key={layerKey}
+            data={territoryData}
+            style={(feature) => ({ className: "barangay-marker", color: "#FFFFFF", weight: 1.5, opacity: 1,
+              fillColor: riskColor(valueOf(byId[feature?.properties?.barangay_id])), fillOpacity: 1 })}
             onEachFeature={(feature: Feature, layer) => {
               const b = byId[feature.properties?.barangay_id];
-              if (b) layer.on("click", () => setSelected(b));
+              const name = b?.name ?? feature.properties?.name ?? feature.properties?.barangay_id ?? "Unknown barangay";
+              const value = valueOf(b);
+              const tip = document.createElement("div");
+              const title = document.createElement("strong");
+              title.textContent = name;
+              tip.append(title, document.createElement("br"), `${layerName}: ${value == null || !Number.isFinite(value) ? "No data" : `${value.toFixed(1)}/100`}`);
+              if (filter !== "score" && b) tip.append(document.createElement("br"), `Healthcare need: ${b.score}/100`);
+              layer.bindTooltip(tip, { sticky: true, className: "risk-hover" });
+              if (layer instanceof Path) {
+                layer.on("mouseover", () => { layer.setStyle({ color: "#451A1A", weight: 3 }); layer.bringToFront(); });
+                layer.on("mouseout", () => layer.setStyle({ color: "#FFFFFF", weight: 1.5 }));
+                layer.on("click", () => { if (b) setSelectedId(b.id); });
+              }
             }}
           />
-        )}
-        {!publicMode &&
-          barangays.map((b) => (
-            <CircleMarker
-              key={b.id}
-              center={[b.lat, b.lng]}
-              className="barangay-marker"
-              radius={selected?.id === b.id ? 13 : 9}
-              pathOptions={{
-                color: "#ffffff",
-                weight: 2,
-                fillColor: mapColor(b),
-                fillOpacity: 0.9,
-              }}
-              eventHandlers={{ click: () => setSelected(b) }}
-            >
-              <Popup>
-                <strong>{b.name}</strong>
-                <br />
-                Demo healthcare need: {b.score}/100
-                <br />
-                Estimated demand: {number(b.demand)} appointments
-              </Popup>
-            </CircleMarker>
-          ))}
-        {hospitals.map((h) => (
+          <GeoJSON key={`labels-${layerKey}`} data={territoryData}
+            style={{ opacity: 0, fillOpacity: 0, interactive: false }}
+            onEachFeature={(feature, layer) => {
+              const b = byId[feature.properties?.barangay_id];
+              const label = document.createElement("span");
+              const name = String(b?.name ?? feature.properties?.name ?? feature.properties?.barangay_id ?? "").replace(/^Demo /, "");
+              const full = document.createElement("span");
+              full.className = "barangay-label-full";
+              full.textContent = name;
+              const compact = document.createElement("span");
+              compact.className = "barangay-label-compact";
+              compact.textContent = name.split(/[\s-]+/).length > 1
+                ? name.split(/[\s-]+/).map((word) => word[0]).join("").toUpperCase()
+                : name.slice(0, 3).toUpperCase();
+              label.append(full, compact);
+              layer.bindTooltip(label, { permanent: true, direction: "center", interactive: false, className: `barangay-label ${valueOf(b) != null && valueOf(b)! >= 50 ? "light-label" : ""}` });
+            }} />
+        </>}
+        {showFacilities && hospitals.map((h) => (
           <Marker
             key={h.id}
             position={[h.lat, h.lng]}
@@ -166,7 +184,7 @@ export function RiskMap({
           </Marker>
         ))}
         {!publicMode &&
-          sites
+          showFacilities && sites
             .filter((s) => !shownClinics.some((c) => c.id === s.id))
             .map((s) => (
               <Marker
@@ -186,7 +204,7 @@ export function RiskMap({
                 </Popup>
               </Marker>
             ))}
-        {shownClinics.map((c) => (
+        {(publicMode || showFacilities) && shownClinics.map((c) => (
           <Marker
             key={c.id}
             position={[c.lat, c.lng]}
@@ -240,7 +258,7 @@ export function RiskMap({
           <button
             className="icon-button detail-close"
             aria-label="Close barangay details"
-            onClick={() => setSelected(null)}
+            onClick={() => setSelectedId(null)}
           >
             <X size={17} />
           </button>
@@ -288,12 +306,13 @@ export function RiskMap({
       )}
       <div className="map-legend">
         {!publicMode &&
-          Object.entries(colors).map(([label, color]) => (
+          riskScale.map(({label, color, range}) => (
             <span key={label}>
               <i style={{ background: color }} />
-              {label}
+              {label} <small>{range}</small>
             </span>
           ))}
+        {!publicMode && <span><i style={{ background: "#D1D5DB" }} />No data</span>}
         <span>
           <HospitalIcon size={13} /> Hospital
         </span>
@@ -302,14 +321,9 @@ export function RiskMap({
         </span>
       </div>
       <div className="map-caption">
-        Demo Data ·{" "}
-        {boundaries.geojson && !publicMode
-          ? "Administrator-supplied boundaries"
-          : "Synthetic point locations; no official barangay boundaries"}{" "}
-        ·{" "}
-        {tilesUnavailable
-          ? "Base map unavailable; local markers remain usable"
-          : "OpenStreetMap base map"}
+        {publicMode ? `Demo deployments | ${tilesUnavailable ? "Base map unavailable" : "OpenStreetMap base map"}`
+          : `${boundaries.geojson ? boundaries.source : "DEMONSTRATION GEOGRAPHY | Synthetic territories; not actual Laguna barangay boundaries"} | Backend scores /100 | Scroll to zoom; drag to pan`}
+
       </div>
     </div>
   );

@@ -1892,3 +1892,21 @@ dd {
     transition: none !important;
   }
 }
+
+/* Flat choropleth: white canvas, solid territories, compact labels. */
+.choropleth-map { background: #fff; }
+.choropleth-map .leaflet-interactive { cursor: pointer; }
+.barangay-label.leaflet-tooltip { background: #ffffffb8; border: 0; border-radius: 1px; box-shadow: none; padding: 1px 3px; color: #451a1a; font-size: 9px; font-weight: 650; pointer-events: none; }
+.barangay-label.light-label { background: #7f1d1d80; color: #fff; }
+.barangay-label::before { display: none; }
+.barangay-label-compact { display: none; }
+.risk-hover { font-size: 12px; }
+.map-overlay-toggle { pointer-events: auto; background: #fff; border: 1px solid #e3eaf0; border-radius: 5px; padding: 7px 8px; font-size: 10px; margin-left: auto; }
+.map-legend i { width: 16px; height: 12px; border-radius: 1px; }
+.map-legend small { color: #64748b; font-size: 8px; }
+.map-caption { font-size: 10px; line-height: 1.5; color: #64748b; }
+@media (max-width: 600px) { .map-toolbar { flex-wrap: wrap; gap: 5px; } .barangay-label.leaflet-tooltip { font-size: 8px; } }
+@media (max-width: 600px) {
+  .barangay-label-full { display: none; }
+  .barangay-label-compact { display: inline; }
+}
