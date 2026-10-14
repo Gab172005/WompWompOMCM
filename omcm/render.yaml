@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: omcm-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.15
+      - key: OMCM_DEMO_AUTH
+        value: "true"
+      - key: OMCM_ADMIN_USERNAME
+        sync: false
+      - key: OMCM_ADMIN_PASSWORD
+        sync: false
+      - key: OMCM_CORS_ORIGINS
+        sync: false
+      - key: OMCM_DATABASE_PATH
+        value: omcm.db

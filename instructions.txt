@@ -1,0 +1,631 @@
+# PROJECT: OMCM — Optimized Mobile Clinic Mapper
+
+## YOUR ROLE
+
+You are an experienced full-stack software engineer, data scientist, UI/UX designer, and optimization specialist.
+
+Your task is to **build a complete, functional, modern web application called OMCM (Optimized Mobile Clinic Mapper)**.
+
+Do not simply describe how to build the application. **Actually create the code, organize the project, install the necessary dependencies, connect the components, and make the application runnable.**
+
+If a file named `WompWomp.pdf` exists in the project folder, use it as the main project reference. Otherwise, follow the specifications below.
+
+Build the system incrementally and test each major component before moving to the next.
+
+## 1. PROJECT OVERVIEW
+
+OMCM is a data-driven healthcare resource planning platform designed to help Philippine Local Government Units (LGUs) determine the best locations for deploying mobile healthcare clinics.
+
+Imagine that Laguna has 20 barangays requiring medical assistance but only three available mobile clinics.
+
+The application should analyze healthcare needs across barangays and recommend the best clinic locations based on:
+
+- Disease prevalence and estimated disease risk
+- Population size and density
+- Vulnerable residents, including children and elderly people
+- Poverty levels
+- Accessibility of existing hospitals
+- Flood hazards and weather conditions
+- Road accessibility and travel time
+- Number and capacity of available mobile clinics
+
+The main objective is to maximize the number of high-priority residents who can access mobile healthcare services while respecting safety, travel-time, and clinic-capacity restrictions.
+
+The system should also allow users to simulate disasters such as flooding, road closures, or clinic shortages.
+
+The application is a decision-support system, not an autonomous medical decision-maker. Final deployment decisions must remain with authorized LGU administrators.
+
+## 2. REQUIRED TECHNOLOGY STACK
+
+Use the following technologies:
+
+### Frontend
+- React with Vite
+- TypeScript
+- Tailwind CSS
+- React Leaflet and Leaflet for interactive mapping
+- Recharts for data visualizations
+- Lucide React for icons
+- React Router for navigation
+
+### Backend
+- Python
+- FastAPI
+- Pandas and NumPy for data processing
+- Google OR-Tools for clinic placement optimization
+- NetworkX for road-network simulations
+- OSMnx for optional real-world routing when suitable road data is available
+- Pydantic for validating incoming data
+
+### Database
+- SQLite for the initial locally runnable prototype
+- Organize database access so PostgreSQL/Supabase can be integrated later
+
+### Deployment
+- Frontend compatible with Vercel
+- Backend compatible with Render
+- Environment variables for configuration and external API credentials
+
+Prefer free, open-source libraries and services.
+
+The application must run locally without requiring paid API keys.
+
+## 3. DESIGN REQUIREMENTS
+
+Create a professional, modern healthcare intelligence dashboard suitable for a national data science hackathon.
+
+### Visual theme
+
+Use:
+- Deep navy blue for the main interface
+- Teal and green for healthcare-related elements
+- White or soft-gray backgrounds
+- Red, orange, yellow, and green to represent healthcare need levels
+- Rounded dashboard cards
+- Modern typography
+- Subtle animations and smooth transitions
+- Professional charts and statistics
+
+The interface should look like a polished government healthcare planning platform, not a basic student project.
+
+Use a clean layout inspired by modern geographic information dashboards.
+
+### General layout
+
+Create a left navigation sidebar with:
+
+1. Overview
+2. Healthcare Risk Map
+3. Clinic Optimization
+4. Disaster Simulator
+5. Clinic Schedules
+6. Data and Analytics
+7. Settings
+
+Create a top navigation bar displaying:
+- Application logo and name
+- Current page
+- Current date
+- Data update status
+- Administrator profile or demo-mode indicator
+
+Make the dashboard responsive for desktop, tablet, and mobile devices.
+
+Prioritize desktop usability because LGU administrators will primarily use larger screens.
+
+## 4. FEATURE 1 — INTERACTIVE HEALTHCARE RISK MAP
+
+Build a large, interactive map focused on the Laguna pilot area.
+
+Use Leaflet with OpenStreetMap tiles.
+
+### Required capabilities
+
+- Display pilot barangays on the map.
+- Color barangays according to their calculated healthcare need.
+- Green means low need.
+- Yellow means moderate need.
+- Orange means high need.
+- Red means critical need.
+- Display hospital markers.
+- Display available mobile clinic staging locations.
+- Highlight recommended mobile clinic locations.
+- Allow zooming, panning, and clicking locations.
+
+When a barangay is clicked, display an information panel containing:
+
+- Barangay name
+- Population
+- Disease risk score
+- Vulnerability score
+- Healthcare need score
+- Flood exposure
+- Nearest hospital
+- Estimated travel time to healthcare services
+- Recommended preventive services
+
+Add map filters for:
+- Overall healthcare need
+- Disease risk
+- Vulnerable population
+- Hospital accessibility
+- Flood exposure
+
+Add a map legend.
+
+Support real GeoJSON barangay boundaries when a valid geographic dataset is supplied.
+
+For the initial demo, use clearly labeled synthetic barangay markers or demo boundaries. Do not present fabricated geographic boundaries as official barangay shapes.
+
+## 5. FEATURE 2 — HEALTHCARE NEED SCORING
+
+Implement a Python-based scoring engine.
+
+Each barangay should receive a healthcare need score from 0 to 100.
+
+Use an initial weighted scoring formula:
+
+- Disease risk: 30%
+- Vulnerable population: 25%
+- Hospital inaccessibility: 20%
+- Poverty: 15%
+- Flood exposure: 10%
+
+These weights are illustrative and must be adjustable, not presented as scientifically validated values.
+
+Normalize the indicators before combining them.
+
+Make sure higher values consistently indicate greater healthcare need.
+
+Calculate an appropriate disease burden indicator using available case counts and population, rather than comparing raw case counts alone.
+
+The system should:
+- Automatically calculate scores.
+- Rank barangays by healthcare need.
+- Display contributing factors.
+- Allow administrators to adjust the weights.
+- Immediately recalculate scores when weights change.
+- Handle missing data gracefully.
+- Display warnings when data is estimated or incomplete.
+
+Provide explanations such as:
+
+"Barangay A has a high healthcare need because of elevated disease risk, limited hospital access, and a large vulnerable population."
+
+Keep the scoring logic transparent and easy to understand.
+
+## 6. FEATURE 3 — OPTIMAL MOBILE CLINIC PLACEMENT
+
+This is the most important feature.
+
+Use Google OR-Tools to implement a capacity-aware maximum coverage optimization model.
+
+### Administrator inputs
+
+- Number of available mobile clinics
+- Capacity of each mobile clinic
+- Maximum acceptable travel time
+- Available staging locations
+- Healthcare priority weights
+- Road restrictions
+- Flood-related restrictions
+
+### Optimization goal
+
+Find the combination of clinic locations that serves the greatest amount of priority-weighted healthcare demand.
+
+### Required constraints
+
+- Do not select more clinics than are available.
+- Only choose eligible staging locations.
+- Respect each clinic's daily patient capacity.
+- Respect the selected maximum travel time.
+- Exclude flooded or inaccessible staging sites.
+- Exclude travel paths affected by simulated road closures.
+- Do not count the same resident or demand allocation twice.
+
+Use an assignment-based optimization model so that residents can be allocated to eligible clinics without exceeding capacity.
+
+### Output
+
+Display:
+- Recommended clinic locations
+- Barangays assigned to each clinic
+- Estimated number of residents served
+- High-priority residents reached
+- Expected average travel time
+- Unserved demand
+- Capacity utilization
+- Reasons for choosing each site
+
+Display recommended locations as prominent markers on the map.
+
+Provide a **Generate Optimal Placement** button.
+
+Whenever users change the number of clinics or other parameters, they should be able to run the algorithm again.
+
+### Baseline comparison
+
+Implement a second, simpler allocation method that prioritizes the most populated eligible barangays.
+
+Compare that baseline with OMCM using the same restrictions and inputs.
+
+Show:
+- Population covered
+- Priority-weighted demand served
+- Average travel time
+- Unserved demand
+- Flood-safe accessibility
+
+Add a comparison chart.
+
+Do not invent an improvement percentage. Calculate it from the actual results generated by the two methods.
+
+## 7. FEATURE 4 — INTERACTIVE DISASTER SIMULATOR
+
+Create a dedicated Disaster Simulator page.
+
+Administrators should be able to explore hypothetical situations.
+
+### Scenarios
+
+**Scenario A: Flooding**
+- Mark selected roads or staging locations as flooded.
+- Show the affected locations on the map.
+- Prevent flooded staging sites from being selected.
+- Recalculate clinic placement.
+
+**Scenario B: Road closure**
+- Allow administrators to disable selected road segments.
+- Update reachability and travel estimates.
+- Recalculate available clinic locations.
+
+**Scenario C: Clinic shortage**
+- Reduce the number of available clinics.
+- Recalculate the optimal placement.
+- Display changes in healthcare coverage.
+
+**Scenario D: Disease outbreak**
+- Increase the disease risk or expected healthcare demand in selected barangays.
+- Recalculate healthcare priority scores.
+- Generate updated recommendations.
+
+### Before-and-after comparison
+
+Display:
+- Original placement
+- Updated placement
+- Previously covered residents
+- Newly covered residents
+- Residents losing coverage
+- Changes in average travel time
+- Changes in capacity utilization
+
+Make the simulations visually engaging, but calculations must remain functional.
+
+For the initial version, provide a deterministic demo road network that supports meaningful road closure simulations.
+
+Use real road data when it becomes available. Do not claim that demo travel times are actual live traffic times.
+
+Simulations must not automatically overwrite published clinic schedules.
+
+## 8. FEATURE 5 — PUBLIC USER DASHBOARD
+
+Create a separate public-facing interface.
+
+Residents should be able to view:
+
+- Today's active mobile clinic locations
+- Clinic operating hours
+- Services offered
+- Schedule status
+- Public health advisories
+- Nearby participating hospitals
+- Emergency clinic status announcements
+
+The public dashboard should have a simplified map and an easy-to-read list of clinic locations.
+
+Users should be able to click a clinic to view its schedule and available services.
+
+Design this interface so ordinary residents can understand it without technical knowledge.
+
+Do not expose administrative functions on public pages.
+
+## 9. FEATURE 6 — LGU ADMINISTRATIVE DASHBOARD
+
+Create an administrator interface for managing clinic placement and schedules.
+
+Include:
+
+- Healthcare need overview
+- Risk rankings
+- Clinic deployment recommendations
+- Disaster simulation controls
+- Next-day scheduling
+- Approval of recommended deployments
+- Manual clinic placement overrides
+- Published schedule management
+
+The normal workflow should be:
+
+1. The system calculates healthcare needs.
+2. The optimization algorithm generates tomorrow's recommendations.
+3. The administrator reviews the suggestions.
+4. The administrator may adjust the recommendations.
+5. The administrator approves the deployment.
+6. The public dashboard displays the approved schedule.
+
+The current day's published schedule must remain unchanged during normal reoptimization.
+
+Emergency overrides should be separate actions that require administrator confirmation and create a visible public notice.
+
+For the prototype, clearly label any demonstration administrator access as demo-only. Do not present an insecure frontend-only password check as production authentication.
+
+## 10. FEATURE 7 — DATA ANALYTICS
+
+Create an Analytics page featuring:
+
+- Healthcare need ranking chart
+- Population vulnerability chart
+- Disease risk distribution
+- Clinic coverage summary
+- Travel-time comparison
+- Optimization versus baseline comparison
+- Flood scenario impact analysis
+
+Use Recharts.
+
+Provide summary cards showing:
+- Total pilot barangays
+- Available clinics
+- Total population
+- Estimated high-priority demand
+- Population served by clinics
+- Percentage of demand served
+
+Use calculated values rather than hardcoded dashboard statistics.
+
+## 11. SAMPLE DATA AND DATA MANAGEMENT
+
+Create a demo dataset containing:
+
+- 20 synthetic pilot barangays
+- Population statistics
+- Vulnerability indicators
+- Estimated disease indicators
+- Poverty indicators
+- Hospital accessibility indicators
+- Flood exposure indicators
+- Candidate clinic staging sites
+- Clinic capacities
+- A small road network or travel-time matrix
+
+Use Laguna as the intended pilot region, but clearly distinguish synthetic demonstration data from official real-world data.
+
+If actual geographic datasets are available, allow them to replace demo data.
+
+Use CSV or JSON seed files.
+
+Organize the backend so the application can later incorporate:
+- PSA population data
+- DOH disease and health facility data
+- Public flood hazard datasets
+- OpenStreetMap roads
+- Weather forecasts
+
+Do not fabricate real health statistics, official geographic records, or live emergency alerts.
+
+Add a visible **Demo Data** indicator wherever synthetic data is being displayed.
+
+## 12. BACKEND API
+
+Use FastAPI to implement endpoints similar to:
+
+- `GET /api/health`
+- `GET /api/barangays`
+- `GET /api/hospitals`
+- `GET /api/clinics`
+- `POST /api/risk/calculate`
+- `POST /api/optimize`
+- `POST /api/simulate`
+- `GET /api/analytics`
+- `GET /api/schedules`
+- `POST /api/schedules/approve`
+- `POST /api/schedules/emergency-override`
+
+Use consistent request and response models.
+
+Ensure that the React frontend obtains calculated results from the Python backend.
+
+Do not duplicate the risk-scoring or optimization logic in frontend JavaScript.
+
+Validate requests and return understandable error messages.
+
+Protect administrator-changing endpoints with a server-enforced authorization mechanism.
+
+For local demonstration, support a clearly documented demo authentication mode using environment-configured credentials. Do not hardcode secrets into the frontend.
+
+## 13. PROJECT STRUCTURE
+
+Create a clean structure similar to:
+
+omcm/
+- frontend/
+  - src/
+    - components/
+    - pages/
+    - layouts/
+    - hooks/
+    - services/
+    - types/
+    - styles/
+- backend/
+  - app/
+    - main.py
+    - api/
+    - models/
+    - services/
+    - algorithms/
+    - database/
+  - tests/
+  - data/
+- README.md
+- .env.example
+- .gitignore
+
+Adjust the structure if necessary, but keep the frontend, backend, algorithms, data, and tests organized.
+
+## 14. TESTING REQUIREMENTS
+
+Implement tests for the most important calculations.
+
+Verify that:
+- Healthcare scores remain within the expected range.
+- Changing weights recalculates the scores.
+- Optimization never exceeds the number of available clinics.
+- No clinic exceeds its patient capacity.
+- Residents or demand are not counted twice.
+- Unreachable barangays are not incorrectly marked as covered.
+- Flooded staging locations are excluded.
+- Closing a road can change the result when it affects accessibility.
+- Reducing the clinic count respects the new limit.
+- Published schedules are not changed by ordinary simulations.
+- Emergency overrides are recorded separately.
+
+Also test frontend-backend integration.
+
+Avoid silently returning fake successful results when an API request fails.
+
+## 15. IMPLEMENTATION ORDER
+
+Build the application in these phases.
+
+### Phase 1 — Project setup
+- Inspect the repository.
+- Initialize frontend and backend.
+- Install dependencies.
+- Create the folder structure.
+- Configure local development.
+
+### Phase 2 — Data and scoring
+- Create a synthetic dataset.
+- Implement CSV loading.
+- Implement healthcare need calculations.
+- Test the scoring engine.
+
+### Phase 3 — Optimization
+- Implement OR-Tools allocation.
+- Enforce clinic capacity, travel-time, and site restrictions.
+- Add the baseline method.
+- Test both algorithms.
+
+### Phase 4 — Main dashboard
+- Create the professional dashboard.
+- Implement navigation.
+- Add healthcare statistics.
+- Build the interactive map.
+
+### Phase 5 — Frontend-backend integration
+- Connect React to FastAPI.
+- Display calculated need scores.
+- Display recommended locations.
+- Make the controls functional.
+
+### Phase 6 — Disaster simulator
+- Implement flood restrictions.
+- Implement road closure scenarios.
+- Implement clinic shortage scenarios.
+- Implement disease outbreak scenarios.
+- Display before-and-after comparisons.
+
+### Phase 7 — Public and administrator views
+- Add schedules.
+- Add administrator approval.
+- Add manual overrides.
+- Connect approved schedules to the public dashboard.
+
+### Phase 8 — Testing and polish
+- Fix errors.
+- Improve UI/UX.
+- Add loading and error states.
+- Test navigation and responsive behavior.
+- Write installation instructions.
+- Prepare deployment configuration.
+
+## 16. IMPORTANT CODING INSTRUCTIONS
+
+Follow these rules throughout implementation:
+
+1. Write complete, functioning code rather than placeholder functions.
+2. Prioritize a working system over unnecessary complexity.
+3. Keep the code readable and organized.
+4. Use reusable React components.
+5. Add short comments explaining complicated calculations.
+6. Implement meaningful error handling.
+7. Do not hardcode optimization results.
+8. Keep risk scores and recommendations connected to the actual data.
+9. Keep synthetic data clearly identified.
+10. If an external API is unavailable, use the documented local demo dataset.
+11. Do not require paid subscriptions.
+12. Ensure the system can run locally before adding deployment features.
+13. Do not leave buttons that appear functional but do nothing.
+14. Do not claim that weather, flood, or disease information is live unless it comes from a working, verified source.
+15. When external data is missing, retain the last available data with an explicit timestamp or display an unavailable-data notice.
+
+## 17. SUCCESS CRITERIA
+
+The prototype is complete when a user can:
+
+1. Open the OMCM website.
+2. See a healthcare risk map of the pilot barangays.
+3. Click a barangay to view healthcare statistics.
+4. Change the number of available mobile clinics.
+5. Generate clinic placement recommendations using the Python optimization engine.
+6. See the recommended clinics on the map.
+7. Understand why each location was selected.
+8. Compare OMCM against a simpler population-based placement method.
+9. Simulate a flood, road closure, or clinic shortage.
+10. Observe how the recommendations change.
+11. Approve a deployment as an administrator.
+12. Open the public view and see the approved clinic schedule.
+
+All of these features should work with the included demonstration dataset without requiring any external API keys.
+
+## 18. FINAL DELIVERABLES
+
+Provide:
+
+- Working frontend application
+- Working FastAPI backend
+- Healthcare scoring engine
+- OR-Tools clinic placement algorithm
+- Disaster simulation engine
+- Local demonstration dataset
+- Public dashboard
+- LGU administrative dashboard
+- Automated tests for important calculations
+- README containing setup instructions
+- Environment variable template
+- Deployment instructions
+
+## 19. HOW TO PROCEED
+
+Start by inspecting the current repository and determining which files already exist.
+
+Create a brief implementation plan, then begin writing code immediately.
+
+Do not stop after proposing the architecture or generating an implementation plan.
+
+Start with the simplest complete working version, then progressively add features.
+
+After each phase:
+- Run relevant tests.
+- Fix errors.
+- Confirm that the existing features still work.
+- Proceed to the next phase.
+
+If time or execution limits prevent completing everything in one session, prioritize the working risk map, risk scoring, clinic optimization, disaster simulation, and baseline comparison. Report exactly what is finished and what remains.
+
+**Your objective is to produce a functional, visually impressive, technically credible healthcare optimization platform ready for a data science hackathon demonstration.**
+
+Begin implementation now.
