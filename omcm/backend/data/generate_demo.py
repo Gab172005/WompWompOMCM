@@ -3,10 +3,11 @@ import csv
 import json
 from pathlib import Path
 
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).parent / "demo"
 
 
 def generate():
+    ROOT.mkdir(exist_ok=True)
     rows = []
     labels = ["Lakeside", "Northfield", "Riverside", "Hillcrest", "Eastwood", "Westhaven", "Greenfield", "Brookside", "Sampaguita", "Mabuhay", "Maligaya", "Bagong Silang", "San Isidro", "Pag-asa", "Masaya", "Dapdap", "Maharlika", "Silangan", "Tahanan", "Pulong"]
     for i, name in enumerate(labels):

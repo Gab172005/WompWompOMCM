@@ -1,4 +1,5 @@
 import pytest
+pytestmark = pytest.mark.usefixtures("demo_data")
 from app.algorithms.placement import optimize
 from app.algorithms.scoring import calculate_scores
 from app.services.data import load_data, road_graph, travel_times

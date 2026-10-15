@@ -1,4 +1,6 @@
 from datetime import timedelta
+import pytest
+pytestmark = pytest.mark.usefixtures("demo_data")
 from app.main import today
 
 

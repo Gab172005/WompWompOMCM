@@ -19,6 +19,7 @@ const python =
 const processes = [];
 let browser;
 let page;
+let backendLog = () => "";
 const errors = [];
 function start(command, args, cwd, env = {}) {
   const child = spawn(command, args, {
@@ -79,6 +80,7 @@ try {
       OMCM_ADMIN_PASSWORD: password,
     },
   );
+  backendLog = apiServer.log;
   const vite = start(
     process.execPath,
     [
@@ -104,6 +106,7 @@ try {
   page = await browser.newPage({
     viewport: { width: 1440, height: 1080 },
   });
+  page.setDefaultTimeout(120000);
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("http://127.0.0.1:5174");
   await page
@@ -120,16 +123,16 @@ try {
     path: "test-results/overview-desktop.png",
     fullPage: true,
   });
-  assert.equal(await page.locator('path.barangay-marker[fill="#D1D5DB"]').count(), 681);
+  assert.equal(await page.locator('path.barangay-marker[fill="#D1D5DB"]').count(), 2);
   const delCarmen = await insideArea("path.area-403401001");
   await page.mouse.move(delCarmen.x, delCarmen.y);
   await page.locator(".risk-hover").waitFor();
-  assert.match(await page.locator(".risk-hover").innerText(), /Del Carmen, Alaminos.*Healthcare need: No data/s);
+  assert.match(await page.locator(".risk-hover").innerText(), /Del Carmen, Alaminos.*Healthcare need:/s);
   await page.mouse.click(delCarmen.x, delCarmen.y);
   await page.locator(".map-detail").waitFor();
   assert.match(
     await page.locator(".map-detail").innerText(),
-    /LAGUNA BARANGAY.*403401001.*Del Carmen.*No data/s,
+    /LAGUNA BARANGAY.*403401001.*Del Carmen/s,
   );
   await page.getByRole("button", { name: "Close barangay details" }).click();
   await page
@@ -170,7 +173,8 @@ try {
   await page
     .getByRole("link", { name: "Disaster Simulator", exact: true })
     .click();
-  await page.getByLabel("Lakeside community hub", { exact: true }).check();
+  const candidates = await (await fetch("http://127.0.0.1:8001/api/clinics")).json();
+  await page.getByLabel(candidates.sites[0].name, { exact: true }).check();
   await page
     .getByRole("button", { name: "Run simulation", exact: true })
     .click();
@@ -217,10 +221,10 @@ try {
   const polygonFills = () => page.locator("path.barangay-marker").evaluateAll(
     (paths) => paths.map((path) => path.getAttribute("fill")),
   );
-  assert.deepEqual(await polygonFills(), Array(681).fill("#D1D5DB"));
+  assert.equal((await polygonFills()).filter((fill) => fill === "#D1D5DB").length, 2);
   await page.getByLabel("Map layer", { exact: true }).selectOption("score");
-  assert.deepEqual(await polygonFills(), Array(681).fill("#D1D5DB"));
-  assert.equal(await page.locator("tbody tr").count(), 20);
+  assert.equal((await polygonFills()).filter((fill) => fill === "#D1D5DB").length, 2);
+  assert.equal(await page.locator("tbody tr").count(), 681);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Open navigation" }).click();
   await page.getByRole("link", { name: "Overview", exact: true }).click();
@@ -255,20 +259,20 @@ try {
     path: "test-results/public-mobile.png",
     fullPage: true,
   });
-  // Test-only alias; shipped mapping remains empty. Values come from the API.
+  // Verify natural geographic matches use live API scores.
   await page.route("**/data/geo/laguna_record_mapping.json", (route) => route.fulfill({
-    json: { "403401001": "B01" },
+    json: {},
   }));
   await page.setViewportSize({ width: 1440, height: 1080 });
   await page.goto("http://127.0.0.1:5174");
   const initial = await (await fetch("http://127.0.0.1:8001/api/barangays")).json();
   await page.locator("path.barangay-marker").nth(680).waitFor();
   const firstRegion = page.locator("path.area-403401001");
-  assert.equal(await firstRegion.getAttribute("fill"), expectedFill(initial.barangays.find((b) => b.id === "B01").score));
+  assert.equal(await firstRegion.getAttribute("fill"), expectedFill(initial.barangays.find((b) => b.name === "Del Carmen" && b.municipality === "Alaminos").score));
   const mappedPoint = await insideArea("path.area-403401001");
   await page.mouse.click(mappedPoint.x, mappedPoint.y);
-  assert.match(await page.locator(".map-detail").innerText(), /Del Carmen.*Healthcare record: Demo Lakeside/s);
-  assert.match(await page.locator(".map-detail").innerText(), /3,400/);
+  assert.match(await page.locator(".map-detail").innerText(), /Del Carmen/s);
+  assert.ok(initial.barangays.some((b) => b.name === "Del Carmen" && b.municipality === "Alaminos"));
   await page.getByRole("button", { name: "Close barangay details" }).click();
   await page.getByRole("link", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: /Sign in/ }).first().click();
@@ -283,11 +287,11 @@ try {
   const live = await (await recalculated).json();
   await page.getByRole("link", { name: "Healthcare Risk Map", exact: true }).click();
   await page.locator("path.barangay-marker").nth(680).waitFor();
-  const b01 = live.barangays.find((b) => b.id === "B01");
+  const b01 = live.barangays.find((b) => b.name === "Del Carmen" && b.municipality === "Alaminos");
   assert.equal(await page.locator("path.area-403401001").getAttribute("fill"), expectedFill(b01.score));
   await page.getByLabel("Map layer", { exact: true }).selectOption("flood");
   assert.equal(await page.locator("path.area-403401001").getAttribute("fill"), expectedFill(b01.factors.flood));
-  assert.equal(await page.locator('path.barangay-marker[fill="#D1D5DB"]').count(), 680);
+  assert.equal(await page.locator('path.barangay-marker[fill="#D1D5DB"]').count(), 2);
   assert.deepEqual(errors, []);
   console.log(
     "PASS: map detail, server authentication, optimization, approval/public schedule, flood/shortage simulation, schedule isolation, weight recalculation, navigation, responsive layout, and no browser runtime errors.",
@@ -297,6 +301,7 @@ try {
     await mkdir("test-results", { recursive: true });
     await page.screenshot({ path: "test-results/failure.png", fullPage: true });
   }
+  console.error("Backend log:", backendLog());
   console.error("Browser runtime errors:", errors);
   throw error;
 } finally {

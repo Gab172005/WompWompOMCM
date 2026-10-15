@@ -53,6 +53,7 @@ const links = [
 ];
 function Layout() {
   const {
+    barangays,
     username,
     signOut,
     requireAdmin,
@@ -104,7 +105,7 @@ function Layout() {
           <div className="pilot-label">
             <span className="live-dot" />
             <strong>Laguna pilot</strong>
-            <small>20 synthetic communities</small>
+            <small>{barangays.length} barangays ? demo health data</small>
           </div>
           <Link className="nav-item" to="/public" target="_blank">
             <Globe size={18} />

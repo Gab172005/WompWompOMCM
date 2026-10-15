@@ -56,7 +56,7 @@ export function Statistics() {
     {
       label: "Pilot population",
       value: number(barangays.reduce((s, b) => s + b.population, 0)),
-      detail: `${barangays.length} synthetic barangays`,
+      detail: `${barangays.length} barangays ? estimated population`,
       icon: Users,
       color: "blue",
     },

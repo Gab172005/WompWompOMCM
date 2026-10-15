@@ -9,6 +9,12 @@ from app.main import app
 
 
 @pytest.fixture
+def demo_data(monkeypatch):
+    from app.services import data
+    monkeypatch.setattr(data, "DATA_DIR", Path(__file__).parent / "fixtures")
+
+
+@pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setenv("OMCM_DATABASE_PATH", str(tmp_path / "test.db"))
     monkeypatch.setenv("OMCM_DEMO_AUTH", "true")

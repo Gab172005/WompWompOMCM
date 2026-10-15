@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from app.models.schemas import Weights, PlacementRequest, SimulationRequest, ApproveRequest, EmergencyRequest, BoundaryRequest
 from app.models.results import RiskResult, PlanResult, SimulationResult, AnalyticsResult, SchedulesResult, ScheduleResult
@@ -46,6 +47,7 @@ async def lifespan(app):
 
 app = FastAPI(title="OMCM", version="1.0.0", lifespan=lifespan,
               description="Laguna synthetic mobile clinic planning prototype. Demo authentication only.")
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(CORSMiddleware, allow_origins=os.getenv("OMCM_CORS_ORIGINS", "http://127.0.0.1:5173,http://localhost:5173").split(","), allow_methods=["GET", "POST"], allow_headers=["Authorization", "Content-Type"])
 
 

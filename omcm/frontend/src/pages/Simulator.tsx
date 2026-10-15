@@ -129,8 +129,8 @@ export function Simulator() {
           {kind === "roads" && (
             <>
               <p>
-                Close demo roads to recalculate shortest paths. Closing bridges
-                R03-04 and R18-19 isolates the eastern sector.
+                Close estimated adjacency links to recalculate shortest paths.
+                Shared borders do not establish actual road access.
               </p>
               <div className="scroll-controls">
                 {roads.map((r) => (

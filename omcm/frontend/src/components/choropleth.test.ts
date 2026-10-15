@@ -10,6 +10,17 @@ const record = (changes: Partial<Barangay>) => ({ id: "health-1", name: "Del Car
 afterEach(() => vi.unstubAllGlobals());
 
 describe("risk choropleth", () => {
+  it("matches supplied barangay geography including Poblacion name suffixes", () => {
+    const rows = readFileSync("../backend/data/barangays.csv", "utf8").trim().split(/\r?\n/).slice(1);
+    const records = rows.map((line, i) => {
+      const fields = line.match(/(?:"(?:[^"]|"")*"|[^,]*)(?:,|$)/g)!;
+      const [name, municipality] = fields.slice(0, 2).map((value) => value.replace(/,$/, "").replace(/^"|"$/g, "").replace(/""/g, '"'));
+      return record({ id: `row-${i}`, name, municipality, geography_level: "barangay" });
+    });
+    const matches = matchAreas(geometry, records, {});
+    expect(Object.values(matches).filter(Boolean)).toHaveLength(679);
+    expect(geometry.features.filter((f) => !matches[f.properties.area_id]).map((f) => f.properties.name).sort()).toEqual(["Cabuyew", "Pooc"]);
+  });
   it("uses all five shades at the scoring thresholds and gray for missing data", () => {
     expect([0, 15, 30, 50, 70, 100].map(riskColor)).toEqual([
       "#FEE5E5", "#FCBABA", "#F87171", "#DC2626", "#7F1D1D", "#7F1D1D",

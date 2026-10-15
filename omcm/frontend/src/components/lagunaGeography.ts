@@ -13,7 +13,7 @@ export type AreaMapping = Record<string, string>;
 export type Geography = { geojson: LagunaGeometry; source: string; mapping: AreaMapping; warning: string };
 
 export const normalizeName = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-  .toLowerCase().replace(/\b(city of|municipality of|barangay|brgy|city)\b/g, "")
+  .toLowerCase().replace(/\s*\(poblacion\)/g, "").replace(/\b(city of|municipality of|barangay|brgy|city)\b/g, "")
   .replace(/[^a-z0-9]/g, "");
 // PSGC's 9-digit legacy IDs and 10-digit IDs differ only in the leading zero.
 export const normalizeCode = (value: unknown) => String(value ?? "").replace(/^0+/, "");
