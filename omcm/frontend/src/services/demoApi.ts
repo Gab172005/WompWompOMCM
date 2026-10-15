@@ -108,15 +108,35 @@ export async function demoApi(path: string, body?: unknown): Promise<unknown> {
   }
   if (path === "/simulate") {
     const input = body as { original: Config; scenario: Config };
-    const before = optimizePilot(pilot, input.original), after = optimizePilot(pilot, input.scenario);
-    const old = before.optimized.served_by_barangay, next = after.optimized.served_by_barangay;
-    return { before, after, changes: {
-      previously_covered: before.optimized.metrics.residents_served,
-      newly_covered: Object.keys(old).reduce((s,id)=>s+Math.max(0,next[id]-old[id]),0),
-      losing_coverage: Object.keys(old).reduce((s,id)=>s+Math.max(0,old[id]-next[id]),0),
-      average_travel_delta: Number((after.optimized.metrics.average_travel_minutes-before.optimized.metrics.average_travel_minutes).toFixed(2)),
-      utilization_delta: after.optimized.metrics.capacity_utilization-before.optimized.metrics.capacity_utilization,
-    }, note: "Synthetic scenario comparison; published browser schedules are unchanged." };
+    const before = optimizePilot(pilot, input.original),
+      after = optimizePilot(pilot, input.scenario);
+    const old = before.optimized.served_by_barangay,
+      next = after.optimized.served_by_barangay;
+    return {
+      before,
+      after,
+      changes: {
+        previously_covered: before.optimized.metrics.residents_served,
+        newly_covered: Object.keys(old).reduce(
+          (s, id) => s + Math.max(0, next[id] - old[id]),
+          0,
+        ),
+        losing_coverage: Object.keys(old).reduce(
+          (s, id) => s + Math.max(0, old[id] - next[id]),
+          0,
+        ),
+        average_travel_delta: Number(
+          (
+            after.optimized.metrics.average_travel_minutes -
+            before.optimized.metrics.average_travel_minutes
+          ).toFixed(2),
+        ),
+        utilization_delta:
+          after.optimized.metrics.capacity_utilization -
+          before.optimized.metrics.capacity_utilization,
+      },
+      note: "Synthetic scenario comparison; published browser schedules are unchanged.",
+    };
   }
   if (path === "/schedules") {
     const state = read();

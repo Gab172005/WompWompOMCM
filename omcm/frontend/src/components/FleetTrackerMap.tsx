@@ -60,7 +60,11 @@ export function FleetTrackerMap({
     const points = runs.flatMap((r) =>
       r.route.coordinates.map(([lng, lat]) => [lat, lng] as [number, number]),
     );
-    map.fitBounds(latLngBounds(points), { padding: [35, 55], maxZoom: 14 });
+    map.fitBounds(latLngBounds(points), {
+      padding: [35, 55],
+      maxZoom: 14,
+      animate: false,
+    });
   }, [fitRequest, map, runs]);
   useEffect(() => {
     const run = runs.find((r) => r.clinicId === selected);

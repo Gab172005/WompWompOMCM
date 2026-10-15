@@ -188,6 +188,34 @@ export function Simulator() {
   );
   return (
     <div className="fleet-workspace">
+      {runs.length > 0 && (
+        <div
+          className="mobile-playback"
+          aria-label="Mobile simulation controls"
+        >
+          <button
+            className="primary"
+            aria-label={clock.playing ? "Pause playback" : "Start playback"}
+            disabled={dirty || busy}
+            onClick={clock.playing ? clock.pause : clock.play}
+          >
+            {clock.playing ? <Pause size={16} /> : <Play size={16} />}{" "}
+            {clock.playing ? "Pause" : "Play"}
+          </button>
+          <div>
+            <output>{clockLabel(clock.elapsed)}</output>
+            <small>SIMULATED · {clock.speed}×</small>
+          </div>
+          <button
+            className="secondary"
+            aria-label="Reset playback"
+            onClick={clock.reset}
+          >
+            <RotateCcw size={15} />
+            Reset
+          </button>
+        </div>
+      )}
       <div className="fleet-heading">
         <div>
           <span className="eyebrow">
@@ -424,206 +452,213 @@ export function Simulator() {
         </section>
         <aside className="fleet-sidebar">
           <Card className="scenario-builder">
-            <div className="card-title">
-              <h2>Scenario builder</h2>
-              <span className="badge">WHAT IF</span>
-            </div>
-            <label>
-              Flood level
-              <select
-                aria-label="Flood level"
-                disabled={busy}
-                value={scenario.flood_level ?? "none"}
-                onChange={(e) =>
-                  change({
-                    flood_level: e.target.value as Config["flood_level"],
-                    manual_sites: null,
-                  })
-                }
-              >
-                <option value="none">None</option>
-                <option value="moderate">Moderate · Bayog / Tagumpay</option>
-                <option value="severe">Severe · plus eastern Bay</option>
-              </select>
-            </label>
-            {pilot?.closures.map((c) => (
-              <label className="checkbox" key={c.id}>
-                <input
-                  type="checkbox"
-                  checked={scenario.closed_roads.includes(c.id)}
-                  onChange={(e) =>
-                    change({ closed_roads: e.target.checked ? [c.id] : [] })
-                  }
-                />
-                <span>
-                  Demo road closure<small>{c.name}</small>
-                </span>
-              </label>
-            ))}
-            <div className="two-inputs">
+            <fieldset disabled={busy}>
+              <div className="card-title">
+                <h2>Scenario builder</h2>
+                <span className="badge">WHAT IF</span>
+              </div>
               <label>
-                Available clinics
-                <input
-                  type="number"
-                  min="1"
-                  max="5"
-                  value={scenario.clinic_count}
+                Flood level
+                <select
+                  aria-label="Flood level"
+                  disabled={busy}
+                  value={scenario.flood_level ?? "none"}
                   onChange={(e) =>
                     change({
-                      clinic_count: Math.max(
-                        1,
-                        Math.min(5, Number(e.target.value)),
-                      ),
+                      flood_level: e.target.value as Config["flood_level"],
                       manual_sites: null,
                     })
                   }
-                />
+                >
+                  <option value="none">None</option>
+                  <option value="moderate">Moderate · Bayog / Tagumpay</option>
+                  <option value="severe">Severe · plus eastern Bay</option>
+                </select>
               </label>
-              <label>
-                Daily capacity
-                <input
-                  type="number"
-                  min="1"
-                  max="5000"
-                  value={scenario.capacity}
-                  onChange={(e) =>
-                    change({
-                      capacity: Math.max(
-                        1,
-                        Math.min(5000, Number(e.target.value)),
-                      ),
-                    })
-                  }
-                />
-              </label>
-            </div>
-            <label>
-              Maximum road travel (min)
-              <input
-                type="number"
-                min="0"
-                max="120"
-                value={scenario.max_travel_minutes}
-                onChange={(e) =>
-                  change({
-                    max_travel_minutes: Math.max(
-                      0,
-                      Math.min(120, Number(e.target.value)),
-                    ),
-                  })
-                }
-              />
-            </label>
-            <label>
-              Disease surge barangay
-              <select
-                aria-label="Disease surge barangay"
-                value={scenario.outbreak_barangays[0] ?? ""}
-                onChange={(e) =>
-                  change({
-                    outbreak_barangays: e.target.value ? [e.target.value] : [],
-                  })
-                }
-              >
-                <option value="">No surge</option>
-                {pilot?.barangays.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}, {b.municipality}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Synthetic surge: +
-              {Math.round((scenario.outbreak_multiplier - 1) * 100)}%
-              <input
-                aria-label="Disease surge percentage"
-                type="range"
-                min="1"
-                max="5"
-                step=".25"
-                value={scenario.outbreak_multiplier}
-                onChange={(e) =>
-                  change({ outbreak_multiplier: Number(e.target.value) })
-                }
-              />
-            </label>
-            <details>
-              <summary>Need weights & site exclusions</summary>
-              {(Object.keys(scenario.weights) as Factor[]).map((f) => (
-                <label className="compact-weight" key={f}>
-                  {f} · {((scenario.weights[f] / weightTotal) * 100).toFixed(1)}
-                  %
-                  <input
-                    type="range"
-                    aria-label={`${f} need weight`}
-                    min="0"
-                    max="100"
-                    value={scenario.weights[f]}
-                    onChange={(e) => {
-                      const next = {
-                        ...scenario.weights,
-                        [f]: Number(e.target.value),
-                      };
-                      if (Object.values(next).some((v) => v > 0))
-                        change({ weights: next });
-                    }}
-                  />
-                </label>
-              ))}
-              <button
-                className="secondary"
-                onClick={() => change({ weights: { ...defaultWeights } })}
-              >
-                Reset weights
-              </button>
-              {pilot?.sites.map((s) => (
-                <label className="checkbox" key={s.id}>
+              {pilot?.closures.map((c) => (
+                <label className="checkbox" key={c.id}>
                   <input
                     type="checkbox"
-                    checked={scenario.flooded_sites.includes(s.id)}
+                    checked={scenario.closed_roads.includes(c.id)}
+                    onChange={(e) =>
+                      change({ closed_roads: e.target.checked ? [c.id] : [] })
+                    }
+                  />
+                  <span>
+                    Demo road closure<small>{c.name}</small>
+                  </span>
+                </label>
+              ))}
+              <div className="two-inputs">
+                <label>
+                  Available clinics
+                  <input
+                    type="number"
+                    min="1"
+                    max="5"
+                    value={scenario.clinic_count}
                     onChange={(e) =>
                       change({
-                        flooded_sites: e.target.checked
-                          ? [...scenario.flooded_sites, s.id]
-                          : scenario.flooded_sites.filter((id) => id !== s.id),
+                        clinic_count: Math.max(
+                          1,
+                          Math.min(5, Number(e.target.value)),
+                        ),
                         manual_sites: null,
                       })
                     }
                   />
-                  Exclude {s.name}
                 </label>
-              ))}
-            </details>
-            <button
-              className="primary"
-              disabled={!pilot || busy}
-              onClick={() => void optimize()}
-            >
-              <Sparkles size={16} />
-              {busy
-                ? "Calculating…"
-                : plan
-                  ? "Reoptimize tomorrow"
-                  : "Optimize tomorrow"}
-            </button>
-            <button
-              className="secondary"
-              disabled={busy}
-              onClick={() => {
-                clock.reset();
-                setScenario(structuredClone(defaultConfig));
-                setBranchNotice(
-                  "Scenario reset to the prepared baseline. Reoptimize to refresh the proposed plan.",
-                );
-              }}
-            >
-              Reset scenario
-            </button>
-            <p className="tiny">
-              Flood footprints and closure are simulated. Intersecting road
-              fixtures are excluded. No reroute is claimed.
-            </p>
+                <label>
+                  Daily capacity
+                  <input
+                    type="number"
+                    min="1"
+                    max="5000"
+                    value={scenario.capacity}
+                    onChange={(e) =>
+                      change({
+                        capacity: Math.max(
+                          1,
+                          Math.min(5000, Number(e.target.value)),
+                        ),
+                      })
+                    }
+                  />
+                </label>
+              </div>
+              <label>
+                Maximum road travel (min)
+                <input
+                  type="number"
+                  min="0"
+                  max="120"
+                  value={scenario.max_travel_minutes}
+                  onChange={(e) =>
+                    change({
+                      max_travel_minutes: Math.max(
+                        0,
+                        Math.min(120, Number(e.target.value)),
+                      ),
+                    })
+                  }
+                />
+              </label>
+              <label>
+                Disease surge barangay
+                <select
+                  aria-label="Disease surge barangay"
+                  value={scenario.outbreak_barangays[0] ?? ""}
+                  onChange={(e) =>
+                    change({
+                      outbreak_barangays: e.target.value
+                        ? [e.target.value]
+                        : [],
+                    })
+                  }
+                >
+                  <option value="">No surge</option>
+                  {pilot?.barangays.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}, {b.municipality}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Synthetic surge: +
+                {Math.round((scenario.outbreak_multiplier - 1) * 100)}%
+                <input
+                  aria-label="Disease surge percentage"
+                  type="range"
+                  min="1"
+                  max="5"
+                  step=".25"
+                  value={scenario.outbreak_multiplier}
+                  onChange={(e) =>
+                    change({ outbreak_multiplier: Number(e.target.value) })
+                  }
+                />
+              </label>
+              <details>
+                <summary>Need weights & site exclusions</summary>
+                {(Object.keys(scenario.weights) as Factor[]).map((f) => (
+                  <label className="compact-weight" key={f}>
+                    {f} ·{" "}
+                    {((scenario.weights[f] / weightTotal) * 100).toFixed(1)}
+                    %
+                    <input
+                      type="range"
+                      aria-label={`${f} need weight`}
+                      min="0"
+                      max="100"
+                      value={scenario.weights[f]}
+                      onChange={(e) => {
+                        const next = {
+                          ...scenario.weights,
+                          [f]: Number(e.target.value),
+                        };
+                        if (Object.values(next).some((v) => v > 0))
+                          change({ weights: next });
+                      }}
+                    />
+                  </label>
+                ))}
+                <button
+                  className="secondary"
+                  onClick={() => change({ weights: { ...defaultWeights } })}
+                >
+                  Reset weights
+                </button>
+                {pilot?.sites.map((s) => (
+                  <label className="checkbox" key={s.id}>
+                    <input
+                      type="checkbox"
+                      checked={scenario.flooded_sites.includes(s.id)}
+                      onChange={(e) =>
+                        change({
+                          flooded_sites: e.target.checked
+                            ? [...scenario.flooded_sites, s.id]
+                            : scenario.flooded_sites.filter(
+                                (id) => id !== s.id,
+                              ),
+                          manual_sites: null,
+                        })
+                      }
+                    />
+                    Exclude {s.name}
+                  </label>
+                ))}
+              </details>
+              <button
+                className="primary"
+                disabled={!pilot || busy}
+                onClick={() => void optimize()}
+              >
+                <Sparkles size={16} />
+                {busy
+                  ? "Calculating…"
+                  : plan
+                    ? "Reoptimize tomorrow"
+                    : "Optimize tomorrow"}
+              </button>
+              <button
+                className="secondary"
+                disabled={busy}
+                onClick={() => {
+                  clock.reset();
+                  setScenario(structuredClone(defaultConfig));
+                  setBranchNotice(
+                    "Scenario reset to the prepared baseline. Reoptimize to refresh the proposed plan.",
+                  );
+                }}
+              >
+                Reset scenario
+              </button>
+              <p className="tiny">
+                Flood footprints and closure are simulated. Intersecting road
+                fixtures are excluded. No reroute is claimed.
+              </p>
+            </fieldset>
           </Card>
           <div className="fleet-list">
             <h2>
@@ -711,7 +746,9 @@ export function Simulator() {
                 unserved daily appointments
               </p>
             </div>
-            {dirty ? <span className="badge">Reoptimize before approval</span> : plan.plan_id ? (
+            {dirty ? (
+              <span className="badge">Reoptimize before approval</span>
+            ) : plan.plan_id ? (
               <Link className="primary" to="/schedules">
                 Review & approve plan
                 <ArrowRight size={16} />

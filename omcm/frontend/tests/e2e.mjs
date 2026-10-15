@@ -158,7 +158,7 @@ try {
   );
   page = await browser.newPage({ viewport: { width: 1440, height: 1080 } });
   page.setDefaultTimeout(30000);
-  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("pageerror", (e) => errors.push(e.stack || e.message));
   await page.goto("http://127.0.0.1:5174/simulator");
   await expect(
     page.getByRole("heading", { name: "Care on the move" }),
@@ -261,7 +261,7 @@ try {
   });
   page = await offline.newPage();
   page.setDefaultTimeout(30000);
-  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("pageerror", (e) => errors.push(e.stack || e.message));
   await page.route("**/api/**", (route) => route.abort());
   await page.goto("http://127.0.0.1:5174/simulator");
   await expect(page.locator(".browser-demo-banner")).toBeVisible();

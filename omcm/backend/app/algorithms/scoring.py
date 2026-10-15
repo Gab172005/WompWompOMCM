@@ -46,6 +46,8 @@ def calculate_scores(frame, network, times, weights: Weights, outbreaks=(), mult
             services += ["Child health", "Vaccination"]
         output.append(dict(id=row["id"], name=row["name"], population=pop,
                            lat=float(row["lat"]), lng=float(row["lng"]), vulnerable_residents=int(vulnerable),
+                           children_pct=round(float(np.clip(indicator("children", pop*.25)/pop*100, 0, 100)), 2),
+                           elderly_pct=round(float(np.clip(indicator("elderly", pop*.10)/pop*100, 0, 100)), 2),
                            disease_per_1000=round(disease_per_1000, 2), factors=factors,
                            contributions={k: round(v, 2) for k, v in contributions.items()}, score=score,
                            level="Critical" if score >= 70 else "High" if score >= 50 else "Moderate" if score >= 30 else "Low",

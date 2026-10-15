@@ -190,6 +190,8 @@ export function scorePilot(pilot: Pilot, config: Config): Barangay[] {
         contributions,
         factors,
         vulnerable_residents: vulnerable,
+        children_pct: round((b.children / b.population) * 100),
+        elderly_pct: round((b.elderly / b.population) * 100),
         disease_per_1000: round(incidence),
         demand: Math.min(
           b.population,

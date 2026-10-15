@@ -26,6 +26,8 @@ class BarangayResult(BaseModel):
     lat: float
     lng: float
     vulnerable_residents: Nonnegative
+    children_pct: Score | None = None
+    elderly_pct: Score | None = None
     disease_per_1000: float
     factors: dict[str, Score]
     contributions: dict[str, Score]

@@ -12,6 +12,8 @@ export interface Barangay {
   lng: number;
   population: number;
   vulnerable_residents: number;
+  children_pct?: number;
+  elderly_pct?: number;
   disease_per_1000: number;
   factors: Weights;
   contributions: Weights;

@@ -6,7 +6,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { api, clearCredentials, setCredentials, enableBrowserDemo, isBrowserDemo } from "./api";
+import {
+  api,
+  clearCredentials,
+  setCredentials,
+  enableBrowserDemo,
+  isBrowserDemo,
+} from "./api";
 import { defaultConfig } from "./defaults";
 export { defaultWeights, defaultConfig } from "./defaults";
 import type {
@@ -98,10 +104,14 @@ export function Provider({ children }: { children: ReactNode }) {
     setError("");
     try {
       if (!isBrowserDemo()) {
-        try { await api("/health", undefined, AbortSignal.timeout(4000)); }
-        catch {
-          enableBrowserDemo(); setBrowserDemo(true);
-          setMessage("Backend unavailable: browser-only demo enabled. Plans stay in this browser; no public service is connected.");
+        try {
+          await api("/health", undefined, AbortSignal.timeout(4000));
+        } catch {
+          enableBrowserDemo();
+          setBrowserDemo(true);
+          setMessage(
+            "Backend unavailable: browser-only demo enabled. Plans stay in this browser; no public service is connected.",
+          );
         }
       }
       const [bs, cs, hs, boundary, schedules, health] = await Promise.all([
@@ -198,7 +208,11 @@ export function Provider({ children }: { children: ReactNode }) {
     <Context.Provider
       value={{
         browserDemo,
-        setDraft: (draft) => { configVersion.current++; setConfig(draft.inputs); setPlan(draft); },
+        setDraft: (draft) => {
+          configVersion.current++;
+          setConfig(draft.inputs);
+          setPlan(draft);
+        },
         barangays,
         sites,
         roads,
