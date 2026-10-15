@@ -117,6 +117,77 @@ async function verifyFleet() {
   await page.getByRole("button", { name: "Reset", exact: true }).click();
   assert.deepEqual(await positions(), origin);
 }
+async function verifyConsecutiveDays() {
+  const day = page.getByTestId("simulation-day");
+  const timeline = page.getByRole("slider", {
+    name: "Deployment timeline",
+    exact: true,
+  });
+  const reset = page.getByRole("button", { name: "Reset", exact: true });
+  const pause = page.getByRole("button", { name: "Pause", exact: true });
+  await expect(day).toHaveAttribute("data-day", "1");
+  // A mid-route click must carry the final positions, not the cursor positions.
+  await seek(await timeline.getAttribute("max"));
+  const finalToday = await positions();
+  await seek(70);
+  assert.notDeepEqual(await positions(), finalToday);
+  await page.getByRole("button", { name: "Reoptimize tomorrow" }).click();
+  await expect(day).toHaveAttribute("data-day", "2");
+  await expect(pause).toBeVisible();
+  await pause.click();
+  await reset.click();
+  assert.deepEqual(await positions(), finalToday);
+  await expect(page.locator(".fleet-status.deployed")).toHaveCount(3);
+  await expect(page.locator(".fleet-card").first()).not.toContainText(
+    "Timugan depot →",
+  );
+
+  // Force a different assignment, then verify real travel from the retained sites.
+  await page
+    .getByText("Need weights & site exclusions", { exact: true })
+    .click();
+  const currentName = await page
+    .locator(".fleet-card > span")
+    .first()
+    .textContent();
+  await page.getByLabel(`Exclude ${currentName}`, { exact: true }).check();
+  await page.getByRole("button", { name: "Reoptimize tomorrow" }).click();
+  await expect(day).toHaveAttribute("data-day", "3");
+  await expect(pause).toBeVisible();
+  await pause.click();
+  await reset.click();
+  assert.deepEqual(await positions(), finalToday);
+  const finalDayTwo = finalToday;
+  await seek(await timeline.getAttribute("max"));
+  const finalDayThree = await positions();
+  assert.notDeepEqual(finalDayThree, finalDayTwo);
+  await expect(page.locator(".fleet-status.deployed")).toHaveCount(3);
+  await reset.click();
+  assert.deepEqual(await positions(), finalDayTwo);
+
+  // Baseline preview is a comparison; it must not become tomorrow's fleet history.
+  await page.getByLabel("Compare baseline routes", { exact: true }).check();
+  await page.getByRole("button", { name: "Reoptimize tomorrow" }).click();
+  await expect(day).toHaveAttribute("data-day", "4");
+  await expect(pause).toBeVisible();
+  await pause.click();
+  await reset.click();
+  assert.deepEqual(await positions(), finalDayThree);
+  await expect(
+    page.getByLabel("Compare baseline routes", { exact: true }),
+  ).not.toBeChecked();
+  await page.getByRole("link", { name: "Data & Methods", exact: true }).click();
+  await page.getByRole("link", { name: "Simulator", exact: true }).click();
+  await expect(day).toHaveAttribute("data-day", "4");
+  assert.deepEqual(await positions(), finalDayThree);
+  await screenshot("simulator-next-day");
+  // The explicit demo tour is the only action here that begins again at the depot.
+  await page.getByRole("button", { name: "Demo tour · 3 clinics" }).click();
+  await expect(day).toHaveAttribute("data-day", "1");
+  await pause.click();
+  await reset.click();
+  assert.notDeepEqual(await positions(), finalDayThree);
+}
 try {
   const apiServer = start(
     python,
@@ -179,7 +250,27 @@ try {
     page.getByRole("link", { name: "Review & approve plan" }),
   ).toBeVisible();
   await verifyFleet();
+  await verifyConsecutiveDays();
   await seek(100);
+  // Failed server requests must preserve the day and the exact paused position.
+  const failedPosition = await positions();
+  const rejectOptimize = (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "Simulated optimizer outage" }),
+    });
+  await page.route("**/api/optimize", rejectOptimize);
+  await page.getByRole("button", { name: "Reoptimize tomorrow" }).click();
+  await expect(
+    page.getByText("Simulated optimizer outage", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByTestId("simulation-day")).toHaveAttribute(
+    "data-day",
+    "1",
+  );
+  assert.deepEqual(await positions(), failedPosition);
+  await page.unroute("**/api/optimize", rejectOptimize);
   await screenshot("simulator-desktop");
   await page.getByRole("link", { name: "Review & approve plan" }).click();
   await page
@@ -267,6 +358,7 @@ try {
   await expect(page.locator(".browser-demo-banner")).toBeVisible();
   await page.getByRole("button", { name: "Demo tour · 3 clinics" }).click();
   await verifyFleet();
+  await verifyConsecutiveDays();
   await seek(100);
   await screenshot("simulator-browser-demo");
   await page.getByRole("link", { name: "Review & approve plan" }).click();
@@ -284,7 +376,7 @@ try {
   await expect(page.locator(".public-clinic")).toHaveCount(3);
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: actual basemap, 20 real polygons, inspection, three road-following vehicles, pause/resume/reset/speed/seek/arrival, authenticated approval, flood/shortage replanning, public isolation, weight changes, 1440px/390px screenshots, standalone browser demo, and no uncaught browser errors.",
+    "PASS: actual basemap, 20 real polygons, inspection, road-following vehicles, playback controls, consecutive days with retained positions and automatic playback, stationary assignments, baseline isolation, failed-request preservation, authenticated approval, flood/shortage replanning, public isolation, weight changes, 1440px/390px screenshots, standalone browser demo, and no uncaught browser errors.",
   );
 } catch (error) {
   if (page) await screenshot("failure");

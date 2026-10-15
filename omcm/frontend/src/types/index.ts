@@ -103,6 +103,7 @@ export interface Metadata {
   travel_times: string;
 }
 export interface Plan {
+  simulation?: SimulationDay;
   created_at?: string;
   status?: "draft" | "published";
   plan_id?: string;
@@ -113,6 +114,16 @@ export interface Plan {
   inputs: Config;
   metadata: Metadata;
   notes: string[];
+}
+export interface FleetOrigin {
+  siteId: string;
+  position: [number, number];
+}
+export interface SimulationDay {
+  day: number;
+  date: string;
+  // Includes temporarily unavailable clinics so they retain their last location.
+  origins: Record<string, FleetOrigin>;
 }
 export interface Simulation {
   before: Plan;

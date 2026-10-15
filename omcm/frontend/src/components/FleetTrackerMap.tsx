@@ -11,15 +11,7 @@ import {
 import { divIcon, latLngBounds } from "leaflet";
 import type { Config, Plan } from "../types";
 import { activeHazards, type Pilot } from "../services/pilot";
-import { vehicleAt, type PreparedRoute } from "../services/simulation";
-
-export interface FleetRun {
-  clinicId: string;
-  siteId: string;
-  route: PreparedRoute;
-  departure: number;
-  color: string;
-}
+import { fleetVehicleAt, type FleetRun } from "../services/fleet";
 export interface MapLayers {
   need: boolean;
   hazards: boolean;
@@ -69,7 +61,7 @@ export function FleetTrackerMap({
   useEffect(() => {
     const run = runs.find((r) => r.clinicId === selected);
     if (!run || !follow || performance.now() - lastPan.current < 400) return;
-    const { position } = vehicleAt(run.route, elapsed, run.departure);
+    const { position } = fleetVehicleAt(run, elapsed);
     map.panTo([position[1], position[0]], { animate: true, duration: 0.3 });
     lastPan.current = performance.now();
   }, [elapsed, selected, follow, map, runs]);
@@ -168,10 +160,10 @@ export function FleetTrackerMap({
         <Tooltip>{pilot.depot.name}</Tooltip>
       </CircleMarker>
       {runs.map((run) => {
-        const state = vehicleAt(run.route, elapsed, run.departure);
+        const state = fleetVehicleAt(run, elapsed);
         return (
           <Fragment key={run.clinicId}>
-            {layers.routes && (
+            {layers.routes && run.route.length > 0 && (
               <Polyline
                 positions={run.route.coordinates.map(([lng, lat]) => [
                   lat,
@@ -200,11 +192,12 @@ export function FleetTrackerMap({
               eventHandlers={{ click: () => setSelected(run.clinicId) }}
             >
               <Tooltip permanent={layers.eta} direction="top" offset={[0, -20]}>
-                {run.clinicId} · {state.status} · {Math.ceil(state.eta / 60)}{" "}
-                min
+                {run.clinicId} · {state.status}
+                {!run.blockedReason && ` · ${Math.ceil(state.eta / 60)} min`}
               </Tooltip>
               <Popup>
                 {run.clinicId} · Simulated vehicle position
+                {run.blockedReason && <p>{run.blockedReason}</p>}
                 <br />
                 {state.status} · {(state.remaining / 1000).toFixed(2)} km
                 remaining

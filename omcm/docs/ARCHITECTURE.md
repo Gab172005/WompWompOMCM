@@ -69,8 +69,30 @@ under the same restrictions. Neither mode treats total population as care delive
 The shared Provider owns the current input configuration and proposed Plan.
 Simulator controls edit a pending scenario; the map reflects pending scores and
 hazards, playback pauses, and the previous results are labeled stale until
-reoptimization. A new plan explicitly restarts at the depot. It never teleports
-an ongoing vehicle into an unrelated diversion.
+reoptimization. **Reoptimize tomorrow** finishes the optimized day's planned
+travel, advances the simulated date by one day and automatically plays the new
+deployment from each vehicle's previous final position. This uses the final
+positions even when playback is paused mid-route or the baseline is being
+previewed. The first day is dated tomorrow relative to the server's Philippine
+date. The explicit demo tour starts a fresh day 1 from the depot.
+
+The Plan's frontend-only `simulation` state records the day, date and starting
+positions keyed by stable clinic IDs, and survives navigation between app pages.
+`services/fleet.ts` matches vehicles to proposed sites by feasible route count,
+then minimum relocation time. It reuses the directed host-barangay OSRM legs
+whose start and end coordinates exactly match the staging points. It never
+reverses a route or adds a straight connector. Unchanged assignments stay in
+place; temporarily unavailable vehicles retain their positions for a later day.
+New vehicles start at the depot. Reset and seeking operate within the current
+day; a stationary fleet gets a one-minute check-in timeline. Failed optimization
+requests leave the day and paused positions intact.
+
+If a scenario blocks relocation from a previous site, the vehicle stays there
+with a Blocked status, and that actual position carries forward. The planner
+still proposes destination coverage using its existing depot-based feasibility
+model, so the simulator explicitly labels coverage as conditional on arrival and
+withholds its approval link until relocation routes are available. No automatic
+publication or changes to approved schedules occur during day transitions.
 
 `useSimulationClock` advances one requestAnimationFrame clock. Route lengths are
 precomputed with cumulative haversine distances. `vehicleAt` locates the current

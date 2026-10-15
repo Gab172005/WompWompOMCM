@@ -28,13 +28,18 @@ resume, and drag the timeline backward. All markers and metrics agree.
 
 Choose **Severe** flood, then **Reoptimize tomorrow**. Read the changed sites
 and before/after comparison. Explain that the hatched polygons are assumed
-whole-community inundation, not observed hazard extents. Blocked routes are
-excluded; the app does not invent a safe diversion.
+whole-community inundation, not observed hazard extents. The day/date advances
+and playback starts from the previous day's final clinic locations. A clinic
+whose route is blocked stays at its previous site with a Blocked status; the
+app does not invent a safe diversion. Coverage for proposed destinations assumes
+arrival, and the simulator's approval link waits for the blocked routes to clear.
 
 Set **Available clinics** to 2, reoptimize and show reduced capacity. Optional:
 enable **Demo road closure**, or choose a disease-surge community and +300%.
 The changed score/demand and eligibility determine results. Changing a scenario
-pauses the previous run; recomputation begins a new run at the depot.
+pauses the previous run; recomputation simulates the following day. Reset returns
+to that day's starting locations. Unchanged assignments stay deployed in place.
+Only the explicit demo tour restarts day 1 at the depot.
 
 ## 1:55–2:25 — Explain the comparison
 

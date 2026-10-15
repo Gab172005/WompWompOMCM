@@ -10,7 +10,7 @@ Microsoft Edge. Final verification date: **2026-10-16, Asia/Manila**.
 | Python dependency consistency | `.venv/Scripts/python.exe -m pip check` | No broken requirements |
 | Road import | `backend/.venv/Scripts/python.exe frontend/scripts/build-road-pilot.py` | 20 validated PSGC joins, 8 contained candidate endpoints, 168 real directed route legs |
 | Frontend lint | `npm run lint` | Passed, zero warnings/errors |
-| Frontend unit tests | `npm test` | **23 passed** in 5 files |
+| Frontend unit tests | `npm test` | **30 passed** in 6 files |
 | TypeScript + production bundle | `npm run build` | Passed |
 | Python score/optimizer/API tests | `.venv/Scripts/python.exe -m pytest -q` | **26 passed** |
 | Browser walkthrough | `npm run test:e2e` | Passed connected and browser-only workflows, no uncaught page errors |
@@ -27,6 +27,13 @@ Microsoft Edge. Final verification date: **2026-10-16, Asia/Manila**.
   backward and back to a timestamp restores identical positions. Changing speed
   does not change the position at a fixed simulation timestamp. Arrival clamps
   to the route endpoint and displays Deployed.
+- Reoptimization advances consecutive day numbers and dates, automatically plays,
+  and retains each clinic's previous final position as its next starting position.
+  Changed assignments travel from retained sites; unchanged assignments stay put.
+  Baseline previews do not alter the carried fleet history. Reset returns to the
+  current day's origin, and app navigation retains the current day. A failed
+  server optimization preserves the day and paused positions. These day-transition
+  flows run in both connected and browser-only modes.
 - Server sign-in generates a persisted solver draft; explicit approval creates
   a dated schedule. Severe flood changes recommended sites. Two-clinic input
   limits the fleet. Scenario reset restores prepared inputs.
@@ -45,7 +52,10 @@ Microsoft Edge. Final verification date: **2026-10-16, Asia/Manila**.
 Allocation tests check K limits, unique sites, site/vehicle capacities, no repeated
 demand, threshold compliance, deterministic output, flood/closure route exclusion,
 surge effects and empty feasibility. Interpolation tests check actual segment
-membership, reverse seeking and no arrival overshoot. Browser storage tests check
+membership, reverse seeking and no arrival overshoot. Consecutive-day tests cover
+stable vehicle IDs, exact road endpoints for every staging-site pair, stationary
+assignments, temporarily unavailable/new vehicles, blocked or missing routes,
+baseline isolation, empty fleets and calendar rollover. Browser storage tests check
 approved snapshot isolation, duplicate-date rejection, today's emergency
 confirmation and public notice creation. Server tests check authentication,
 concurrent approval conflicts, stored publication status/timestamp, emergency
@@ -66,6 +76,7 @@ Generated under `frontend/test-results/` (ignored by Git):
 - `simulator-mobile.png` — 390px-wide simulator.
 - `simulator-severe-flood.png` — actual recomputed scenario.
 - `simulator-browser-demo.png` — API-disabled fallback.
+- `simulator-next-day.png` — retained fleet positions on simulated day 4.
 - `public-mobile.png` — approved public schedule.
 
 The fixture and source manifest are committed-source candidates, not runtime

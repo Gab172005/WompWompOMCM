@@ -47,7 +47,12 @@ export function vehicleAt(
 ) {
   const progress = Math.min(
     1,
-    Math.max(0, (elapsed - departure) / Math.max(1, route.duration_seconds)),
+    route.length === 0 && elapsed >= departure
+      ? 1
+      : Math.max(
+          0,
+          (elapsed - departure) / Math.max(1, route.duration_seconds),
+        ),
   );
   const target = progress * route.length;
   let low = 0,

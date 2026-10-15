@@ -21,18 +21,15 @@ import {
   routeSafe,
   type Pilot,
 } from "../services/pilot";
+import { clockLabel } from "../services/simulation";
 import {
-  clockLabel,
-  prepareRoute,
-  routeColors,
-  vehicleAt,
-} from "../services/simulation";
+  buildFleetRuns,
+  fleetVehicleAt,
+  initialSimulationDay,
+  nextSimulationDay,
+} from "../services/fleet";
 import { useSimulationClock } from "../hooks/useSimulationClock";
-import {
-  FleetTrackerMap,
-  type FleetRun,
-  type MapLayers,
-} from "../components/FleetTrackerMap";
+import { FleetTrackerMap, type MapLayers } from "../components/FleetTrackerMap";
 import { RiskMap } from "../components/RiskMap";
 import { Card, number } from "../components/ui";
 import type { Config, Factor, Plan } from "../types";
@@ -55,6 +52,7 @@ export function Simulator() {
     browserDemo,
     setError,
     requireAdmin,
+    today,
   } = useOMCM();
   const [pilot, setPilot] = useState<Pilot | null>(null),
     [scenario, setScenario] = useState<Config>(() => structuredClone(config));
@@ -74,7 +72,7 @@ export function Simulator() {
     coverage: false,
     eta: true,
   });
-  const [tourPending, setTourPending] = useState(false);
+  const [playPending, setPlayPending] = useState(false);
   useEffect(() => {
     let active = true;
     loadPilot()
@@ -92,32 +90,34 @@ export function Simulator() {
     [pilot, scenario],
   );
   const allocation = showBaseline ? plan?.baseline : plan?.optimized;
-  const runs = useMemo<FleetRun[]>(() => {
+  const simulationDay =
+    plan?.simulation ?? (today ? initialSimulationDay(today) : null);
+  const runs = useMemo(() => {
     if (!pilot || !allocation || !plan) return [];
-    const blocked = activeHazards(pilot, plan.inputs);
-    return allocation.clinics
-      .map((c, i) => {
-        const route = pilot.routes.find(
-          (r) =>
-            r.origin_id === "depot" &&
-            r.site_id === c.id &&
-            routeSafe(r, blocked),
-        );
-        return route
-          ? {
-              clinicId: `MC-${String(i + 1).padStart(3, "0")}`,
-              siteId: c.id,
-              route: prepareRoute(route),
-              departure: i * 20,
-              color: routeColors[i % routeColors.length],
-            }
-          : null;
-      })
-      .filter((r): r is FleetRun => r !== null);
+    return buildFleetRuns(
+      pilot,
+      allocation,
+      plan.inputs,
+      plan.simulation?.origins,
+    );
   }, [pilot, allocation, plan]);
+  const blockedRuns = runs.filter((r) => r.blockedReason);
+  const blockedDeployment = useMemo(() => {
+    if (!pilot || !plan) return false;
+    return buildFleetRuns(
+      pilot,
+      plan.optimized,
+      plan.inputs,
+      plan.simulation?.origins,
+    ).some((r) => r.blockedReason);
+  }, [pilot, plan]);
   const duration = useMemo(
     () =>
-      Math.max(0, ...runs.map((r) => r.departure + r.route.duration_seconds)),
+      // Retained assignments still get a short next-day check-in simulation.
+      Math.max(
+        runs.length ? 60 : 0,
+        ...runs.map((r) => r.departure + r.route.duration_seconds),
+      ),
     [runs],
   );
   const clock = useSimulationClock(duration);
@@ -132,18 +132,17 @@ export function Simulator() {
     clock.pause();
     setScenario((s) => ({ ...s, ...partial }));
     setBranchNotice(
-      "Scenario changed. Playback paused; reoptimize to start a new proposed run from the depot.",
+      "Scenario changed. Playback paused; reoptimize to simulate the next day from today's final clinic locations.",
     );
   }
   async function optimize(tour = false) {
-    if (!pilot) return;
+    if (!pilot || !today || busy) return;
     const input = tour
       ? structuredClone(defaultConfig)
       : structuredClone(scenario);
     setBusy(true);
     setError("");
-    clock.reset();
-    setShowBaseline(false);
+    clock.pause();
     try {
       const result =
         browserDemo || username
@@ -152,15 +151,24 @@ export function Simulator() {
               ...optimizePilot(pilot, input),
               created_at: new Date().toISOString(),
             };
-      setBefore(plan);
-      setDraft(result);
+      const nextDay =
+        tour || !plan
+          ? initialSimulationDay(today)
+          : nextSimulationDay(pilot, plan, today);
+      setBefore(tour ? null : plan);
+      setDraft({ ...result, simulation: nextDay });
       setScenario(result.inputs);
+      clock.reset();
+      setShowBaseline(false);
       setSelected("MC-001");
       setFitRequest((n) => n + 1);
       setBranchNotice(
-        "New proposed run starts at the depot. Published schedules are unchanged.",
+        tour || !plan
+          ? `Day 1 · ${nextDay.date}: simulation starts at the Timugan depot.`
+          : `Day ${nextDay.day} · ${nextDay.date}: simulating the next day from each clinic's previous final location. Reset returns to the start of this day.`,
       );
-      if (tour) setTourPending(true);
+      if (tour) clock.setSpeed(20);
+      setPlayPending(true);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -168,12 +176,11 @@ export function Simulator() {
     }
   }
   useEffect(() => {
-    if (tourPending && duration > 0) {
-      clock.setSpeed(20);
-      clock.play();
-      setTourPending(false);
+    if (playPending) {
+      if (duration > 0) clock.play();
+      setPlayPending(false);
     }
-  }, [tourPending, duration, clock]);
+  }, [playPending, duration, clock]);
   const metrics = allocation?.metrics;
   const weightedTotal =
     plan?.barangays.reduce((s, b) => s + (b.demand * b.score) / 100, 0) ?? 0;
@@ -204,11 +211,14 @@ export function Simulator() {
           </button>
           <div>
             <output>{clockLabel(clock.elapsed)}</output>
-            <small>SIMULATED · {clock.speed}×</small>
+            <small>
+              DAY {simulationDay?.day ?? 1} · {clock.speed}×
+            </small>
           </div>
           <button
             className="secondary"
             aria-label="Reset playback"
+            disabled={busy}
             onClick={clock.reset}
           >
             <RotateCcw size={15} />
@@ -226,7 +236,7 @@ export function Simulator() {
         </div>
         <button
           className="primary"
-          disabled={!pilot || busy}
+          disabled={!pilot || !today || busy}
           onClick={() => void optimize(true)}
         >
           <Play size={17} />
@@ -239,9 +249,12 @@ export function Simulator() {
           Real Laguna boundaries & OSM roads. Illustrative synthetic data — not
           reported disease cases. No live GPS.
         </span>
-        <small>
-          {plan?.created_at
-            ? `Run: ${new Date(plan.created_at).toLocaleString("en-PH")}`
+        <small
+          data-testid="simulation-day"
+          data-day={plan ? simulationDay?.day : undefined}
+        >
+          {plan && simulationDay
+            ? `Day ${simulationDay.day} · ${simulationDay.date}`
             : "Ready for a new plan"}
         </small>
       </div>
@@ -297,7 +310,7 @@ export function Simulator() {
                   setFollow(false);
                   setFitRequest((n) => n + 1);
                 }}
-                disabled={!runs.length}
+                disabled={!runs.length || busy}
               >
                 <LocateFixed size={15} />
                 Fit routes
@@ -382,7 +395,7 @@ export function Simulator() {
               </button>
               <button
                 className="secondary"
-                disabled={!runs.length}
+                disabled={!runs.length || busy}
                 onClick={clock.reset}
               >
                 <RotateCcw size={16} />
@@ -416,7 +429,7 @@ export function Simulator() {
                 max={Math.max(1, duration)}
                 step=".1"
                 value={clock.elapsed}
-                disabled={!runs.length || dirty}
+                disabled={!runs.length || dirty || busy}
                 onChange={(e) => clock.seek(Number(e.target.value))}
               />
             </label>
@@ -433,7 +446,7 @@ export function Simulator() {
                 <input
                   type="checkbox"
                   checked={showBaseline}
-                  disabled={!plan || dirty}
+                  disabled={!plan || dirty || busy}
                   onChange={(e) => {
                     clock.reset();
                     setShowBaseline(e.target.checked);
@@ -447,6 +460,22 @@ export function Simulator() {
               <p className="tiny" role="status">
                 {branchNotice}
               </p>
+            )}
+            {blockedRuns.length > 0 && (
+              <div className="notice" role="status">
+                <strong>
+                  {blockedRuns.length} clinic(s) cannot relocate under this
+                  scenario.
+                </strong>
+                {blockedRuns.map((run) => (
+                  <p key={run.clinicId}>{run.blockedReason}</p>
+                ))}
+                <p>
+                  Coverage estimates assume arrival at the proposed sites.
+                  Adjust the scenario to restore a route before approving this
+                  deployment.
+                </p>
+              </div>
             )}
           </Card>
         </section>
@@ -631,7 +660,7 @@ export function Simulator() {
               </details>
               <button
                 className="primary"
-                disabled={!pilot || busy}
+                disabled={!pilot || !today || busy}
                 onClick={() => void optimize()}
               >
                 <Sparkles size={16} />
@@ -645,7 +674,7 @@ export function Simulator() {
                 className="secondary"
                 disabled={busy}
                 onClick={() => {
-                  clock.reset();
+                  clock.pause();
                   setScenario(structuredClone(defaultConfig));
                   setBranchNotice(
                     "Scenario reset to the prepared baseline. Reoptimize to refresh the proposed plan.",
@@ -670,7 +699,7 @@ export function Simulator() {
               </p>
             )}
             {runs.map((run) => {
-              const state = vehicleAt(run.route, clock.elapsed, run.departure);
+              const state = fleetVehicleAt(run, clock.elapsed);
               const clinic = allocation?.clinics.find(
                 (c) => c.id === run.siteId,
               );
@@ -686,6 +715,8 @@ export function Simulator() {
                     setFollow(true);
                   }}
                   data-testid={`fleet-${run.clinicId}`}
+                  data-site-id={run.siteId}
+                  data-origin-site-id={run.origin.siteId}
                   data-lng={state.position[0]}
                   data-lat={state.position[1]}
                 >
@@ -699,14 +730,19 @@ export function Simulator() {
                   </div>
                   <span>{clinic?.name}</span>
                   <small>
-                    Timugan depot →{" "}
+                    {run.originName} →{" "}
                     {clinic?.name.replace("Illustrative site: ", "")}
                   </small>
                   <progress max="1" value={state.progress} />
                   <div>
-                    <span>ETA {Math.ceil(state.eta / 60)} min</span>
+                    <span>
+                      {run.blockedReason
+                        ? "Route blocked"
+                        : `ETA ${Math.ceil(state.eta / 60)} min`}
+                    </span>
                     <span>{(state.remaining / 1000).toFixed(2)} km left</span>
                   </div>
+                  {run.blockedReason && <small>{run.blockedReason}</small>}
                   <small>
                     Simulated position · updated {clockLabel(clock.elapsed)} ·{" "}
                     {Math.round(state.progress * 100)}%
@@ -733,7 +769,7 @@ export function Simulator() {
               <span className="eyebrow">
                 {dirty
                   ? "PREVIOUS SNAPSHOT · REOPTIMIZE TO UPDATE"
-                  : "PROPOSED NEXT-DAY PLAN"}
+                  : `PROPOSED DAY ${simulationDay?.day ?? 1} PLAN`}
               </span>
               <h2>Why these locations?</h2>
               <p>
@@ -746,7 +782,11 @@ export function Simulator() {
                 unserved daily appointments
               </p>
             </div>
-            {dirty ? (
+            {blockedDeployment ? (
+              <span className="badge">
+                Resolve blocked clinic routes before approval
+              </span>
+            ) : dirty ? (
               <span className="badge">Reoptimize before approval</span>
             ) : plan.plan_id ? (
               <Link className="primary" to="/schedules">
@@ -760,7 +800,11 @@ export function Simulator() {
                   requireAdmin(async () => {
                     try {
                       const result = await api<Plan>("/optimize", scenario);
-                      setDraft(result);
+                      setDraft({
+                        ...result,
+                        simulation:
+                          plan.simulation ?? initialSimulationDay(today),
+                      });
                       setScenario(result.inputs);
                       clock.reset();
                     } catch (e) {
