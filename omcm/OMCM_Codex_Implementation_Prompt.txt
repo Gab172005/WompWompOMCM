@@ -1,0 +1,417 @@
+# CODEX MASTER IMPLEMENTATION PROMPT — OMCM (OPTIMIZED MOBILE CLINIC MAPPER)
+# Project: WompWomp / OMCM
+# Existing deployed reference: https://womp-womp-omcm.vercel.app/simulator
+# Pilot geography: Laguna, Philippines
+# Target showcase: October 24, 2026
+
+You are Codex, acting as a senior full-stack engineer, GIS developer, data-science engineer, UI/UX designer, and QA lead. Work INSIDE THE EXISTING PROJECT REPOSITORY. Your job is to audit, repair, and substantially upgrade the existing OMCM web application so it actually expresses the intended product, especially its Laguna map, healthcare-need choropleth, optimized mobile clinic placement, moving-vehicle deployment simulator, and disaster-aware replanning. Do not merely generate an attractive static mockup. Implement a usable vertical slice with coherent data, genuine application state, calculations, and interactions.
+
+IMPORTANT: The current live site is a reference for what already exists, NOT proof that it meets requirements. First inspect the code, dependencies, routes, screens, assets, dataset files, API integrations, and README in this repository. If possible, run the app and inspect /simulator in a browser. Identify what can be retained and what must be refactored. Do not claim you visited or inspected any page if you could not. Prefer upgrading the working existing project over creating an unrelated parallel app. Preserve useful infrastructure and working user flows. Never delete user work gratuitously.
+
+============================================================
+A. PRODUCT VISION AND NON-NEGOTIABLE GOALS
+============================================================
+
+OMCM is a web-based decision-support platform for LGUs that recommends where to PRE-POSITION a limited number of mobile clinics across high-need barangays in Laguna. It combines illness burden/risk, population, vulnerable groups, poverty, hospital access, and flood/weather exposure into transparent need scores. A capacity-aware maximal-coverage optimization chooses clinic staging sites to serve high-priority residents within reasonable road travel times. The platform supports stable next-day schedules, public visibility, emergency simulations, and authorized overrides.
+
+There are three core experiences:
+1. ADMIN — Analyze healthcare need, run next-day optimization, compare with a baseline, simulate emergencies, approve and publish a deployment plan.
+2. SIMULATOR / FLEET TRACKER — Watch up to three clinic vehicles travel on REAL ROAD-ALIGNED routes on a REAL MAP OF LAGUNA (not on a fictional canvas); inspect each vehicle's location, ETA, status, destination, and route; pause/play/reset and accelerate time; trigger scenario changes and visualize impact.
+3. PUBLIC — View today's approved clinic destinations, schedules, offered services, last known position/status (when public sharing is enabled), and critical schedule or emergency advisories. Public view must never implicitly display unapproved simulations as real deployments.
+
+Core user story for the live demo:
+(a) Admin opens Laguna map showing polygons shaded light-to-dark RED by composite healthcare need.
+(b) Admin selects a barangay and sees metrics, source/date badges, score components, and risk explanation.
+(c) Admin enters/chooses 3 available mobile clinics and clicks OPTIMIZE TOMORROW.
+(d) App selects up to three feasible staging sites on actual mapped locations, draws routes and coverage, and displays clear reasons for each recommendation.
+(e) Admin opens deployment simulation and presses PLAY. Three vehicle icons MOVE ALONG THE ACTUAL ROAD POLYLINES toward their recommended destinations, with independent progress, ETA, and status indicators, like a delivery/fleet-tracking application.
+(f) Admin switches on flood / road-closure scenario or disease surge, sees impacted roads/sites and degraded coverage, then clicks REOPTIMIZE. System recomputes feasible recommendations; it does not merely change labels or randomize pins.
+(g) Admin reviews changes and explicitly APPROVES/PUBLISHES the next-day plan. Public page now displays only that approved plan.
+(h) Admin sees evaluation vs a simple baseline that sends clinics to the most populated barangays, including prioritized residents served, average modeled road travel time, unserved priority population, and flood-safe accessibility.
+
+The application must be immediately understandable to a hackathon judge watching a 3–5 minute demo.
+
+============================================================
+B. FIRST TASK: REPOSITORY AUDIT AND GAP ANALYSIS
+============================================================
+
+Before editing code:
+- Detect framework/runtime, folder structure, package manager, build scripts, existing styling/components, auth, API routes, database usage, state model, maps providers, map keys, simulator implementation, and datasets.
+- Find the implementation of /simulator and linked public/admin pages.
+- Check existing environment variable references and .env.example. NEVER output or commit secret values.
+- Identify whether the displayed map uses real geographic tiles and genuine Laguna coordinates. Look for hardcoded rectangles, pseudo-barangay polygons, placeholder markers, straight-line routes, or disconnected simulation controls.
+- Audit whether optimization is actually computed from data or whether sites are predetermined.
+- Inspect any existing GeoJSON and determine geographic bounds, feature identifiers, and validity.
+- Write a short implementation plan to docs/IMPLEMENTATION_PLAN.md with P0/P1/P2 priority, before major refactoring.
+- Follow the existing stack when suitable; when a major change is needed, explain it in docs/ARCHITECTURE.md and migrate incrementally.
+
+IMPORTANT: A marketing-style redesign is NOT sufficient. Every high-priority control must cause a meaningful, testable state change.
+
+============================================================
+C. RECOMMENDED TECH STACK (ADAPT TO EXISTING REPO)
+============================================================
+
+Frontend:
+- React + TypeScript (Vite or Next.js depending on existing repo)
+- Tailwind CSS + shadcn/ui or compatible accessible components
+- Google Maps JavaScript API for actual basemap, markers, map controls, route polylines, and GeoJSON polygons
+- Google Routes API for road-aligned routes and origin-to-destination travel times (or an existing legal routing provider already integrated)
+- Recharts for charts
+- React Query / TanStack Query and a small state store (Zustand or React context) as needed
+
+Backend/data science (strongly preferred):
+- Python FastAPI, Pydantic, Pandas, NumPy, OR-Tools
+- GeoPandas/Shapely for offline preprocessing and hazard-route intersection if available
+- Structured CSV and GeoJSON input; use database only if necessary
+
+Persistence/live update (optional after functional simulation):
+- Existing database if present; otherwise Firebase Firestore for schedules and Firebase Realtime Database for optional live GPS tracking; Firebase Auth for LGU admin access
+- Do not introduce Firebase solely for a simulation that can run locally.
+
+Deploy frontend on Vercel as existing, backend on a compatible Python host if needed. Provide documented environment configuration. If backend deployment is not ready, the simulator MUST remain functional using a deterministic client-side demo mode, while backend endpoints and optimization are implemented and testable where practical. Never silently substitute fake production API results.
+
+============================================================
+D. PAGE / NAVIGATION REQUIREMENTS
+============================================================
+
+Keep the existing routes working if possible. At minimum:
+- / or /dashboard: mission-focused landing / overview with current status and prominent "Open Operations Center" action
+- /admin or /dashboard/admin: LGU operations dashboard for score, optimization, validation, approval
+- /simulator: FULL, prominent fleet-deployment and disaster simulation experience
+- /public or /clinics: public approved schedule/map view
+- /driver (optional P2): protected live location-sharing interface
+
+Use clear top navigation and mode labels: "Operations", "Simulator", "Public View", "Data & Methods". There must be a visible banner indicating DEMO / SIMULATION when demo data is active. The public screen must distinguish planned, approved, active, and simulated deployments.
+
+VISUAL STYLE:
+- Modern public-sector operations center: clean, calm, trustworthy, not cluttered.
+- Light neutral panels, charcoal text, red heatmap hierarchy; red is reserved for high need/hazards, green may indicate healthy clinic status, blue/purple may distinguish vehicle route colors.
+- Prominent REAL MAP occupies ~60–70% of the desktop simulator workspace; sidebar right or left contains simulation controls, clinic cards, and detailed inspection. Responsive: mobile stacks panels, readable controls, no sideways scrolling.
+- Header shows "OMCM | Optimized Mobile Clinic Mapper", current mode, demo/live indicator, run timestamp.
+- A top metrics row: total population in pilot, high-priority population served, available clinics, coverage %, average travel time; label estimates/synthetic input clearly.
+- Intuitive legend for barangay need (very low → very high), hazard overlays, fleet status, selected site, and proposed route. Accessible color contrasts and keyboard support.
+- Google Maps controls for zoom, recenter to Laguna, layers/legend, click-to-inspect barangay, selected clinic focus, route fit-to-bounds.
+- No random data changing on refresh or scenario reruns; reproducible seed and fixtures.
+
+============================================================
+E. REAL LAGUNA MAP — ABSOLUTELY REQUIRED
+============================================================
+
+Render a genuine cartographic map centered on Laguna, Philippines (roughly lat 14.1–14.5, lng 121.0–121.7; use real data bounds rather than these approximate numbers). The backdrop must show actual roads and geographical features with zoom/pan, not a faux map or illustration.
+
+- Use Google Maps API if a key is configured. Configure key via proper client-exposed environment variable restricted to approved domains and APIs.
+- If no key exists, display explicit setup instructions and, if licensing/implementation permits, a real OSM/MapLibre-based demo fallback. DO NOT replace the map with rectangles or invented map shapes. Never expose a server-secret key.
+- Load authentic GeoJSON MULTIPOLYGON/POLYGON boundaries for Laguna's pilot barangays. Each feature must have an official/traceable barangay name and PSGC code when available; verify geometry and geographic correctness.
+- Prefer an authentic smaller initial scope (e.g., 20 VERIFIED barangays with real boundaries in a coherent Laguna pilot area) rather than claiming that synthetic shapes represent all Laguna barangays. If full Laguna data is available, support province-wide zoom/filtering, but optimize the configured pilot subset by default.
+- Render polygon FILL with RED GRADIENT by need score: very light pink, pink, coral, strong red, dark red; thin muted polygon outlines. No green choropleth; red means higher need.
+- Hover: barangay name, score, rank. Click: side detail card with population, children/elderly share, disease-risk indicator, poverty, healthcare access, flood risk, score breakdown, sources and data-confidence flags.
+- Selected barangay polygon highlights border but does not obscure fill.
+- Add toggleable layers: need choropleth, flood hazard, hospitals/health centers, candidate staging sites, selected clinics, routes, vehicle tracks, coverage areas.
+- Distinguish map locations accurately. No misleading pins placed at municipal centroids when they are labeled as specific halls/hospitals; use verified coordinates or state "illustrative site".
+- Avoid excessive Google API calls and avoid storing Google-derived places/route content in ways prohibited by Google Maps Platform terms; document attribution, caching and usage restrictions.
+
+============================================================
+F. DATA MODEL, QUALITY, AND CLEARLY LABELED DEMO DATA
+============================================================
+
+Produce a documented import pipeline and typed contracts for at least:
+- Barangay: psgc, name, municipality, boundary GeoJSON, centroid, population, children_pct, elderly_pct, poverty_indicator, disease_cases_by_date / normalized incidence, flood_exposure, healthcare_access_time_minutes, source and date/confidence per indicator.
+- Facility: id, verified name, category (hospital/RHU/health center), lat/lng, available services, capacity if verified, source.
+- CandidateSite: id, name, type (barangay hall/school/health center/covered court), lat/lng, barangay_psgc, eligible, capacity/accessibility constraints, flood hazard indicator, source/verified flag.
+- Clinic: id, name, daily_patient_capacity, services, start_position, availability, status.
+- DeploymentPlan: id, day, input snapshot, selected clinic-to-site assignments, route geometry or route reference, costs, coverage, KPIs, status (draft/approved/published), created_at, approved_at.
+- Scenario: flood_level, affected roads/sites, disease_surge_by_barangay, closed_segments, available_clinics, overrides, explanation.
+- VehicleLocation: clinic_id, timestamp, lat, lng, heading, speed, accuracy, source (simulated/live), status.
+
+Recommended starting files (or equivalent existing assets):
+  datasets/barangays.geojson
+  datasets/population.csv
+  datasets/disease_cases.csv
+  datasets/vulnerability.csv
+  datasets/poverty.csv
+  datasets/flood_hazards.geojson
+  datasets/health_facilities.csv
+  datasets/candidate_sites.csv
+  datasets/mobile_clinics.csv
+
+REAL SOURCES TO SUPPORT WHEN AVAILABLE: PSA/PSGC population and age groups, DOH disease counts and facilities, Philippine Geoportal for polygons, UP NOAH/GeoRiskPH for hazards, PAGASA for weather, OSM/official facility inventories for possible staging sites. Do not assert that these sources expose all data at barangay level. Keep a source manifest in datasets/SOURCES.md showing URLs, download dates, licenses, geographic resolution, missingness, and limitations. Do not invent datasets while claiming to have downloaded them.
+
+For missing health data: use explicitly SIMULATED, deterministic, plausible-looking scenario values with a clear "Illustrative synthetic data — not reported disease cases" label in UI, exports, and docs. Never fabricate citations, patient counts, live traffic, actual closures, or clinical predictions. Distinguish numerical need *scores* from validated disease *predictions*. The app must work out-of-the-box with bundled labeled fixtures. Validate join keys using PSGC, dates, coordinate ranges, missing values, and positivity constraints. Do not use individual patient personal records.
+
+============================================================
+G. TRANSPARENT HEALTHCARE NEED SCORING
+============================================================
+
+Implement real functions, not fixed outputs:
+- Normalize disease burden/incidence, vulnerable resident counts/share, lack of hospital access, flood exposure, poverty, and population need into comparable ranges, using documented direction and safe missing-data handling.
+- Combine into a configurable composite need score in [0,100]. Provide an example default weight configuration (adjustable by admin), not an alleged validated model. Example: disease 30%, vulnerability 20%, healthcare-access deficit 20%, flood exposure 15%, poverty 15%; optionally incorporate population carefully without allowing large barangays to drown out small high-risk groups.
+- Expose a breakdown panel and a brief, deterministic reason, e.g., "High dengue-risk indicator + long travel time to nearest hospital + high flood exposure"; do NOT claim medically validated diagnoses.
+- UI supports weight sliders that normalize to 100% and recompute map + recommendations. Include reset-to-default.
+- Disease trend chart if dated records exist; otherwise show a clearly simulated trend.
+- All calculations reproducible; no random score changes when clicking buttons.
+
+============================================================
+H. GENUINE CLINIC LOCATION OPTIMIZATION
+============================================================
+
+Implement a simplified but mathematically meaningful maximal covering location problem (MCLP) / capacity-aware facility-location optimizer using OR-Tools where available; deterministic reference heuristic fallback only if documented.
+
+Inputs:
+- Demand nodes: actual pilot barangay locations or population-weighted centroids.
+- Each node has priority-weighted demand or estimated high-risk resident count.
+- Candidate sites: geographically real and eligible, preferably barangay halls / RHUs / schools; exclude flooded/ineligible sites when scenario active.
+- K clinics (default 3), capacity per clinic, available services, maximum ROAD travel time to serve a barangay (e.g. configurable 30 minutes), and travel-time matrix computed via Google Routes API or cached demonstrative route fixture from a real routing provider. Display a clear modeled/demo status if route data is approximated.
+
+Optimization requirements:
+- Select no more than K unique feasible staging sites.
+- Assign demand to sites within travel-time threshold, respecting site/clinic capacity; avoid double-counting people served. If splitting demand across sites is supported, make it explicit; otherwise use a documented assignment approximation.
+- Maximize total priority-weighted residents served; tie-break by shorter travel time or equitable underserved coverage. Where possible, favor smaller high-need barangays so raw population is not the sole determinant.
+- Surface unserved barangays and why (capacity, distance, flood, insufficient clinics).
+- Support variable K (1–5 in demo), vehicle capacities, travel-time threshold.
+- Return proposed sites, vehicle-to-site assignment, demand assignments, KPIs and human-readable reasons.
+- Compute a BASELINE: assign clinics to the K highest-population feasible barangays or sites (document exact rule). Use same restrictions and scoring for fair evaluation.
+- Show side-by-side optimized vs baseline: covered high-priority residents, % priority-weighted coverage, unserved priority population, average road travel minutes, viable sites under scenario.
+- Do not claim exact optimality if fallback heuristic used. Mark "Optimal (solver)" or "Heuristic (demo)" correctly.
+- Deterministic: same snapshot+weights+scenario => same recommendations.
+- Keep optimization on next-day proposed plan separate from today's published plan.
+
+API design example (adjust as appropriate):
+GET /api/health
+GET /api/barangays
+GET /api/facilities
+GET /api/candidate-sites
+POST /api/score
+POST /api/optimize
+POST /api/scenario/evaluate
+POST /api/plans/{id}/approve  [authorized admin only]
+GET /api/plans/published
+Provide request/response schemas in docs/API.md.
+
+============================================================
+I. MOST IMPORTANT SCREEN: LIFE360/LALAMOVE-LIKE SIMULATOR
+============================================================
+
+Rebuild /simulator around a full-size REAL LAGUNA MAP and a functional fleet tracker. The simulator is the visual hero of this application.
+
+Layout:
+- Main canvas: ~65% wide interactive Laguna map with heatmap polygons; real route polylines; labeled candidate sites; 3 clearly distinct mobile-clinic vehicle markers.
+- Sidebar: Scenario Builder, selected clinic summary, and SIMULATION CONTROLS.
+- Top metric tiles and simulation mode label.
+- Bottom / collapsible event timeline: "08:00 departed", "08:16 reached junction", "08:35 arrived", etc. Times should follow the simulated clock and route durations.
+
+Simulation controls MUST WORK:
+  [Optimize deployment]  [Play]  [Pause]  [Resume]  [Reset]
+  Sim speed: 1x / 5x / 20x / 60x
+  Seek/scrub timeline slider (time can move backwards deterministically)
+  Select clinic MC-001 / MC-002 / MC-003; click a marker or card to focus it
+  Toggle auto-follow vehicle, display trails, label ETA, and show all routes
+  Restart scenario, compare baseline vs optimized, publish plan (admin only)
+
+Behavior:
+1. After optimization, create a route for every chosen clinic from its starting depot to its assigned staging site using a ROUTING SERVICE capable of returning a road polyline. For the offline demo, bundle a SMALL SET of legitimately obtained/precomputed road-aligned paths with source attribution if redistribution is permitted, or generate an OSM-based route using a compatible provider; otherwise make absence of route data explicit rather than showing a fake road-aligned claim.
+2. Decode route polylines to an array of lat/lng points. Compute cumulative segment lengths and interpolate the vehicle's position along actual route segments, never straight-line interpolate from origin to destination.
+3. Advance a single global simulated clock with requestAnimationFrame or a robust interval; independent per-vehicle departure offsets and durations. Simulation speed affects only how fast the simulation runs, NOT physical route geometry.
+4. At each tick, update vehicle lat/lng, heading, traveled distance, remaining distance, ETA, progress, and status (scheduled -> departing -> en route -> arrived -> deployed). Animate marker smoothly; smoothly pan to selected vehicle if follow enabled.
+5. When playback pauses or resets, both markers and metrics must stop/reset consistently. Seeking must reposition every vehicle and recompute timeline/events without stale state.
+6. On arrival, vehicle status becomes "Deployed"; optionally show service-start window and capacity/service tags. After end of service, mark "Completed" if included in scenario.
+7. Public vs admin modes must show whether location is simulated, manually reported, or live GPS. Show last-updated time; stale GPS feed => offline badge, never fake live coordinates.
+8. Visual tracking should feel like a logistics app: selected van highlight, route prominence, readable ETA, remaining kilometers, status pill, origin->destination information, and progress bar.
+9. Add a "Demo tour" button that automatically selects a prepared 3-vehicle scenario, centers the map, runs optimization, and starts playback. It must be deterministic and work on demo day.
+10. Support simultaneous 3-clinic motion, not just a single vehicle.
+
+If Routes API access is missing or quota-limited, the UI must show an actionable configuration message and use clearly labeled legitimate demo geometry only if present. Never present a straight line as a driving route or pretend there is live location tracking when none exists.
+
+============================================================
+J. DISASTER / OUTBREAK WHAT-IF SIMULATOR
+============================================================
+
+Scenario builder controls:
+- Flood level: None / Moderate / Severe (based on hazard layers, not random colors).
+- Toggle one or more documented DEMO road closures (e.g. a specific map-visible segment or bridge) or choose a known affected road from an eligible data source.
+- Disease surge: choose barangay + percentage increase in its synthetic or observed indicator. Mark scenario values as simulated.
+- Clinic availability: reduce K from 3 to 2 or 1; optionally disable a specific vehicle.
+- Clinic daily capacities and maximum travel-time threshold.
+
+When scenarios change:
+- Preserve "today's published" schedule unless an authorized emergency override is explicitly confirmed.
+- On map, visually display affected flood polygons/closed road segments with legend and explanation.
+- Recompute need scores, exclude hazard-exposed staging sites, and assess route accessibility when credible road-edge geometry exists.
+- Reoptimize NEXT DAY plan, update selected sites, covered/unserved population, baselines, KPI deltas, and reasoning.
+- For emergencies during ongoing playback, clearly distinguish simulation of a proposed diversion from real driver navigation. Freeze/recompute or branch the simulation cleanly; do not teleport a moving vehicle or silently snap it to an unrelated road.
+- Google Routes API cannot be assumed to honor arbitrary user-drawn flooded roads or custom edge closures. Do not state that an arbitrary Google route avoids a blocked road unless independently validated against real route geometry and hazard data. If no legal routing engine with avoid-edge capability exists, provide one of: (a) valid alternative candidate route geometry checked not to intersect closure; or (b) explicit "unsafe/unverified route — cannot confirm reroute" explanation and adjust feasible sites. This honesty is more important than a visually deceptive demo.
+- Scenario results table with before vs after metrics and list of affected barangays / routes.
+- "Reset scenario" reliably returns to baseline snapshot and visuals.
+
+============================================================
+K. ADMIN WORKFLOW, APPROVAL, PUBLIC VIEW
+============================================================
+
+Admin journey:
+- Inspect heatmap and source status.
+- Adjust weights and available clinics.
+- Optimize for tomorrow; see selected staging sites, reasons, route/travel-time evidence, coverage, comparison with baseline.
+- Preview simulation and disaster stress tests.
+- Optionally manually override a site with documented warning if infeasible (capacity/flood/travel).
+- Click "Approve next-day plan" then "Publish" (can combine if simple). Approval changes persisted plan status and timestamp, not just a button color.
+- Today's published plan remains fixed across nightly recalculations. Emergency diversions require separate confirmation and create a public alert.
+
+Public journey:
+- Map centered on Laguna with TODAY'S APPROVED clinic destinations, schedules, services, and statuses.
+- List "Which clinic is nearest to me?" only with optional location permission, and calculate route/time if API configured. Do not require visitor geolocation to open page.
+- Show approved alert banners and "Last updated" timestamps.
+- Do not expose admin controls or simulated locations as live.
+
+Authentication:
+- Reuse existing secure auth where possible. If none exists, prioritize functional local admin demo without pretending it is secure production auth; require real authorization before making public/production publish endpoints writable. Keep developer demo mode visibly separate from production.
+
+OPTIONAL P2 — LIVE TRACKING:
+- Driver phone/browser sends explicit-consent GPS positions over HTTPS while tracking page is open, e.g. every 5–10 seconds / significant location changes.
+- Firebase Realtime Database (or existing realtime channel) broadcasts vehicles to authorized dashboard clients.
+- Validate clinic identity, timestamps, rate limit writes, and protect permissions.
+- Mark GPS accuracy and stale/offline status; browser tracking may stop in background/locked screen. Do not promise background tracking without a native app.
+- Never expose driver identity or off-duty locations to public. Allow driver to stop sharing.
+- NOT required to complete the core simulated fleet-tracking demo.
+
+============================================================
+L. SPECIFIC COMPONENTS TO CREATE OR REPAIR
+============================================================
+
+Use names that fit the existing codebase, but ensure equivalent responsibilities:
+- LagunaMap.tsx — Google/real basemap, boundary polygons, layers, site/facility markers, fleet overlays.
+- BarangayChoropleth.tsx — true GeoJSON polygon fill and legend, click/hover inspection.
+- BarangayDetailsPanel.tsx — metric sources, score components, trend and uncertainty.
+- FleetTrackerMap.tsx — animated 3-clinic markers along road polylines.
+- FleetClinicCard.tsx — status, route, progress, ETA, simulated/live badge.
+- SimulationControls.tsx — play/pause/reset/speed/seek.
+- ScenarioBuilder.tsx — flood, road closures, disease surge, fleet reduction.
+- OptimizationPanel.tsx — selected sites, constraints, change weights/K, solve status.
+- CoverageComparison.tsx — optimized vs baseline metrics and chart.
+- PlanApprovalPanel.tsx — draft, approve, publish, override and alert.
+- PublicClinicMap.tsx — only published clinic information.
+- services/maps.ts / routing.ts — typed Google Maps/Routes integration and key/quota errors.
+- services/optimizationApi.ts — typed score/optimize/simulation client.
+- hooks/useSimulationClock.ts — deterministic shared clock and interpolation.
+- backend/app/* — schemas, data ingest, risk scoring, optimization, scenario evaluation.
+
+No duplicate disconnected sources of truth. Structure components around a shared, explicit deployment plan snapshot and simulation state.
+
+============================================================
+M. IMPLEMENTATION ORDER — DELIVER A WORKING VERTICAL SLICE
+============================================================
+
+P0 — COMPLETE BEFORE POLISH:
+1. Audit repository, ensure install/build/run and existing route repair.
+2. Genuine Laguna basemap + authentic pilot barangay GeoJSON, red need choropleth, clickable details, layer legend.
+3. Consistent demo dataset, source/confidence labels, reproducible weighted scores.
+4. Working capacity-aware 3-clinic placement and optimized-vs-baseline KPIs.
+5. Real road routes / properly labeled valid demo route geometry.
+6. /simulator showing 3 moving vehicles on the map with play/pause/speed/seek/reset and responsive status cards.
+7. Working moderate/severe flood + 2-clinic and disease surge scenario that actually recomputes output.
+8. Public published schedule vs admin draft separation.
+9. Passing build, lint, unit tests, browser smoke test; README how to start.
+
+P1 — AFTER CORE DEMO WORKS:
+- Rich charting, timeline/events, hazard explanations and approval audit trail.
+- Data import validation, backend persistence, improved routing cache, clearer error states.
+- Fully mobile layout, keyboard navigation, polished icons, loading states.
+
+P2 — ONLY IF TIME:
+- True live phone GPS/Firebase, push notifications, chatbot, advanced ML disease forecasting, complex animations, 3D extrusion. Do NOT prioritize these over real map and correct optimization.
+
+============================================================
+N. TESTS AND ACCEPTANCE CRITERIA (DO NOT STOP UNTIL PASSING)
+============================================================
+
+Implement automated tests where feasible and report manual verification where browser/GMaps creds aren't available:
+
+Map and data:
+[ ] /simulator loads without uncaught errors.
+[ ] Map is actual Laguna map, not generic grid; pilot boundaries match real Laguna polygons.
+[ ] Red choropleth reflects data changes; click on a polygon shows matching barangay record.
+[ ] No fabricated real-world data or site labels; fixture is clearly flagged synthetic.
+[ ] Missing API key shows graceful honest fallback/message, not a blank broken UI.
+
+Optimization:
+[ ] Clicking OPTIMIZE changes site assignments when relevant parameters change.
+[ ] With K=3 choose <=3 sites; with K=2 choose <=2 sites; no duplicate sites.
+[ ] No assigned demand beyond capacity; no duplicate count of served residents.
+[ ] Ineligible/flooded sites are excluded.
+[ ] Optimized and baseline KPIs recompute from the same scenario.
+[ ] Same inputs produce same plan; constraints show clear infeasibility messages.
+
+Tracker:
+[ ] Three unique vehicle markers have separate valid routes.
+[ ] On PLAY, markers move along their own road polylines and status/ETA/progress change in sync.
+[ ] On PAUSE, all stop; RESUME continues; RESET returns to initial positions.
+[ ] 5x/20x speed changes temporal playback only; seeking is deterministic.
+[ ] Focus a clinic and see its current position, origin, destination, ETA, remaining km, and last update.
+[ ] On arrival, vehicle switches to deployed and never overshoots.
+
+Scenario:
+[ ] Flood overlay is visually accurate to hazard input, and exclusion rules applied.
+[ ] Simulated closure is explicitly labeled; no false guarantee that Google has rerouted around closure.
+[ ] Disease surge changes relevant score/recommendation, if large enough.
+[ ] Fewer clinics reduces allowed fleet size and recomputes metrics.
+[ ] Reset scenario restores initial scenario exactly.
+[ ] Today's approved public plan does not change when admin previews tomorrow's proposals.
+
+Delivery:
+[ ] npm install/npm run build/npm run lint (or repo equivalents) succeeds.
+[ ] Python dependency install, score/optimizer unit tests, and FastAPI health endpoint pass where applicable.
+[ ] Responsive 1440px desktop and ~390px mobile screenshots/verification.
+[ ] No secret API keys committed, and .env.example lists ALL needed variables.
+[ ] docs/DEMO_SCRIPT.md contains a 3-minute judge walkthrough with prepared deterministic scenario.
+
+At completion: Provide a concise SUMMARY OF CHANGES, changed files, commands to run, environment/API keys needed, whether datasets are real or simulated, tests actually run and their results, and any remaining limitations. Never say something is tested if not executed.
+
+============================================================
+O. UX DETAILS FOR THE SIMULATOR — REFERENCE WIREFRAME
+============================================================
+
+DESKTOP (not pixel-exact; use this for hierarchy):
+
++--------------------------------------------------------------------------------------+
+| OMCM  Operations | Simulator | Public View | Data & Methods     DEMO / 15 Oct 2026 |
++--------------------------------------------------------------------------------------+
+| High priority served | Coverage % | Mean travel time | Unserved residents | 3 clinics |
++---------------------------------------------------------------+----------------------+
+| LAGUNA GOOGLE MAP                                            | SCENARIO BUILDER     |
+| [Need heatmap RED by true barangay polygons]                  | Flood: [None|Mod|Sev]|
+| [Real roads, towns, water bodies]                             | Disease surge [+__] |
+| [Hospitals + candidates + recommended sites]                 | Road closures [..]  |
+| [MC-001 moving van ----road route----> Selected site]        | Clinics [ 3 ]       |
+| [MC-002 moving van ----road route----> Selected site]        | [Apply][Reoptimize] |
+| [MC-003 moving van ----road route----> Selected site]        +----------------------+
+| [Layer toggles] [Legend: Pale Red -> Dark Red]                | FLEET TRACKER        |
+| [Google Map zoom + recenter]                                  | MC-001 En route ETA |
+|                                                               | MC-002 Deployed     |
+|                                                               | MC-003 En route ETA |
++---------------------------------------------------------------+----------------------+
+| [Optimize tomorrow] [Play/Pause] [Reset]  Speed [1x|5x|20x]  Timeline [---o-------] |
++--------------------------------------------------------------------------------------+
+| Recommended sites + why | Optimization vs population baseline | Approve/Publish     |
++--------------------------------------------------------------------------------------+
+
+MOBILE: map first at useful height, floating legend and compact fleet selector, controls in bottom drawer/stacked panels. Do not hide simulation playback offscreen.
+
+MICROINTERACTIONS:
+- Clicking recommended site highlights assigned clinic + served barangays.
+- Route lines use distinct accessible colors while heatmap stays strictly red.
+- Hovering fleet card raises marker prominence.
+- When a flood makes a route unsafe, visibly mark the affected region/segment and show plain-language warning.
+- Charts animate gently but no excessive cinematic effects.
+- Loading skeletons during route calculations; retry option for API failure.
+- Status phrasing is unambiguous: "Simulated vehicle position", "Proposed plan", "Approved deployment", "GPS last seen".
+
+============================================================
+P. DO THIS NOW
+============================================================
+
+1. Audit existing repository and document gaps against this specification.
+2. Implement P0 features in the EXISTING app, not an unrelated proof-of-concept.
+3. Where credentials or datasets are missing, build robust adapters and a deterministic, clearly labeled DEMO mode with real geographic foundations, not fraudulent geographic or medical data.
+4. Run all available checks, fix issues, and verify /simulator behavior.
+5. Produce a short, actionable deployment/setup checklist and a real demo script.
+6. Continue until the simulator looks and behaves like an LGU healthcare deployment control center, with real Laguna map, RED need polygons, intelligent recommendations, and THREE road-following moving mobile clinics.
+
+Success means a judge can open the simulator, immediately recognize Laguna, understand which communities need help, click Optimize, watch three clinics drive along mapped roads, introduce a disaster scenario, see what actually changes, and understand the data-backed reason for the resulting deployment plan.

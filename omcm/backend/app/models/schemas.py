@@ -9,10 +9,10 @@ class StrictModel(BaseModel):
 
 class Weights(StrictModel):
     disease: float = Field(30, ge=0, le=100)
-    vulnerability: float = Field(25, ge=0, le=100)
+    vulnerability: float = Field(20, ge=0, le=100)
     accessibility: float = Field(20, ge=0, le=100)
     poverty: float = Field(15, ge=0, le=100)
-    flood: float = Field(10, ge=0, le=100)
+    flood: float = Field(15, ge=0, le=100)
 
     @model_validator(mode="after")
     def nonzero(self):
@@ -32,6 +32,7 @@ class PlacementRequest(StrictModel):
     outbreak_barangays: list[str] = Field(default_factory=list)
     outbreak_multiplier: float = Field(1, ge=1, le=5)
     manual_sites: list[str] | None = None
+    flood_level: Literal["none", "moderate", "severe"] = "none"
 
 
 class SimulationRequest(StrictModel):

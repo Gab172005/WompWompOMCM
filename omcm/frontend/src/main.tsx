@@ -65,6 +65,7 @@ function Layout() {
     setMessage,
     loading,
     refresh,
+    browserDemo,
   } = useOMCM();
   const [open, setOpen] = React.useState(false);
   const location = useLocation();
@@ -105,7 +106,7 @@ function Layout() {
           <div className="pilot-label">
             <span className="live-dot" />
             <strong>Laguna pilot</strong>
-            <small>{barangays.length} barangays ? demo health data</small>
+            <small>{barangays.length} barangays · demo health data</small>
           </div>
           <Link className="nav-item" to="/public" target="_blank">
             <Globe size={18} />
@@ -148,14 +149,15 @@ function Layout() {
             <button
               className="profile-button"
               onClick={() => (username ? signOut() : requireAdmin())}
+              disabled={browserDemo}
             >
               <div className="avatar">
                 {username ? username.slice(0, 2).toUpperCase() : "LG"}
               </div>
               <span>
-                <strong>{username || "LGU planner"}</strong>
+                <strong>{browserDemo ? "Browser demo" : username || "LGU planner"}</strong>
                 <small>
-                  {username ? "Demo admin · sign out" : "Demo mode · sign in"}
+                  {browserDemo ? "Local rehearsal only" : username ? "Demo admin · sign out" : "Demo mode · sign in"}
                 </small>
               </span>
               {username ? <LogOut size={15} /> : <LogIn size={15} />}
@@ -163,6 +165,8 @@ function Layout() {
           </div>
         </header>
         <main className="main-content">
+          <nav className="operations-nav" aria-label="Product modes"><NavLink to="/optimization">Operations</NavLink><NavLink to="/simulator">Simulator</NavLink><Link to="/public">Public View</Link><NavLink to="/settings">Data & Methods</NavLink></nav>
+          {browserDemo && <div className="browser-demo-banner">Browser-only demo · Plans are saved on this browser and origin. Local approval rehearses publication; it does not publish an LGU service.</div>}
           {error && (
             <div className="error global-alert" role="alert">
               <span>{error}</span>
@@ -247,10 +251,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <Provider>
         <Routes>
           <Route path="/public" element={<Public />} />
+          <Route path="/clinics" element={<Public />} />
           <Route element={<Layout />}>
             <Route index element={<Overview />} />
             <Route path="risk" element={<Risk />} />
             <Route path="optimization" element={<Optimization />} />
+            <Route path="admin" element={<Optimization />} />
+            <Route path="dashboard" element={<Overview />} />
+            <Route path="dashboard/admin" element={<Optimization />} />
             <Route path="simulator" element={<Simulator />} />
             <Route path="schedules" element={<Schedules />} />
             <Route path="analytics" element={<Analytics />} />

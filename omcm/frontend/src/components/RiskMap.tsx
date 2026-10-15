@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -32,7 +32,7 @@ const icon = (kind: "hospital" | "site" | "clinic") =>
     // The geographic coordinate remains the exact supplied site/hospital coordinate.
     iconAnchor: kind === "hospital" ? [-8, 32] : kind === "clinic" ? [37, -8] : [32, -8],
   });
-function FitTerritories({ data }: { data: FeatureCollection }) {
+function FitTerritories({ data, request }: { data: FeatureCollection; request: number }) {
   const map = useMap();
   useEffect(() => {
     const bounds = geoJSON(data).getBounds();
@@ -44,7 +44,7 @@ function FitTerritories({ data }: { data: FeatureCollection }) {
     const observer = new ResizeObserver(fit);
     observer.observe(map.getContainer());
     return () => observer.disconnect();
-  }, [map, data]);
+  }, [map, data, request]);
   return null;
 }
 function ReadableLabels({ layerKey, barangayLevel }: { layerKey: string; barangayLevel: boolean }) {
@@ -83,6 +83,9 @@ export function RiskMap({
   publicMode = false,
   scheduleInfo = "",
   services = [],
+  children,
+  needVisible = true,
+  coverageIds = [],
 }: {
   clinics?: Clinic[];
   data?: Barangay[];
@@ -92,6 +95,9 @@ export function RiskMap({
   publicMode?: boolean;
   scheduleInfo?: string;
   services?: string[];
+  children?: ReactNode;
+  needVisible?: boolean;
+  coverageIds?: string[];
 }) {
   const {
     barangays: currentBarangays,
@@ -101,7 +107,7 @@ export function RiskMap({
     roads,
     plan,
   } = useOMCM();
-  const barangays = data ?? currentBarangays;
+  const barangays = data ?? plan?.barangays ?? currentBarangays;
   const [geography, setGeography] = useState<Geography | null>(null);
   const [geographyError, setGeographyError] = useState("");
   useEffect(() => {
@@ -115,6 +121,7 @@ export function RiskMap({
     [selectedId, setSelectedId] = useState<string | null>(null),
     [showFacilities, setShowFacilities] = useState(publicMode || showRoads),
     [tilesUnavailable, setTilesUnavailable] = useState(false);
+  const [recenter, setRecenter] = useState(0), [tileAttempt, setTileAttempt] = useState(0);
   const shownClinics = clinics ?? plan?.optimized.clinics ?? [];
   const byId = useMemo(
     () => Object.fromEntries(barangays.map((b) => [b.id, b])),
@@ -128,7 +135,12 @@ export function RiskMap({
       return parseLagunaGeometry(boundaries.geojson, level);
     } catch { return null; } // Legacy invented uploads never replace real geography.
   }, [boundaries.geojson]);
-  const territoryData = uploadedGeometry ?? geography?.geojson;
+  const territoryData = useMemo(() => {
+    const all = uploadedGeometry ?? geography?.geojson;
+    if (!all || !barangays.length || !barangays.every(b => b.psgc)) return all;
+    const ids = new Set(barangays.map(b => String(b.psgc).replace(/^0+/, "")));
+    return { ...all, features: all.features.filter(f => ids.has(f.properties.area_id)) };
+  }, [uploadedGeometry, geography, barangays]);
   const areaRecords = useMemo(() => territoryData ? matchAreas(territoryData, barangays, geography?.mapping ?? {}) : {}, [geography, territoryData, barangays]);
   const selectedArea = territoryData?.features.find((f) => f.properties.area_id === selectedId)?.properties;
   const selected = selectedId ? areaRecords[selectedId] : undefined;
@@ -149,6 +161,7 @@ export function RiskMap({
             Map layer
           </label>
           <button className="map-overlay-toggle" aria-pressed={showFacilities} onClick={() => setShowFacilities(!showFacilities)}>Facilities {showFacilities ? "on" : "off"}</button>
+          <button className="map-overlay-toggle" onClick={() => setRecenter(n => n+1)}>Recenter</button>
           <select
             id="map-layer"
             value={filter}
@@ -169,18 +182,19 @@ export function RiskMap({
         scrollWheelZoom={true}
         className={`risk-map ${publicMode ? "" : "choropleth-map"}`}
       >
-        {publicMode && <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        <TileLayer
+          key={tileAttempt}
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           eventHandlers={{ tileerror: () => setTilesUnavailable(true) }}
-        />}
+        />
         {!publicMode && territoryData && <>
-          <FitTerritories data={territoryData} />
+          <FitTerritories data={territoryData} request={recenter} />
           <GeoJSON
             key={layerKey}
             data={territoryData}
-            style={(feature) => ({ className: `barangay-marker area-${feature?.properties?.area_id}`, color: "#FFFFFF", weight: borderWeight, opacity: 1,
-              fillColor: riskColor(valueOf(areaRecords[feature?.properties?.area_id])), fillOpacity: 1 })}
+            style={(feature) => ({ className: `barangay-marker area-${feature?.properties?.area_id}`, color: coverageIds.includes(feature?.properties?.area_id) ? "#2563eb" : selectedId === feature?.properties?.area_id ? "#451A1A" : "#94595b", weight: coverageIds.includes(feature?.properties?.area_id) || selectedId === feature?.properties?.area_id ? 3 : borderWeight, opacity: 1,
+              fillColor: riskColor(valueOf(areaRecords[feature?.properties?.area_id])), fillOpacity: needVisible ? .48 : 0 })}
             onEachFeature={(feature: Feature, layer) => {
               const b = areaRecords[feature.properties?.area_id];
               const name = `${feature.properties?.name}${feature.properties?.level === "barangay" ? `, ${feature.properties?.municipality}` : ""}`;
@@ -188,7 +202,7 @@ export function RiskMap({
               const tip = document.createElement("div");
               const title = document.createElement("strong");
               title.textContent = name;
-              tip.append(title, document.createElement("br"), `${layerName}: ${value == null || !Number.isFinite(value) ? "No data" : `${value.toFixed(1)}/100`}`);
+              tip.append(title, document.createElement("br"), `${layerName}: ${value == null || !Number.isFinite(value) ? "No data" : `${value.toFixed(1)}/100`}${b ? ` · Rank ${b.rank}` : ""}`);
               if (filter !== "score" && b) tip.append(document.createElement("br"), `Healthcare need: ${b.score}/100`);
               layer.bindTooltip(tip, { sticky: true, className: "risk-hover" });
               if (layer instanceof Path) {
@@ -301,7 +315,9 @@ export function RiskMap({
               </Polyline>
             );
           })}
+        {children}
       </MapContainer>
+      {tilesUnavailable && <div className="map-caption" role="status">Some OpenStreetMap tiles could not load. Internet access is needed for the street basemap. <button className="text-link" onClick={() => {setTilesUnavailable(false);setTileAttempt(n => n+1);}}>Retry tiles</button></div>}
       {!publicMode && !territoryData && <div className="map-geography-status" role="status">{geographyError || "Loading real Laguna boundaries…"}</div>}
       {selectedArea && !selected && !publicMode && (
         <div className="map-detail">
@@ -357,6 +373,12 @@ export function RiskMap({
               : `${selected.hospital_minutes} min · demo travel`}
           </p>
           <p className="explanation">{selected.explanation}</p>
+          <h4>Score contributions</h4>
+          {Object.entries(selected.contributions).map(([key, value]) => <div className="summary-line" key={key}><span>{key}</span><strong>{value.toFixed(1)} / 100</strong></div>)}
+          <p className="tiny">Boundary: 2023 PSGC snapshot · Health inputs: 2026-10-15 · Confidence: synthetic. Illustrative synthetic data — not reported disease cases.</p>
+          <h4>Illustrative 7-day disease-indicator trend</h4>
+          <svg viewBox="0 0 210 60" role="img" aria-label="Synthetic disease indicator trend, illustrative values only" style={{width:"100%",height:60}}>{[.7,.72,.81,.77,.85,.9,1].map((scale,i)=><rect key={i} x={i*30+4} y={55-scale*45} width="20" height={scale*45} fill="#dc2626"><title>Demo day {i+1}: {(selected.disease_per_1000*scale).toFixed(1)} per 1,000 (synthetic)</title></rect>)}</svg>
+          <small>Generated illustration ending at the selected synthetic indicator; no observed time series is available.</small>
           <h4>Preventive services to consider</h4>
           <div className="service-tags">
             {selected.recommended_services.map((s) => (

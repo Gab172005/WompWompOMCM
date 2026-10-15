@@ -6,7 +6,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { api, clearCredentials, setCredentials } from "./api";
+import { api, clearCredentials, setCredentials, enableBrowserDemo, isBrowserDemo } from "./api";
+import { defaultConfig } from "./defaults";
+export { defaultWeights, defaultConfig } from "./defaults";
 import type {
   Barangay,
   BoundaryData,
@@ -17,29 +19,11 @@ import type {
   PublicData,
   Road,
   Site,
-  Weights,
 } from "../types";
 
-export const defaultWeights: Weights = {
-  disease: 30,
-  vulnerability: 25,
-  accessibility: 20,
-  poverty: 15,
-  flood: 10,
-};
-export const defaultConfig: Config = {
-  clinic_count: 3,
-  capacity: 180,
-  max_travel_minutes: 25,
-  weights: defaultWeights,
-  eligible_sites: null,
-  flooded_sites: [],
-  closed_roads: [],
-  outbreak_barangays: [],
-  outbreak_multiplier: 1,
-  manual_sites: null,
-};
 interface State {
+  browserDemo: boolean;
+  setDraft: (plan: Plan) => void;
   barangays: Barangay[];
   sites: Site[];
   roads: Road[];
@@ -105,6 +89,7 @@ export function Provider({ children }: { children: ReactNode }) {
     [adminConfigured, setAdminConfigured] = useState(false);
   const pending = useRef<(() => Promise<void>) | undefined>(undefined);
   const configVersion = useRef(0);
+  const [browserDemo, setBrowserDemo] = useState(isBrowserDemo());
   async function reloadSchedules() {
     setPublicData(await api<PublicData>("/schedules"));
   }
@@ -112,6 +97,13 @@ export function Provider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError("");
     try {
+      if (!isBrowserDemo()) {
+        try { await api("/health", undefined, AbortSignal.timeout(4000)); }
+        catch {
+          enableBrowserDemo(); setBrowserDemo(true);
+          setMessage("Backend unavailable: browser-only demo enabled. Plans stay in this browser; no public service is connected.");
+        }
+      }
       const [bs, cs, hs, boundary, schedules, health] = await Promise.all([
         api<{ barangays: Barangay[]; metadata: Metadata }>("/barangays"),
         api<{ sites: Site[]; roads: Road[] }>("/clinics"),
@@ -143,7 +135,7 @@ export function Provider({ children }: { children: ReactNode }) {
   }, []);
   // A cancelled request cannot overwrite scores after newer weights or plans arrive.
   useEffect(() => {
-    if (!username) return;
+    if (!username && !browserDemo) return;
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
@@ -161,7 +153,7 @@ export function Provider({ children }: { children: ReactNode }) {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [config.weights, username]);
+  }, [config.weights, username, browserDemo]);
   function updateConfig(changes: Partial<Config>) {
     configVersion.current++;
     setConfig((c) => ({ ...c, ...changes }));
@@ -169,7 +161,7 @@ export function Provider({ children }: { children: ReactNode }) {
     setMessage("");
   }
   function requireAdmin(action?: () => Promise<void>) {
-    if (username) {
+    if (username || browserDemo) {
       if (action) void action();
     } else {
       pending.current = action;
@@ -205,6 +197,8 @@ export function Provider({ children }: { children: ReactNode }) {
   return (
     <Context.Provider
       value={{
+        browserDemo,
+        setDraft: (draft) => { configVersion.current++; setConfig(draft.inputs); setPlan(draft); },
         barangays,
         sites,
         roads,

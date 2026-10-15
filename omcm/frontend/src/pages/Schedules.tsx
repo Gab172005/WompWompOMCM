@@ -32,6 +32,7 @@ export function Schedules() {
     publicData,
     today,
     username,
+    browserDemo,
     requireAdmin,
     reloadSchedules,
     setError,
@@ -268,6 +269,7 @@ export function Schedules() {
               className={emergency ? "danger" : "primary"}
               disabled={
                 busy ||
+                !plan?.plan_id ||
                 !plan?.optimized.clinics.length ||
                 !services.length ||
                 (!confirmed && emergency)
@@ -281,7 +283,7 @@ export function Schedules() {
                   : "Approve deployment"}
             </button>
             <p className="tiny">
-              {username
+              {browserDemo ? "Local browser approval rehearsal · no server authentication" : username
                 ? `Signed in as ${username} · demo-only access`
                 : "Server-verified administrator sign-in required."}{" "}
               Normal approval is for tomorrow or later and cannot replace an
@@ -293,7 +295,7 @@ export function Schedules() {
       <Card>
         <div className="card-title">
           <h3>Published schedules</h3>
-          <span className="badge">PERSISTED IN SQLITE</span>
+          <span className="badge">{browserDemo ? "SAVED IN THIS BROWSER" : "PERSISTED IN SQLITE"}</span>
         </div>
         {publicData.schedules.length ? (
           <div className="table-scroll">

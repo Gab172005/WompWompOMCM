@@ -10,7 +10,7 @@ export function Optimization() {
   return (
     <>
       <PageHeader
-        eyebrow="CAPACITY-AWARE ALLOCATION · OR-TOOLS"
+        eyebrow="CAPACITY-AWARE ALLOCATION · ROAD PILOT"
         title="Place care where it matters"
         description="Maximize priority-weighted daily demand within safe site, travel, and clinic-capacity constraints."
       />
@@ -18,7 +18,7 @@ export function Optimization() {
       {!plan && (
         <div className="notice">
           Choose your parameters and generate a placement. Results are
-          calculated by the Python backend; no deployment is published
+          calculated from the active road dataset; no deployment is published
           automatically.
         </div>
       )}

@@ -7,7 +7,7 @@ import { Card, PageHeader } from "../components/ui";
 const descriptions: Record<Factor, string> = {
   disease: "Cases per 1,000 residents ÷ 100, capped at 1",
   vulnerability: "(Children + elderly) ÷ population ÷ 0.60, capped at 1",
-  accessibility: "Shortest-path hospital minutes ÷ 60; unreachable = 1",
+  accessibility: "Synthetic hospital-access minutes ÷ 60; capped at 1 in road pilot",
   poverty: "Poverty percentage ÷ 100",
   flood: "Synthetic flood exposure index ÷ 100",
 };
@@ -23,6 +23,7 @@ export function Settings() {
     config,
     updateConfig,
     username,
+    browserDemo,
     requireAdmin,
     metadata,
     boundaries,
@@ -35,11 +36,11 @@ export function Settings() {
       { id: string; action: string; actor: string; created_at: string }[]
     >([]);
   useEffect(() => {
-    if (username)
+    if (username || browserDemo)
       api<{ events: typeof audit }>("/audit")
         .then((x) => setAudit(x.events))
         .catch((e) => setError(e.message));
-  }, [username, setError]);
+  }, [username, browserDemo, setError]);
   const sum = Object.values(config.weights).reduce((s, n) => s + n, 0);
   return (
     <>
@@ -62,7 +63,7 @@ export function Settings() {
             greater need. These thresholds and weights are demo assumptions, not
             scientific validation.
           </p>
-          {!username && (
+          {!username && !browserDemo && (
             <button className="secondary" onClick={() => requireAdmin()}>
               <LockKeyhole size={15} />
               Sign in to adjust weights
@@ -83,7 +84,7 @@ export function Settings() {
                 min="0"
                 max="100"
                 step="1"
-                disabled={!username}
+                disabled={!username && !browserDemo}
                 value={config.weights[key]}
                 onChange={(e) => {
                   const value = Number(e.target.value);
@@ -98,7 +99,7 @@ export function Settings() {
           ))}
           <button
             className="secondary"
-            disabled={!username}
+            disabled={!username && !browserDemo}
             onClick={() => updateConfig({ weights: { ...defaultWeights } })}
           >
             Restore initial weights
@@ -107,7 +108,7 @@ export function Settings() {
             Need = Σ (normalized indicator × normalized weight) × 100
           </div>
           <p className="tiny">
-            Scores recalculate from the backend after each change. Missing
+            Scores recalculate in the active planning mode after each change. Missing
             inputs use visible conservative demo estimates. Existing published
             schedules remain unchanged.
           </p>
@@ -193,7 +194,7 @@ export function Settings() {
           <h3>Schedule approval audit trail</h3>
           <span className="badge">ADMINISTRATOR ONLY</span>
         </div>
-        {!username ? (
+        {!username && !browserDemo ? (
           <p>Sign in to view recorded approvals and emergency revisions.</p>
         ) : audit.length ? (
           <div className="table-scroll">

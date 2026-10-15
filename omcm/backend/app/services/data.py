@@ -2,6 +2,7 @@ import json
 import hashlib
 import math
 import re
+import os
 from pathlib import Path
 import pandas as pd
 import networkx as nx
@@ -10,6 +11,9 @@ DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
 
 def load_data():
+    if (DATA_DIR / "pilot.json").exists() and os.getenv("OMCM_DATASET", "pilot") == "pilot":
+        from app.services.pilot import load_pilot_data
+        return load_pilot_data(DATA_DIR / "pilot.json")
     frame = pd.read_csv(DATA_DIR / "barangays.csv", dtype={"id": str, "psgc": str})
     if "barangay_name" in frame.columns:
         return load_geographic_data(frame)

@@ -1,5 +1,8 @@
 const base = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 let authorization = "";
+let browserDemo = import.meta.env.VITE_DEMO_MODE === "true";
+export function enableBrowserDemo() { browserDemo = true; authorization = ""; }
+export function isBrowserDemo() { return browserDemo; }
 export function setCredentials(username: string, password: string) {
   authorization =
     "Basic " +
@@ -17,6 +20,12 @@ export async function api<T>(
   body?: unknown,
   signal?: AbortSignal,
 ): Promise<T> {
+  if (browserDemo) {
+    const { demoApi } = await import("./demoApi");
+    const data = await demoApi(path, body);
+    signal?.throwIfAborted();
+    return data as T;
+  }
   const response = await fetch(`${base}/api${path}`, {
     method: body === undefined ? "GET" : "POST",
     signal,

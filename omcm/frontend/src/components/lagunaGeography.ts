@@ -65,6 +65,7 @@ export function matchAreas(geometry: LagunaGeometry, records: Barangay[], aliase
   for (const { properties: area } of geometry.features) {
     const explicit = aliases[area.area_id];
     const candidates = records.filter((record) => {
+      if (record.psgc) return normalizeCode(record.psgc) === area.area_id;
       if (explicit) return record.id === explicit;
       if (record.geography_level && record.geography_level !== area.level) return false;
       // Fictional pilot names must never be silently attached to real areas.

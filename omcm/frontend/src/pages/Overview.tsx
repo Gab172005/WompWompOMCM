@@ -20,8 +20,8 @@ export function Overview() {
         title="Better care. Within reach."
         description="Turn community needs into a clear, equitable mobile clinic deployment plan."
         action={
-          <Link className="secondary" to="/analytics">
-            Explore analytics
+          <Link className="primary" to="/simulator">
+            Open Operations Center
             <ArrowUpRight size={16} />
           </Link>
         }

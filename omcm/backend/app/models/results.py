@@ -94,6 +94,8 @@ class AllocationResult(BaseModel):
 
 
 class PlanResult(BaseModel):
+    status: str = "draft"
+    created_at: str | None = None
     plan_id: str | None = None
     optimized: AllocationResult
     baseline: AllocationResult
@@ -120,6 +122,7 @@ class SimulationResult(BaseModel):
 
 
 class ScheduleResult(BaseModel):
+    approved_at: str | None = None
     date: str
     plan_id: str
     status: Literal["Approved", "Emergency revised"]

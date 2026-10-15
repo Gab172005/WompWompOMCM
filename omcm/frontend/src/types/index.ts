@@ -81,6 +81,7 @@ export interface Allocation {
   optimal: boolean;
 }
 export interface Config {
+  flood_level?: "none" | "moderate" | "severe";
   clinic_count: number;
   capacity: number;
   max_travel_minutes: number;
@@ -100,6 +101,8 @@ export interface Metadata {
   travel_times: string;
 }
 export interface Plan {
+  created_at?: string;
+  status?: "draft" | "published";
   plan_id?: string;
   optimized: Allocation;
   baseline: Allocation;

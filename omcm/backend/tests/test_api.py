@@ -22,6 +22,9 @@ def test_schedule_approval_simulation_and_emergency(client, auth):
     deployment = dict(plan_id=plan["plan_id"], deployment_date=(today()+timedelta(days=1)).isoformat())
     assert client.post("/api/schedules/approve", json=deployment).status_code == 401
     assert client.post("/api/schedules/approve", json=deployment, auth=auth).status_code == 200
+    from app.database.repository import get_plan
+    assert get_plan(plan["plan_id"])["status"] == "published"
+    assert get_plan(plan["plan_id"])["approved_at"]
     assert client.post("/api/schedules/approve", json=deployment, auth=auth).status_code == 409
     original = client.get("/api/schedules").json()
     simulation = client.post("/api/simulate", json={"original":{}, "scenario":{"clinic_count":1,"flooded_sites":["S01"]}}, auth=auth)

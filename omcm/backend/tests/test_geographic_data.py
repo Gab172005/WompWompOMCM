@@ -5,7 +5,8 @@ from app.models.results import RiskResult
 from app.algorithms.placement import optimize
 
 
-def test_supplied_geography_and_network():
+def test_supplied_geography_and_network(monkeypatch):
+    monkeypatch.setenv("OMCM_DATASET", "province")
     frame, network, metadata = load_data()
     assert len(frame) == 681
     assert frame.municipality.nunique() == 30
@@ -24,7 +25,8 @@ def test_supplied_geography_and_network():
     assert dict(zip(frame.source_url, frame.id)) == dict(zip(shuffled.source_url, shuffled.id))
 
 
-def test_supplied_geography_optimization():
+def test_supplied_geography_optimization(monkeypatch):
+    monkeypatch.setenv("OMCM_DATASET", "province")
     result = optimize(PlacementRequest(clinic_count=1, capacity=70))
     assert len(result["barangays"]) == 681
     assert result["optimized"]["metrics"]["residents_served"] <= 70

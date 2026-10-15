@@ -19,6 +19,7 @@ export function Public() {
     setError,
     error,
     loading,
+    browserDemo,
   } = useOMCM();
   const [date, setDate] = useState(""),
     [refreshing, setRefreshing] = useState(false);
@@ -51,7 +52,7 @@ export function Public() {
             services.
           </p>
           <div className="notice">
-            Demonstration only. These are synthetic clinics and schedules, not
+            {browserDemo && "Browser-only approval rehearsal. "}Demonstration only. These are synthetic clinics and schedules, not
             actual health services or emergency alerts.
           </div>
         </div>
@@ -94,6 +95,7 @@ export function Public() {
                 ? "Loading…"
                 : "No schedule published"}
           </span>
+          {schedule && <small>Last updated: {new Date(schedule.updated_at).toLocaleString("en-PH")} · Approved destination; location sharing disabled.</small>}
         </div>
         {publicData.notices
           .filter((n) => n.date === current)

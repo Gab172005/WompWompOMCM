@@ -28,6 +28,11 @@ def calculate_scores(frame, network, times, weights: Weights, outbreaks=(), mult
         vulnerable = min(pop, indicator("children", pop * .25) + indicator("elderly", pop * .10))
         reachable = [(times.get(row["id"], {}).get(h["barangay_id"], float("inf")), h["name"]) for h in network["hospitals"]]
         nearest_minutes, nearest_name = min(reachable)
+        if "healthcare_access_time_minutes" in row:
+            nearest_minutes = row["healthcare_access_time_minutes"]
+            nearest_name = "Synthetic hospital-access indicator (no verified facility)"
+        if row.get("scenario_flood"):
+            row["flood_exposure"] = 100
         raw = dict(disease=disease_per_1000 / 100, vulnerability=vulnerable / pop / .6,
                    accessibility=nearest_minutes / 60, poverty=indicator("poverty_pct", 50) / 100,
                    flood=indicator("flood_exposure", 50) / 100)
@@ -35,7 +40,7 @@ def calculate_scores(frame, network, times, weights: Weights, outbreaks=(), mult
         contributions = {key: factors[key] * normalized_weights[key] for key in raw}
         score = round(sum(contributions.values()), 2)
         top = sorted(contributions, key=contributions.get, reverse=True)[:3]
-        demand = min(pop, max(1, round(pop * indicator("demand_rate", .03) * outbreak)))
+        demand = min(pop, max(1, math.floor(pop * indicator("demand_rate", .03) * outbreak + .5)))
         services = ["Primary care", "Blood pressure screening", "Health education"]
         if factors["vulnerability"] >= 50:
             services += ["Child health", "Vaccination"]

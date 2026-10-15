@@ -1,6 +1,7 @@
 from ortools.sat.python import cp_model
 from app.algorithms.scoring import calculate_scores
 from app.services.data import load_data, road_graph, travel_times, validate_references
+from app.services.pilot import active_hazards, road_evidence
 
 
 def solve(barangays, sites, times, request, selected=None):
@@ -23,7 +24,7 @@ def solve(barangays, sites, times, request, selected=None):
         model.add(sum(v for (bid, _), v in allocations.items() if bid == b["id"]) <= b["demand"])
     for s in sites:
         used = sum(v for (_, sid), v in allocations.items() if sid == s["id"])
-        model.add(used <= request.capacity * active[s["id"]])
+        model.add(used <= min(request.capacity, s["capacity"]) * active[s["id"]])
         model.add(used >= active[s["id"]])
     # Lexicographic integer objective: priority demand, then shorter travel, then fewer sites.
     # Every weighted unit outweighs the maximum possible total secondary penalty.
@@ -54,16 +55,17 @@ def solve(barangays, sites, times, request, selected=None):
                 travel_sum += amount * minutes[(bid, sid)]
                 high += amount if b["high_priority"] else 0
         served = sum(a["residents"] for a in assignments)
-        clinics.append(dict(**s, daily_capacity=request.capacity, served=served, assignments=assignments,
-                            utilization=round(served / request.capacity * 100, 2),
-                            reason=f"Eligible flood-safe hub reaching {len(assignments)} barangays within {request.max_travel_minutes} minutes; {served} of {request.capacity} daily appointments allocated."))
+        capacity = min(request.capacity, s["capacity"])
+        clinics.append(dict(**s, daily_capacity=capacity, served=served, assignments=assignments,
+                            utilization=round(served / capacity * 100, 2),
+                            reason=f"Scenario-feasible site reaching {len(assignments)} barangays within {request.max_travel_minutes} modeled road minutes; {served} of {capacity} daily appointments allocated."))
     served = sum(served_by_barangay.values())
     demand = sum(b["demand"] for b in barangays)
     return dict(clinics=clinics, served_by_barangay=served_by_barangay,
                 metrics=dict(residents_served=served, high_priority_reached=high, weighted_demand=round(weighted, 4),
                              total_demand=demand, unserved_demand=demand-served,
                              average_travel_minutes=round(travel_sum / served, 2) if served else 0,
-                             capacity_utilization=round(served / (len(clinics) * request.capacity) * 100, 2) if clinics else 0,
+                             capacity_utilization=round(served / sum(c["daily_capacity"] for c in clinics) * 100, 2) if clinics else 0,
                              demand_served_pct=round(served / demand * 100, 2) if demand else 0,
                              flood_safe_accessibility_pct=100 if served else 0),
                 solver_status=solver.status_name(status), optimal=status == cp_model.OPTIMAL)
@@ -72,9 +74,17 @@ def solve(barangays, sites, times, request, selected=None):
 def optimize(request):
     frame, network, metadata = load_data()
     validate_references(request, frame, network)
-    times = travel_times(road_graph(frame, network, request.closed_roads))
+    excluded = set(request.flooded_sites)
+    if "routes" in network:
+        times, excluded = road_evidence(network, request)
+        hazards = active_hazards(network, request.flood_level)
+        affected = {h["properties"]["barangay_id"] for h in network["hazards"]["features"] if h["properties"]["id"] in hazards}
+        frame = frame.copy()
+        frame["scenario_flood"] = frame.id.isin(affected)
+    else:
+        times = travel_times(road_graph(frame, network, request.closed_roads))
     barangays = calculate_scores(frame, network, times, request.weights, request.outbreak_barangays, request.outbreak_multiplier)
-    sites = [s for s in network["sites"] if s["eligible"] and s["id"] not in request.flooded_sites
+    sites = [s for s in network["sites"] if s["eligible"] and s["id"] not in excluded
              and (request.eligible_sites is None or s["id"] in request.eligible_sites)]
     if request.manual_sites is not None:
         if len(request.manual_sites) > request.clinic_count or set(request.manual_sites) - {s["id"] for s in sites}:
@@ -90,7 +100,8 @@ def optimize(request):
                 inputs=request.model_dump(), metadata=metadata,
                 notes=["Demand represents estimated daily appointments, not total population coverage.",
                        "Priority-weighted demand = allocated appointments × illustrative need / 100.",
-                       "Flood safety is based only on selected demo exclusions, not verified hazard conditions."])
+                       "Flood safety is based only on selected demo exclusions, not verified hazard conditions.",
+                       f"{len(sites)} viable staging sites under this scenario. Blocked fixture routes are excluded; no diversion is assumed."])
 
 
 def greedy_baseline(barangays, sites, times, request, selected):
@@ -99,7 +110,8 @@ def greedy_baseline(barangays, sites, times, request, selected):
     for s in sorted(sites, key=lambda s: selected.index(s["id"]) if s["id"] in selected else len(selected)):
         if s["id"] not in selected:
             continue
-        capacity, assignments = request.capacity, []
+        limit = min(request.capacity, s["capacity"])
+        capacity, assignments = limit, []
         for b in sorted(barangays, key=lambda b: (-b["population"], b["id"])):
             minutes = times.get(b["id"], {}).get(s["barangay_id"])
             if minutes is None or minutes > request.max_travel_minutes:
@@ -114,13 +126,13 @@ def greedy_baseline(barangays, sites, times, request, selected):
             high += amount if b["high_priority"] else 0
             assignments.append(dict(barangay_id=b["id"], name=b["name"], residents=amount, minutes=minutes))
         if assignments:
-            clinics.append(dict(**s, daily_capacity=request.capacity, served=request.capacity-capacity, assignments=assignments,
-                                utilization=round((request.capacity-capacity)/request.capacity*100, 2), reason="Population-first baseline staging site."))
+            clinics.append(dict(**s, daily_capacity=limit, served=limit-capacity, assignments=assignments,
+                                utilization=round((limit-capacity)/limit*100, 2), reason="Population-first baseline staging site."))
     served = sum(b["demand"]-remaining[b["id"]] for b in barangays)
     demand = sum(b["demand"] for b in barangays)
     return dict(clinics=clinics, served_by_barangay={b["id"]: b["demand"]-remaining[b["id"]] for b in barangays},
                 metrics=dict(residents_served=served, high_priority_reached=high, weighted_demand=round(weighted, 4), total_demand=demand,
                              unserved_demand=demand-served, average_travel_minutes=round(travel_sum/served, 2) if served else 0,
-                             capacity_utilization=round(served/(len(clinics)*request.capacity)*100, 2) if clinics else 0,
+                             capacity_utilization=round(served/sum(c["daily_capacity"] for c in clinics)*100, 2) if clinics else 0,
                              demand_served_pct=round(served/demand*100, 2), flood_safe_accessibility_pct=100 if served else 0),
                 solver_status="POPULATION_GREEDY", optimal=False)

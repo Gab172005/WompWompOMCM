@@ -36,6 +36,7 @@ def now():
 
 def save_plan(payload):
     plan_id = str(uuid4())
+    payload.update(status="draft", created_at=now())
     with connect() as db:
         db.execute("INSERT INTO plans VALUES (?, ?, ?)", (plan_id, json.dumps(payload), now()))
     return plan_id
@@ -49,6 +50,7 @@ def get_plan(plan_id):
 
 def publish(payload, actor, emergency_notice=None):
     stamp = now()
+    payload.update(updated_at=stamp, approved_at=stamp)
     action = "emergency_override" if emergency_notice else "approve"
     with connect() as db:
         # Serialize approvals so concurrent ordinary requests cannot overwrite a date.
@@ -56,6 +58,11 @@ def publish(payload, actor, emergency_notice=None):
         if emergency_notice is None and db.execute("SELECT 1 FROM schedules WHERE date=?", (payload["date"],)).fetchone():
             raise ValueError("A schedule is already published for this date. Use the confirmed emergency override to replace it.")
         db.execute("INSERT INTO schedules VALUES (?, ?, ?) ON CONFLICT(date) DO UPDATE SET payload=excluded.payload, updated_at=excluded.updated_at", (payload["date"], json.dumps(payload), stamp))
+        draft = db.execute("SELECT payload FROM plans WHERE id=?", (payload["plan_id"],)).fetchone()
+        if draft:
+            stored = json.loads(draft["payload"])
+            stored.update(status="published", approved_at=stamp)
+            db.execute("UPDATE plans SET payload=? WHERE id=?", (json.dumps(stored), payload["plan_id"]))
         if emergency_notice:
             db.execute("INSERT INTO notices VALUES (?, ?, ?, ?, ?)", (str(uuid4()), payload["date"], emergency_notice, actor, stamp))
         db.execute("INSERT INTO audit VALUES (?, ?, ?, ?, ?)", (str(uuid4()), action, actor, json.dumps(payload), stamp))
@@ -66,7 +73,7 @@ def schedules():
     with connect() as db:
         rows = db.execute("SELECT payload, updated_at FROM schedules ORDER BY date DESC").fetchall()
         notices = [dict(row) for row in db.execute("SELECT * FROM notices ORDER BY created_at DESC")]
-    return dict(schedules=[dict(**json.loads(row["payload"]), updated_at=row["updated_at"]) for row in rows], notices=notices)
+    return dict(schedules=[dict(json.loads(row["payload"]), updated_at=row["updated_at"]) for row in rows], notices=notices)
 
 
 def audit_log():
