@@ -9,6 +9,7 @@ import {
 import { divIcon } from "leaflet";
 import { riskScale } from "./choropleth";
 import { Heatmap } from "./Heatmap";
+import { LagunaMask } from "./LagunaMask";
 import { useMunicipalities } from "../hooks/useMunicipalities";
 import { coveredMunicipalities } from "../services/municipalities";
 import { Hospital as HospitalIcon, MapPin, Navigation, X } from "lucide-react";
@@ -260,6 +261,7 @@ export function MapView({
             );
           })}
         {children}
+        <LagunaMask data={territoryData} />
       </MapContainer>
       {tilesUnavailable && (
         <div className="map-caption" role="status">

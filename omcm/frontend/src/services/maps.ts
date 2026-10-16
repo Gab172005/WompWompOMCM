@@ -195,11 +195,13 @@ export function loadLagunaGeography(): Promise<Geography> {
         );
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const geojson = parseLagunaGeometry(await response.json(), level);
+        if (geojson.features.length !== 30)
+          throw new Error("Expected all 30 Laguna cities and municipalities.");
         return {
           geojson,
           mapping,
           source:
-            "Real Laguna city and municipality boundaries (2023 PSGC snapshot)",
+            "Laguna city and municipality boundaries: philippines-json-maps · MIT · simplified 2023 PSGC snapshot",
           warning: warnings.join(" "),
         };
       } catch {
@@ -213,4 +215,31 @@ export function loadLagunaGeography(): Promise<Geography> {
     );
   })();
   return pending;
+}
+
+/** WGS84 point containment, including polygon holes and islands. */
+export function containsLagunaPoint(
+  data: LagunaGeometry,
+  lng: number,
+  lat: number,
+) {
+  const inRing = (ring: number[][]) => {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [x, y] = ring[i],
+        [a, b] = ring[j];
+      if (y > lat !== b > lat && lng < ((a - x) * (lat - y)) / (b - y) + x)
+        inside = !inside;
+    }
+    return inside;
+  };
+  return data.features.some((feature) => {
+    const polygons =
+      feature.geometry.type === "Polygon"
+        ? [feature.geometry.coordinates]
+        : feature.geometry.coordinates;
+    return polygons.some(
+      ([outer, ...holes]) => inRing(outer) && !holes.some(inRing),
+    );
+  });
 }
