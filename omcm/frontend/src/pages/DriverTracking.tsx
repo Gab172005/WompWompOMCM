@@ -1,5 +1,7 @@
+import { createPortal } from "react-dom";
+import { ExplanationAssistant } from "../components/ExplanationAssistant";
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { WorkspaceLink as Link } from "../components/WorkspaceLink";
 import {
   Play,
   Pause,
@@ -32,7 +34,7 @@ import { useSimulationClock } from "../hooks/useSimulationClock";
 import { ClinicTracker, type MapLayers } from "../components/ClinicTracker";
 import { MapView } from "../components/MapView";
 import { Card, number } from "../components/ui";
-import type { Config, Factor, Plan } from "../types";
+import type { Config, Factor, Plan, Simulation } from "../types";
 
 const layerLabels: Record<keyof MapLayers, string> = {
   need: "Need polygons",
@@ -43,10 +45,16 @@ const layerLabels: Record<keyof MapLayers, string> = {
   coverage: "Assigned areas",
   eta: "ETA labels",
 };
-export function DriverTracking() {
+export function DriverTracking({
+  mapTarget,
+  assistantTarget,
+}: {
+  mapTarget?: HTMLElement | null;
+  assistantTarget?: HTMLElement | null;
+}) {
   const {
     config,
-    plan,
+    plan: plannerPlan,
     setDraft,
     username,
     browserDemo,
@@ -54,6 +62,12 @@ export function DriverTracking() {
     requireAdmin,
     today,
   } = useOMCM();
+  const [explanationOriginal, setExplanationOriginal] = useState<
+    Config | undefined
+  >(undefined);
+  const [simulationMode, setSimulationMode] = useState(false);
+  const [previewReady, setPreviewReady] = useState(false);
+  const [plan, setSimulationPlan] = useState<Plan | null>(plannerPlan);
   const [pilot, setPilot] = useState<Pilot | null>(null),
     [scenario, setScenario] = useState<Config>(() => structuredClone(config));
   const [busy, setBusy] = useState(false),
@@ -86,8 +100,13 @@ export function DriverTracking() {
   }, [setError]);
   const dirty = JSON.stringify(scenario) !== JSON.stringify(plan?.inputs);
   const preview = useMemo(
-    () => (pilot ? scorePilot(pilot, scenario) : []),
-    [pilot, scenario],
+    () =>
+      simulationMode
+        ? (plan?.barangays ?? [])
+        : pilot
+          ? scorePilot(pilot, scenario)
+          : [],
+    [pilot, scenario, simulationMode, plan],
   );
   const allocation = showBaseline ? plan?.baseline : plan?.optimized;
   const simulationDay =
@@ -132,11 +151,19 @@ export function DriverTracking() {
     clock.pause();
     setScenario((s) => ({ ...s, ...partial }));
     setBranchNotice(
-      "Scenario changed. Playback paused; reoptimize to simulate the next day from today's final clinic locations.",
+      simulationMode
+        ? "Scenario changed. Playback paused; recompute to update the heatmap and routes from the Timugan depot."
+        : "Scenario changed. Playback paused; reoptimize to simulate the next day from today's final clinic locations.",
     );
   }
   async function optimize(tour = false) {
     if (!pilot || !today || busy) return;
+    if (simulationMode && (browserDemo || !username)) {
+      setError(
+        "Simulation Mode requires the Python API and administrator sign-in. Existing offline rehearsals remain available with Simulation Mode off.",
+      );
+      return;
+    }
     const input = tour
       ? structuredClone(defaultConfig)
       : structuredClone(scenario);
@@ -144,26 +171,37 @@ export function DriverTracking() {
     setError("");
     clock.pause();
     try {
-      const result =
-        browserDemo || username
+      const result = simulationMode
+        ? (
+            await api<Simulation>("/simulate", {
+              original: plannerPlan?.inputs ?? config,
+              scenario: input,
+            })
+          ).after
+        : browserDemo || username
           ? await api<Plan>("/optimize", input)
           : {
               ...optimizePilot(pilot, input),
               created_at: new Date().toISOString(),
             };
       const nextDay =
-        tour || !plan
+        simulationMode || tour || !plan
           ? initialSimulationDay(today)
           : nextSimulationDay(pilot, plan, today);
+      setExplanationOriginal(
+        simulationMode ? (plannerPlan?.inputs ?? config) : plan?.inputs,
+      );
       setBefore(tour ? null : plan);
-      setDraft({ ...result, simulation: nextDay });
+      setSimulationPlan({ ...result, simulation: nextDay });
+      if (!simulationMode) setDraft({ ...result, simulation: nextDay });
+      setPreviewReady(simulationMode);
       setScenario(result.inputs);
       clock.reset();
       setShowBaseline(false);
       setSelected("MC-001");
       setFitRequest((n) => n + 1);
       setBranchNotice(
-        tour || !plan
+        simulationMode || tour || !plan
           ? `Day 1 · ${nextDay.date}: simulation starts at the Timugan depot.`
           : `Day ${nextDay.day} · ${nextDay.date}: simulating the next day from each clinic's previous final location. Reset returns to the start of this day.`,
       );
@@ -195,6 +233,22 @@ export function DriverTracking() {
   );
   return (
     <div className="fleet-workspace">
+      {assistantTarget ? (
+        createPortal(
+          <ExplanationAssistant
+            plan={plan}
+            original={explanationOriginal}
+            stale={dirty || busy}
+          />,
+          assistantTarget,
+        )
+      ) : (
+        <ExplanationAssistant
+          plan={plan}
+          original={explanationOriginal}
+          stale={dirty || busy}
+        />
+      )}
       {runs.length > 0 && (
         <div
           className="mobile-playback"
@@ -243,6 +297,36 @@ export function DriverTracking() {
           Demo tour · 3 clinics
         </button>
       </div>
+      <label className="checkbox">
+        <input
+          type="checkbox"
+          role="switch"
+          aria-label="Simulation Mode"
+          checked={simulationMode}
+          disabled={busy}
+          onChange={(e) => {
+            clock.pause();
+            setSimulationMode(e.target.checked);
+            setPreviewReady(false);
+            setScenario(structuredClone(plannerPlan?.inputs ?? config));
+            setSimulationPlan(plannerPlan);
+            setBefore(null);
+            clock.reset();
+            setBranchNotice(
+              "Simulation previews do not change the planner draft or published schedules. Recompute after changing settings.",
+            );
+          }}
+        />
+        Simulation Mode
+      </label>
+      {simulationMode && (
+        <p role="status">
+          Python scenario preview · Routes start at the Timugan depot. Published
+          schedules are unchanged.
+          {dirty &&
+            " Settings changed; recompute to update heatmap and routes."}
+        </p>
+      )}
       <div className="fleet-disclosure">
         <strong>{browserDemo ? "BROWSER DEMO" : "SIMULATION"}</strong>
         <span>
@@ -295,90 +379,210 @@ export function DriverTracking() {
       </div>
       <div className="fleet-grid">
         <section className="fleet-map-column">
-          <Card className="fleet-map-card">
-            <div className="fleet-map-title">
-              <div>
-                <strong>Los Baños & Bay, Laguna</strong>
-                <small>
-                  20 PSGC-joined barangays ·{" "}
-                  {showBaseline ? "Population baseline" : "Proposed deployment"}
-                </small>
+          {mapTarget ? (
+            createPortal(
+              <Card className="fleet-map-card">
+                <div className="fleet-map-title">
+                  <div>
+                    <strong>Los Baños & Bay, Laguna</strong>
+                    <small>
+                      20 PSGC-joined barangays ·{" "}
+                      {showBaseline
+                        ? "Population baseline"
+                        : "Proposed deployment"}
+                    </small>
+                  </div>
+                  <button
+                    className="secondary"
+                    onClick={() => {
+                      setFollow(false);
+                      setFitRequest((n) => n + 1);
+                    }}
+                    disabled={!runs.length || busy}
+                  >
+                    <LocateFixed size={15} />
+                    Fit routes
+                  </button>
+                </div>
+                <MapView
+                  data={preview}
+                  clinics={[]}
+                  needVisible={layers.need}
+                  coverageIds={coverageIds}
+                >
+                  {pilot && (
+                    <ClinicTracker
+                      pilot={pilot}
+                      plan={plan}
+                      config={scenario}
+                      runs={runs}
+                      elapsed={clock.elapsed}
+                      selected={selected}
+                      setSelected={setSelected}
+                      follow={follow}
+                      fitRequest={fitRequest}
+                      layers={layers}
+                      onToggleRoad={
+                        simulationMode && !busy
+                          ? (id) =>
+                              change({
+                                closed_roads: scenario.closed_roads.includes(id)
+                                  ? scenario.closed_roads.filter(
+                                      (road) => road !== id,
+                                    )
+                                  : [...scenario.closed_roads, id],
+                                manual_sites: null,
+                              })
+                          : undefined
+                      }
+                    />
+                  )}
+                </MapView>
+                <div className="fleet-layers">
+                  {(Object.keys(layers) as (keyof MapLayers)[]).map((key) => (
+                    <label key={key}>
+                      <input
+                        type="checkbox"
+                        checked={layers[key]}
+                        onChange={(e) =>
+                          setLayers((l) => ({ ...l, [key]: e.target.checked }))
+                        }
+                      />
+                      {layerLabels[key]}
+                    </label>
+                  ))}
+                </div>
+                <p className="route-attribution">
+                  Road fixtures:{" "}
+                  <a
+                    href="https://project-osrm.org/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    OSRM
+                  </a>{" "}
+                  / ©{" "}
+                  <a
+                    href="https://www.openstreetmap.org/copyright"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    OpenStreetMap contributors (ODbL)
+                  </a>{" "}
+                  ·{" "}
+                  <a
+                    href="https://www.openstreetmap.org/fixthemap"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Fix the map
+                  </a>
+                  . Modeled times; no traffic feed.
+                </p>
+              </Card>,
+              mapTarget,
+            )
+          ) : (
+            <Card className="fleet-map-card">
+              <div className="fleet-map-title">
+                <div>
+                  <strong>Los Baños & Bay, Laguna</strong>
+                  <small>
+                    20 PSGC-joined barangays ·{" "}
+                    {showBaseline
+                      ? "Population baseline"
+                      : "Proposed deployment"}
+                  </small>
+                </div>
+                <button
+                  className="secondary"
+                  onClick={() => {
+                    setFollow(false);
+                    setFitRequest((n) => n + 1);
+                  }}
+                  disabled={!runs.length || busy}
+                >
+                  <LocateFixed size={15} />
+                  Fit routes
+                </button>
               </div>
-              <button
-                className="secondary"
-                onClick={() => {
-                  setFollow(false);
-                  setFitRequest((n) => n + 1);
-                }}
-                disabled={!runs.length || busy}
+              <MapView
+                data={preview}
+                clinics={[]}
+                needVisible={layers.need}
+                coverageIds={coverageIds}
               >
-                <LocateFixed size={15} />
-                Fit routes
-              </button>
-            </div>
-            <MapView
-              data={preview}
-              clinics={[]}
-              needVisible={layers.need}
-              coverageIds={coverageIds}
-            >
-              {pilot && (
-                <ClinicTracker
-                  pilot={pilot}
-                  plan={plan}
-                  config={scenario}
-                  runs={runs}
-                  elapsed={clock.elapsed}
-                  selected={selected}
-                  setSelected={setSelected}
-                  follow={follow}
-                  fitRequest={fitRequest}
-                  layers={layers}
-                />
-              )}
-            </MapView>
-            <div className="fleet-layers">
-              {(Object.keys(layers) as (keyof MapLayers)[]).map((key) => (
-                <label key={key}>
-                  <input
-                    type="checkbox"
-                    checked={layers[key]}
-                    onChange={(e) =>
-                      setLayers((l) => ({ ...l, [key]: e.target.checked }))
+                {pilot && (
+                  <ClinicTracker
+                    pilot={pilot}
+                    plan={plan}
+                    config={scenario}
+                    runs={runs}
+                    elapsed={clock.elapsed}
+                    selected={selected}
+                    setSelected={setSelected}
+                    follow={follow}
+                    fitRequest={fitRequest}
+                    layers={layers}
+                    onToggleRoad={
+                      simulationMode && !busy
+                        ? (id) =>
+                            change({
+                              closed_roads: scenario.closed_roads.includes(id)
+                                ? scenario.closed_roads.filter(
+                                    (road) => road !== id,
+                                  )
+                                : [...scenario.closed_roads, id],
+                              manual_sites: null,
+                            })
+                        : undefined
                     }
                   />
-                  {layerLabels[key]}
-                </label>
-              ))}
-            </div>
-            <p className="route-attribution">
-              Road fixtures:{" "}
-              <a
-                href="https://project-osrm.org/"
-                target="_blank"
-                rel="noreferrer"
-              >
-                OSRM
-              </a>{" "}
-              / ©{" "}
-              <a
-                href="https://www.openstreetmap.org/copyright"
-                target="_blank"
-                rel="noreferrer"
-              >
-                OpenStreetMap contributors (ODbL)
-              </a>{" "}
-              ·{" "}
-              <a
-                href="https://www.openstreetmap.org/fixthemap"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Fix the map
-              </a>
-              . Modeled times; no traffic feed.
-            </p>
-          </Card>
+                )}
+              </MapView>
+              <div className="fleet-layers">
+                {(Object.keys(layers) as (keyof MapLayers)[]).map((key) => (
+                  <label key={key}>
+                    <input
+                      type="checkbox"
+                      checked={layers[key]}
+                      onChange={(e) =>
+                        setLayers((l) => ({ ...l, [key]: e.target.checked }))
+                      }
+                    />
+                    {layerLabels[key]}
+                  </label>
+                ))}
+              </div>
+              <p className="route-attribution">
+                Road fixtures:{" "}
+                <a
+                  href="https://project-osrm.org/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  OSRM
+                </a>{" "}
+                / ©{" "}
+                <a
+                  href="https://www.openstreetmap.org/copyright"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  OpenStreetMap contributors (ODbL)
+                </a>{" "}
+                ·{" "}
+                <a
+                  href="https://www.openstreetmap.org/fixthemap"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Fix the map
+                </a>
+                . Modeled times; no traffic feed.
+              </p>
+            </Card>
+          )}
           <Card className="playback-controls">
             <div className="playback-row">
               <button
@@ -504,6 +708,72 @@ export function DriverTracking() {
                   <option value="severe">Severe · plus eastern Bay</option>
                 </select>
               </label>
+              {simulationMode && (
+                <>
+                  <p>
+                    Flood severity per municipality (pilot health inputs only).
+                    Click the marked road to block or reopen it.
+                  </p>
+                  {[
+                    ...new Set(
+                      pilot?.barangays.map((b) => b.municipality) ?? [],
+                    ),
+                  ]
+                    .sort()
+                    .map((municipality) => (
+                      <label key={municipality}>
+                        {municipality} flood severity
+                        <select
+                          aria-label={`${municipality} flood severity`}
+                          value={
+                            scenario.municipality_flood_levels?.[
+                              municipality
+                            ] ??
+                            scenario.flood_level ??
+                            "none"
+                          }
+                          onChange={(e) =>
+                            change({
+                              municipality_flood_levels: {
+                                ...scenario.municipality_flood_levels,
+                                [municipality]: e.target.value as
+                                  "none" | "moderate" | "severe",
+                              },
+                              manual_sites: null,
+                            })
+                          }
+                        >
+                          <option value="none">None</option>
+                          <option value="moderate">Moderate</option>
+                          <option value="severe">Severe</option>
+                        </select>
+                      </label>
+                    ))}
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() =>
+                      change({
+                        municipality_flood_levels: Object.fromEntries(
+                          (pilot?.barangays ?? []).map((b) => [
+                            b.municipality,
+                            "severe" as const,
+                          ]),
+                        ),
+                        manual_sites: null,
+                      })
+                    }
+                  >
+                    100-year flood preset
+                  </button>
+                  <p className="tiny">
+                    Synthetic stress test: severe flooding in both pilot
+                    municipalities using existing footprints. No calibrated
+                    100-year flood depth or extent data; not an official hazard
+                    forecast.
+                  </p>
+                </>
+              )}
               {pilot?.closures.map((c) => (
                 <label className="checkbox" key={c.id}>
                   <input
@@ -523,13 +793,13 @@ export function DriverTracking() {
                   Available clinics
                   <input
                     type="number"
-                    min="1"
+                    min={simulationMode ? "0" : "1"}
                     max="5"
                     value={scenario.clinic_count}
                     onChange={(e) =>
                       change({
                         clinic_count: Math.max(
-                          1,
+                          simulationMode ? 0 : 1,
                           Math.min(5, Number(e.target.value)),
                         ),
                         manual_sites: null,
@@ -666,9 +936,11 @@ export function DriverTracking() {
                 <Sparkles size={16} />
                 {busy
                   ? "Calculating…"
-                  : plan
-                    ? "Reoptimize tomorrow"
-                    : "Optimize tomorrow"}
+                  : simulationMode
+                    ? "Recompute simulation"
+                    : plan
+                      ? "Reoptimize tomorrow"
+                      : "Optimize tomorrow"}
               </button>
               <button
                 className="secondary"
@@ -752,8 +1024,26 @@ export function DriverTracking() {
                       {state.position[1].toFixed(5)},{" "}
                       {state.position[0].toFixed(5)} ·{" "}
                       {Math.round(state.heading)}° · {Math.round(state.speed)}{" "}
-                      km/h · {clinic?.served}/{clinic?.daily_capacity}{" "}
-                      appointments
+                      km/h · Patient load {clinic?.served}/
+                      {clinic?.daily_capacity} appointments
+                      <br />
+                      Barangays served:{" "}
+                      {clinic?.assignments
+                        .map((a) => `${a.name} (${a.residents})`)
+                        .join(", ") || "None"}
+                      <br />
+                      Services:{" "}
+                      {[
+                        ...new Set(
+                          plan?.barangays
+                            .filter((b) =>
+                              clinic?.assignments.some(
+                                (a) => a.barangay_id === b.id,
+                              ),
+                            )
+                            .flatMap((b) => b.recommended_services),
+                        ),
+                      ].join(", ") || "None"}
                     </small>
                   )}
                 </button>
@@ -788,6 +1078,33 @@ export function DriverTracking() {
               </span>
             ) : dirty ? (
               <span className="badge">Reoptimize before approval</span>
+            ) : simulationMode ? (
+              <button
+                className="primary"
+                disabled={busy || browserDemo || !previewReady}
+                onClick={() =>
+                  requireAdmin(async () => {
+                    setBusy(true);
+                    try {
+                      const result = await api<Plan>("/optimize", plan.inputs);
+                      setDraft({ ...result, simulation: plan.simulation });
+                      setSimulationPlan({
+                        ...result,
+                        simulation: plan.simulation,
+                      });
+                      setBranchNotice(
+                        "Simulation applied to planner draft. Published schedules are unchanged; review and approve separately in Schedules.",
+                      );
+                    } catch (e) {
+                      setError((e as Error).message);
+                    } finally {
+                      setBusy(false);
+                    }
+                  })
+                }
+              >
+                Apply simulation to draft
+              </button>
             ) : plan.plan_id ? (
               <Link className="primary" to="/schedules">
                 Review & approve plan
@@ -800,6 +1117,10 @@ export function DriverTracking() {
                   requireAdmin(async () => {
                     try {
                       const result = await api<Plan>("/optimize", scenario);
+                      setSimulationPlan({
+                        ...result,
+                        simulation: plan.simulation,
+                      });
                       setDraft({
                         ...result,
                         simulation:
