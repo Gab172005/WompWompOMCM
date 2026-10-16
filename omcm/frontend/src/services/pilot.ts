@@ -135,6 +135,7 @@ export function feasibleSites(pilot: Pilot, config: Config) {
 }
 const round = (n: number, digits = 2) => Number(n.toFixed(digits));
 const factorNames: Record<keyof Weights, string> = {
+  population: "population percentile",
   disease: "disease burden",
   vulnerability: "vulnerable residents",
   accessibility: "limited hospital access",
@@ -158,6 +159,15 @@ export function scorePilot(pilot: Pilot, config: Config): Barangay[] {
       const incidence = (b.disease_cases / b.population) * 1000 * surge;
       const vulnerable = Math.min(b.population, b.children + b.elderly);
       const factors: Weights = {
+        population:
+          ((pilot.barangays.filter((row) => row.population < b.population)
+            .length +
+            (pilot.barangays.filter((row) => row.population === b.population)
+              .length +
+              1) /
+              2) /
+            pilot.barangays.length) *
+          100,
         disease: Math.min(100, incidence),
         vulnerability: Math.min(100, (vulnerable / b.population / 0.6) * 100),
         accessibility: Math.min(

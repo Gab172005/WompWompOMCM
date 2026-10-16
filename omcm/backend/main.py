@@ -5,14 +5,14 @@ from datetime import datetime, timedelta, timezone, date
 from pathlib import Path
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from app.models.schemas import Weights, PlacementRequest, SimulationRequest, ApproveRequest, EmergencyRequest, BoundaryRequest
 from app.models.results import RiskResult, PlanResult, SimulationResult, AnalyticsResult, SchedulesResult, ScheduleResult
 from app.services.data import load_data, road_graph, travel_times
-from risk_scoring import calculate_scores
+from risk_scoring import calculate_scores, sensitivity_check
 from optimization import optimize
 from simulation import simulate_scenario
 from app.database import repository as repo
@@ -91,6 +91,13 @@ def clinics():
 def risk(weights: Weights, actor=Depends(require_admin)):
     frame, network, metadata = load_data()
     return dict(barangays=calculate_scores(frame, network, travel_times(road_graph(frame, network)), weights), weights=weights.model_dump(), metadata=metadata)
+
+
+@app.post("/api/risk/sensitivity")
+def risk_sensitivity(weights: Weights, top_k: int = Query(3, ge=1, le=100), actor=Depends(require_admin)):
+    frame, network, _ = load_data()
+    scores = calculate_scores(frame, network, travel_times(road_graph(frame, network)), weights)
+    return sensitivity_check(scores, weights, top_k)
 
 
 @app.post("/api/optimize", response_model=PlanResult)

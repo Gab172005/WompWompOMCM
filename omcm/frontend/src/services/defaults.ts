@@ -1,5 +1,6 @@
 import type { Config, Weights } from "../types";
 export const defaultWeights: Weights = {
+  population: 10,
   disease: 30,
   vulnerability: 20,
   accessibility: 20,

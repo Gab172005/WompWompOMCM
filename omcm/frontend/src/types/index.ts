@@ -1,6 +1,6 @@
 import type { FeatureCollection } from "geojson";
 export type Factor =
-  "disease" | "vulnerability" | "accessibility" | "poverty" | "flood";
+  "population" | "disease" | "vulnerability" | "accessibility" | "poverty" | "flood";
 export type Weights = Record<Factor, number>;
 export interface Barangay {
   id: string;

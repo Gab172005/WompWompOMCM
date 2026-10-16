@@ -8,6 +8,7 @@ class StrictModel(BaseModel):
 
 
 class Weights(StrictModel):
+    population: float = Field(10, ge=0, le=100)
     disease: float = Field(30, ge=0, le=100)
     vulnerability: float = Field(20, ge=0, le=100)
     accessibility: float = Field(20, ge=0, le=100)
