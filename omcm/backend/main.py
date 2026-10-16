@@ -160,6 +160,33 @@ def chat(body: dict = Body(...), actor=Depends(require_admin)):
         raise HTTPException(422, str(error)) from error
 
 
+@app.get("/api/integrations/google")
+def google_integration_status(actor=Depends(require_admin)):
+    from app.services.google_routes import configured
+    return dict(routes_configured=configured(), routes_active_in_planner=False,
+                maps_renderer="leaflet", google_routes_display="google_map_only")
+
+
+@app.get("/api/routes/google")
+def google_route(origin_id: str, site_id: str, actor=Depends(require_admin)):
+    from app.services.google_routes import compute_route, GoogleRoutesUnavailable
+    _, network, _ = load_data()
+    if "depot" not in network:
+        raise HTTPException(503, "Google Routes preparation requires the existing pilot dataset.")
+    origins = {row["id"]: row for row in network["barangays"]}
+    origins["depot"] = network["depot"]
+    sites = {site["id"]: site for site in network["sites"]}
+    if origin_id not in origins or site_id not in sites:
+        raise HTTPException(422, "Choose an existing pilot origin and candidate site.")
+    try:
+        return dict(**compute_route(origins[origin_id], sites[site_id]),
+                    source="Google Routes API", display_on="google_map_only",
+                    origin_id=origin_id, site_id=site_id,
+                    simulated_closures_applied=False, saved_to_plan=False)
+    except GoogleRoutesUnavailable as error:
+        raise HTTPException(503, str(error)) from error
+
+
 @app.get("/api/analytics", response_model=AnalyticsResult)
 def analytics():
     data = barangays()

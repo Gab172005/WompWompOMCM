@@ -1,5 +1,22 @@
 # OMCM audit and proposed build plan
 
+## Google API preparation — 2026-10-16
+
+The user requested readiness for Google Maps and Google Routes after the map-first
+implementation. This first reviewable build step adds an optional official Maps
+SDK loader, a standard-library server Routes adapter, authenticated readiness and
+route endpoints, a typed frontend route client, environment examples and tests.
+No dependencies or existing data schemas change. Google loading/routing is opt-in;
+Leaflet, OSRM pilot evidence and the optimizer remain active as before. No key,
+Google response or route is persisted into the pilot or published plans.
+
+Live Google verification is blocked by absent credentials. The Google renderer
+and integration of Google travel times into the optimizer are not implemented.
+After review, the next step is an optional Google renderer that preserves Laguna
+masking/bounds and all existing map/tracking interactions, then credential-backed
+validation. Existing road closures cannot be claimed to affect arbitrary Google
+routes. See [GOOGLE-APIS.md](GOOGLE-APIS.md) for configuration and exact interfaces.
+
 ## Current map-first implementation — 2026-10-16
 
 The latest one-shot user request supersedes the earlier step-by-step stops and

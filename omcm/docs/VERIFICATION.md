@@ -344,3 +344,19 @@ that isolated export. This confirms the committed application builds and runs
 without the remaining legacy-page and nightly-state edits in the working tree.
 The user authorized including the prerequisite weights, optimization, and
 simulation edits. Unrelated work and local instruction files remain uncommitted.
+
+## Google Maps and Routes readiness step — 2026-10-16
+
+- Frontend lint and build/type check passed; **45 frontend unit tests** passed.
+- **49 backend tests** passed, with the existing Starlette/httpx warning.
+- Added mocked SDK tests for explicit key requirements, single-script loading,
+  library imports, timeout and retry; route-client tests check server transport
+  and rejection of non-Google renderers.
+- Added server tests for disabled readiness/authentication, unknown pilot IDs,
+  request headers/field masks/GeoJSON encoding, response validation, provider
+  errors, secret redaction and unchanged saved drafts/published schedules.
+- No Google credentials were supplied and no live or billed Google requests
+  were made. External API behavior was stub-tested, not browser-verified.
+- No UI workflow changed: Leaflet and the existing OSRM pilot remain active.
+  The optional Google renderer and live-key validation await the next reviewed
+  build step. Setup and exact entry points are in `GOOGLE-APIS.md`.

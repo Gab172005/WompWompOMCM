@@ -233,3 +233,16 @@ Unset credentials, missing configuration, or provider failures use a grounded
 server template. Signed-out/browser-only sessions have a visibly labeled local
 template from displayed app data. Remote-provider network behavior is unit-tested
 with a stub; live credentials are not included or required for template chat.
+
+## Optional Google API preparation
+
+See [GOOGLE-APIS.md](GOOGLE-APIS.md) for setup and activation limits.
+`GET /api/integrations/google` reports server Routes readiness without exposing
+keys or requesting a route. `GET /api/routes/google?origin_id=depot&site_id=P01`
+requests an ephemeral Google driving route between existing pilot identifiers.
+Both use the existing administrator authentication. Routes requires explicit
+`OMCM_GOOGLE_ROUTES_ENABLED=true` and a server-only API key; otherwise route calls
+return 503. Unknown identifiers return 422. Results are marked Google-map-only,
+not saved to plans and not asserted to avoid simulated closures. The current
+Leaflet map and optimizer never call this adapter automatically. No existing
+request models, bundled JSON schemas or publication behavior changed.
