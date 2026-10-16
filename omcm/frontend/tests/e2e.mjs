@@ -59,7 +59,7 @@ async function seek(seconds) {
     .fill(String(seconds));
 }
 async function inspectPolygon() {
-  const point = await page.locator("path.area-403411004").evaluate((path) => {
+  const point = await page.locator("path.area-403411000").evaluate((path) => {
     const b = path.getBBox();
     for (const x of [0.5, 0.35, 0.65, 0.2, 0.8])
       for (const y of [0.5, 0.35, 0.65, 0.2, 0.8]) {
@@ -72,11 +72,24 @@ async function inspectPolygon() {
     throw new Error("No polygon interior found");
   });
   await page.mouse.click(point.x, point.y);
-  await expect(page.locator(".map-detail")).toContainText("Batong Malake");
+  await expect(page.locator(".map-detail")).toContainText("Los Baños");
+  await expect(page.locator(".map-detail")).toContainText(
+    "available barangay records",
+  );
   await expect(page.locator(".map-detail")).toContainText(
     "Score contributions",
   );
-  await page.getByRole("button", { name: "Close barangay details" }).click();
+  await page
+    .getByRole("button", { name: "Close municipality details" })
+    .click();
+  await page
+    .getByRole("combobox", { name: "Inspect city or municipality" })
+    .selectOption("403401000");
+  await expect(page.locator(".map-detail")).toContainText("Alaminos");
+  await expect(page.locator(".map-detail .detail-score")).toHaveText("No data");
+  await page
+    .getByRole("button", { name: "Close municipality details" })
+    .click();
 }
 async function verifyFleet() {
   await expect(page.locator(".fleet-card")).toHaveCount(3);
@@ -191,7 +204,7 @@ async function verifyConsecutiveDays() {
 try {
   const apiServer = start(
     python,
-    ["-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8001"],
+    ["-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8001"],
     backend,
     {
       OMCM_DATABASE_PATH: join(temp, "test.db"),
@@ -234,9 +247,20 @@ try {
   await expect(
     page.getByRole("heading", { name: "Care on the move" }),
   ).toBeVisible();
-  await expect(page.locator("path.barangay-marker")).toHaveCount(20);
+  await expect(page.locator("path.municipality-marker")).toHaveCount(30);
   await expect(page.locator(".leaflet-tile-loaded").first()).toBeVisible();
   await inspectPolygon();
+  await page.getByLabel("Need polygons", { exact: true }).uncheck();
+  await expect(page.locator("path.area-403411000")).toHaveAttribute(
+    "fill-opacity",
+    "0",
+  );
+  await expect(page.locator("path.area-403411000")).toHaveAttribute(
+    "stroke-width",
+    "1.8",
+  );
+  await page.getByLabel("Need polygons", { exact: true }).check();
+  await screenshot("municipality-map");
   // A credential-free read-only tour works while server publishing remains protected.
   await page.getByRole("button", { name: "Demo tour · 3 clinics" }).click();
   await verifyFleet();
@@ -341,6 +365,7 @@ try {
   );
   await screenshot("simulator-mobile");
   await page.goto("http://127.0.0.1:5174/public");
+  await expect(page.locator("path.municipality-marker")).toHaveCount(30);
   await page.getByLabel("Schedule date").fill(tomorrow);
   await expect(page.locator(".public-clinic")).toHaveCount(3);
   assert.equal(await page.locator(".fleet-marker").count(), 0);

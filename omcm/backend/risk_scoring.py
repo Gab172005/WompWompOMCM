@@ -1,3 +1,4 @@
+"""Healthcare need scores and their contributing factors."""
 import math
 import numpy as np
 from app.models.schemas import Weights

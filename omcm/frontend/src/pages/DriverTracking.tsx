@@ -29,8 +29,8 @@ import {
   nextSimulationDay,
 } from "../services/fleet";
 import { useSimulationClock } from "../hooks/useSimulationClock";
-import { FleetTrackerMap, type MapLayers } from "../components/FleetTrackerMap";
-import { RiskMap } from "../components/RiskMap";
+import { ClinicTracker, type MapLayers } from "../components/ClinicTracker";
+import { MapView } from "../components/MapView";
 import { Card, number } from "../components/ui";
 import type { Config, Factor, Plan } from "../types";
 
@@ -43,7 +43,7 @@ const layerLabels: Record<keyof MapLayers, string> = {
   coverage: "Assigned areas",
   eta: "ETA labels",
 };
-export function Simulator() {
+export function DriverTracking() {
   const {
     config,
     plan,
@@ -316,14 +316,14 @@ export function Simulator() {
                 Fit routes
               </button>
             </div>
-            <RiskMap
+            <MapView
               data={preview}
               clinics={[]}
               needVisible={layers.need}
               coverageIds={coverageIds}
             >
               {pilot && (
-                <FleetTrackerMap
+                <ClinicTracker
                   pilot={pilot}
                   plan={plan}
                   config={scenario}
@@ -336,7 +336,7 @@ export function Simulator() {
                   layers={layers}
                 />
               )}
-            </RiskMap>
+            </MapView>
             <div className="fleet-layers">
               {(Object.keys(layers) as (keyof MapLayers)[]).map((key) => (
                 <label key={key}>

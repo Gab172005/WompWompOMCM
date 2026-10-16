@@ -65,7 +65,8 @@ export async function demoApi(path: string, body?: unknown): Promise<unknown> {
   if (path === "/boundaries" && body === undefined)
     return {
       geojson: null,
-      source: "Bundled authentic 2023 PSGC pilot boundaries",
+      source:
+        "Bundled Laguna city and municipality boundaries (2023 PSGC snapshot)",
     };
   if (path === "/risk/calculate")
     return {

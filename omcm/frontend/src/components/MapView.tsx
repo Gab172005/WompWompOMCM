@@ -1,23 +1,16 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   MapContainer,
   TileLayer,
   Popup,
   Marker,
   Polyline,
-  GeoJSON,
-  useMap,
 } from "react-leaflet";
-import { divIcon, geoJSON, Path } from "leaflet";
-import type { FeatureCollection } from "geojson";
-import { riskColor, riskScale } from "./choropleth";
-import {
-  loadLagunaGeography,
-  matchAreas,
-  parseLagunaGeometry,
-} from "./lagunaGeography";
-import type { Geography } from "./lagunaGeography";
-import type { Feature } from "geojson";
+import { divIcon } from "leaflet";
+import { riskScale } from "./choropleth";
+import { Heatmap } from "./Heatmap";
+import { useMunicipalities } from "../hooks/useMunicipalities";
+import { coveredMunicipalities } from "../services/municipalities";
 import { Hospital as HospitalIcon, MapPin, Navigation, X } from "lucide-react";
 import { useOMCM } from "../services/store";
 import type { Barangay, Clinic, Factor } from "../types";
@@ -37,87 +30,7 @@ const icon = (kind: "hospital" | "site" | "clinic") =>
     iconAnchor:
       kind === "hospital" ? [-8, 32] : kind === "clinic" ? [37, -8] : [32, -8],
   });
-function FitTerritories({
-  data,
-  request,
-}: {
-  data: FeatureCollection;
-  request: number;
-}) {
-  const map = useMap();
-  useEffect(() => {
-    const bounds = geoJSON(data).getBounds();
-    const fit = () => {
-      map.invalidateSize();
-      if (bounds.isValid())
-        map.fitBounds(bounds, {
-          paddingTopLeft: [28, 65],
-          paddingBottomRight: [28, 28],
-          maxZoom: 13,
-          animate: false,
-        });
-    };
-    fit();
-    const observer = new ResizeObserver(fit);
-    observer.observe(map.getContainer());
-    return () => observer.disconnect();
-  }, [map, data, request]);
-  return null;
-}
-function ReadableLabels({
-  layerKey,
-  barangayLevel,
-}: {
-  layerKey: string;
-  barangayLevel: boolean;
-}) {
-  const map = useMap();
-  useEffect(() => {
-    let frame = 0;
-    const update = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        const viewport = map.getContainer().getBoundingClientRect();
-        const occupied: DOMRect[] = [];
-        map
-          .getContainer()
-          .querySelectorAll<HTMLElement>(".barangay-label")
-          .forEach((label) => {
-            label.style.visibility = "hidden";
-            if (barangayLevel && map.getZoom() < 12) return;
-            const rect = label.getBoundingClientRect();
-            if (
-              rect.left < viewport.left ||
-              rect.right > viewport.right ||
-              rect.top < viewport.top ||
-              rect.bottom > viewport.bottom
-            )
-              return;
-            if (
-              occupied.some(
-                (other) =>
-                  rect.left < other.right + 3 &&
-                  rect.right + 3 > other.left &&
-                  rect.top < other.bottom + 3 &&
-                  rect.bottom + 3 > other.top,
-              )
-            )
-              return;
-            occupied.push(rect);
-            label.style.visibility = "visible";
-          });
-      });
-    };
-    map.on("zoomend moveend resize", update);
-    update();
-    return () => {
-      cancelAnimationFrame(frame);
-      map.off("zoomend moveend resize", update);
-    };
-  }, [map, layerKey, barangayLevel]);
-  return null;
-}
-export function RiskMap({
+export function MapView({
   clinics,
   data,
   closedRoads = [],
@@ -151,76 +64,37 @@ export function RiskMap({
     plan,
   } = useOMCM();
   const barangays = data ?? plan?.barangays ?? currentBarangays;
-  const [geography, setGeography] = useState<Geography | null>(null);
-  const [geographyError, setGeographyError] = useState("");
-  useEffect(() => {
-    if (publicMode) return;
-    let active = true;
-    loadLagunaGeography()
-      .then((value) => {
-        if (active) setGeography(value);
-      })
-      .catch((error) => {
-        if (active) setGeographyError(error.message);
-      });
-    return () => {
-      active = false;
-    };
-  }, [publicMode]);
+  const {
+    geography,
+    geographyError,
+    territoryData,
+    municipalities,
+    uploadedGeometry,
+  } = useMunicipalities(barangays, boundaries);
   const [filter, setFilter] = useState<Factor | "score">("score"),
     [selectedId, setSelectedId] = useState<string | null>(null),
     [showFacilities, setShowFacilities] = useState(publicMode || showRoads),
     [tilesUnavailable, setTilesUnavailable] = useState(false);
   const [recenter, setRecenter] = useState(0),
     [tileAttempt, setTileAttempt] = useState(0);
-  const selectedRef = useRef(selectedId);
-  selectedRef.current = selectedId;
   const shownClinics = clinics ?? plan?.optimized.clinics ?? [];
   const byId = useMemo(
     () => Object.fromEntries(barangays.map((b) => [b.id, b])),
     [barangays],
   );
-  const uploadedGeometry = useMemo(() => {
-    if (!boundaries.geojson) return null;
-    try {
-      const p = boundaries.geojson.features[0]?.properties;
-      const level =
-        p?.adm4_psgc || p?.level === "barangay" || p?.geo_level === "Bgy"
-          ? "barangay"
-          : "municipality";
-      return parseLagunaGeometry(boundaries.geojson, level);
-    } catch {
-      return null;
-    } // Legacy invented uploads never replace real geography.
-  }, [boundaries.geojson]);
-  const territoryData = useMemo(() => {
-    const all = uploadedGeometry ?? geography?.geojson;
-    if (!all || !barangays.length || !barangays.every((b) => b.psgc))
-      return all;
-    const ids = new Set(
-      barangays.map((b) => String(b.psgc).replace(/^0+/, "")),
-    );
-    return {
-      ...all,
-      features: all.features.filter((f) => ids.has(f.properties.area_id)),
-    };
-  }, [uploadedGeometry, geography, barangays]);
   const areaRecords = useMemo(
-    () =>
-      territoryData
-        ? matchAreas(territoryData, barangays, geography?.mapping ?? {})
-        : {},
-    [geography, territoryData, barangays],
+    () => Object.fromEntries(municipalities.map((area) => [area.id, area])),
+    [municipalities],
+  );
+  const municipalityCoverage = useMemo(
+    () => coveredMunicipalities(municipalities, coverageIds),
+    [municipalities, coverageIds],
   );
   const selectedArea = territoryData?.features.find(
     (f) => f.properties.area_id === selectedId,
   )?.properties;
   const selected = selectedId ? areaRecords[selectedId] : undefined;
   const matchedCount = Object.values(areaRecords).filter(Boolean).length;
-  const borderWeight =
-    territoryData?.features[0]?.properties.level === "barangay" ? 0.7 : 1.5;
-  const valueOf = (b?: Barangay) =>
-    b ? (filter === "score" ? b.score : b.factors[filter]) : undefined;
   const layerName =
     filter === "score"
       ? "Healthcare need"
@@ -231,30 +105,17 @@ export function RiskMap({
           : filter === "flood"
             ? "Flood exposure"
             : "Hospital inaccessibility";
-  const layerKey = JSON.stringify([
-    filter,
-    barangays.map((b) => [
-      b.id,
-      b.name,
-      b.psgc,
-      b.municipality,
-      b.geography_level,
-      b.score,
-      b.factors,
-    ]),
-    geography?.source,
-    boundaries.updated_at,
-  ]);
+  const layerKey = useMemo(
+    () => JSON.stringify([filter, municipalities, territoryData, publicMode]),
+    [filter, municipalities, territoryData, publicMode],
+  );
   return (
     <div className="map-shell">
       {!publicMode && (
         <div className="map-toolbar">
           <span>
             <span className="live-dot" />
-            Laguna ·{" "}
-            {territoryData?.features[0]?.properties.level === "municipality"
-              ? "Municipalities"
-              : "Barangays"}
+            Laguna · Cities & municipalities
           </span>
           <label className="sr-only" htmlFor="map-layer">
             Map layer
@@ -300,112 +161,20 @@ export function RiskMap({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           eventHandlers={{ tileerror: () => setTilesUnavailable(true) }}
         />
-        {!publicMode && territoryData && (
-          <>
-            <FitTerritories data={territoryData} request={recenter} />
-            <GeoJSON
-              key={layerKey}
-              data={territoryData}
-              style={(feature) => ({
-                className: `barangay-marker area-${feature?.properties?.area_id}`,
-                color: coverageIds.includes(feature?.properties?.area_id)
-                  ? "#2563eb"
-                  : selectedId === feature?.properties?.area_id
-                    ? "#451A1A"
-                    : "#94595b",
-                weight:
-                  coverageIds.includes(feature?.properties?.area_id) ||
-                  selectedId === feature?.properties?.area_id
-                    ? 3
-                    : borderWeight,
-                opacity: 1,
-                fillColor: riskColor(
-                  valueOf(areaRecords[feature?.properties?.area_id]),
-                ),
-                fillOpacity: needVisible ? 0.48 : 0,
-              })}
-              onEachFeature={(feature: Feature, layer) => {
-                const b = areaRecords[feature.properties?.area_id];
-                const name = `${feature.properties?.name}${feature.properties?.level === "barangay" ? `, ${feature.properties?.municipality}` : ""}`;
-                const value = valueOf(b);
-                const tip = document.createElement("div");
-                const title = document.createElement("strong");
-                title.textContent = name;
-                tip.append(
-                  title,
-                  document.createElement("br"),
-                  `${layerName}: ${value == null || !Number.isFinite(value) ? "No data" : `${value.toFixed(1)}/100`}${b ? ` · Rank ${b.rank}` : ""}`,
-                );
-                if (filter !== "score" && b)
-                  tip.append(
-                    document.createElement("br"),
-                    `Healthcare need: ${b.score}/100`,
-                  );
-                layer.bindTooltip(tip, {
-                  sticky: true,
-                  className: "risk-hover",
-                });
-                if (layer instanceof Path) {
-                  layer.on("mouseover", () => {
-                    layer.setStyle({ color: "#451A1A", weight: 3 });
-                    layer.bringToFront();
-                  });
-                  layer.on("mouseout", () =>
-                    layer.setStyle({
-                      color:
-                        selectedRef.current === feature.properties?.area_id
-                          ? "#451A1A"
-                          : "#94595b",
-                      weight:
-                        selectedRef.current === feature.properties?.area_id
-                          ? 3
-                          : borderWeight,
-                    }),
-                  );
-                  layer.on("click", () =>
-                    setSelectedId(feature.properties?.area_id),
-                  );
-                }
-              }}
-            />
-            <GeoJSON
-              key={`labels-${layerKey}`}
-              data={territoryData}
-              interactive={false}
-              style={{ opacity: 0, fillOpacity: 0, interactive: false }}
-              onEachFeature={(feature, layer) => {
-                const b = areaRecords[feature.properties?.area_id];
-                const label = document.createElement("span");
-                const name = String(feature.properties?.name ?? "");
-                const full = document.createElement("span");
-                full.className = "barangay-label-full";
-                full.textContent = name;
-                const compact = document.createElement("span");
-                compact.className = "barangay-label-compact";
-                compact.textContent =
-                  name.split(/[\s-]+/).length > 1
-                    ? name
-                        .split(/[\s-]+/)
-                        .map((word) => word[0])
-                        .join("")
-                        .toUpperCase()
-                    : name.slice(0, 3).toUpperCase();
-                label.append(full, compact);
-                layer.bindTooltip(label, {
-                  permanent: true,
-                  direction: "center",
-                  interactive: false,
-                  className: `barangay-label ${valueOf(b) != null && valueOf(b)! >= 50 ? "light-label" : ""}`,
-                });
-              }}
-            />
-            <ReadableLabels
-              layerKey={layerKey}
-              barangayLevel={
-                territoryData.features[0]?.properties.level === "barangay"
-              }
-            />
-          </>
+        {territoryData && (
+          <Heatmap
+            data={territoryData}
+            records={areaRecords}
+            filter={filter}
+            layerName={layerName}
+            layerKey={layerKey}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            coverageIds={municipalityCoverage}
+            needVisible={needVisible}
+            publicMode={publicMode}
+            recenter={recenter}
+          />
         )}
         {showFacilities &&
           hospitals.map((h) => (
@@ -507,7 +276,7 @@ export function RiskMap({
           </button>
         </div>
       )}
-      {!publicMode && !territoryData && (
+      {!territoryData && (
         <div className="map-geography-status" role="status">
           {geographyError || "Loading real Laguna boundaries…"}
         </div>
@@ -516,23 +285,20 @@ export function RiskMap({
         <div className="map-detail">
           <button
             className="icon-button detail-close"
-            aria-label="Close barangay details"
+            aria-label="Close municipality details"
             onClick={() => setSelectedId(null)}
           >
             <X size={17} />
           </button>
           <span className="eyebrow">
-            LAGUNA {selectedArea.level.toUpperCase()} · PSGC{" "}
-            {selectedArea.area_id}
+            LAGUNA CITY / MUNICIPALITY · PSGC {selectedArea.area_id}
           </span>
           <h3>{selectedArea.name}</h3>
-          {selectedArea.level === "barangay" && (
-            <p>{selectedArea.municipality}, Laguna</p>
-          )}
+          <p>Laguna</p>
           <strong className="detail-score">No data</strong>
           <p>
-            No matching healthcare record. The fictional pilot communities are
-            not assigned to real Laguna areas.
+            No healthcare records are available for this city or municipality.
+            Its boundary remains visible for geographic context.
           </p>
           <div className="detail-grid">
             {[
@@ -555,18 +321,19 @@ export function RiskMap({
         <div className="map-detail">
           <button
             className="icon-button detail-close"
-            aria-label="Close barangay details"
+            aria-label="Close municipality details"
             onClick={() => setSelectedId(null)}
           >
             <X size={17} />
           </button>
           <span className="eyebrow">
-            LAGUNA {selectedArea.level.toUpperCase()} · PSGC{" "}
-            {selectedArea.area_id}
+            LAGUNA CITY / MUNICIPALITY · PSGC {selectedArea.area_id}
           </span>
           <h3>{selectedArea.name}</h3>
           <p>
-            {selectedArea.municipality} · Healthcare record: {selected.name}
+            {selected.aggregated
+              ? `${selected.barangay_count} available barangay records · Population-weighted indicators`
+              : "City / municipality healthcare record"}
           </p>
           <NeedBadge level={selected.level} />
           <strong className="detail-score">
@@ -575,7 +342,8 @@ export function RiskMap({
           </strong>
           <div className="detail-grid">
             <div>
-              Population<strong>{number(selected.population)}</strong>
+              Represented population
+              <strong>{number(selected.population)}</strong>
             </div>
             <div>
               Children / elderly
@@ -606,7 +374,7 @@ export function RiskMap({
           <p>
             <Navigation size={14} />{" "}
             {selected.hospital_minutes === null
-              ? "No reachable hospital"
+              ? "Hospital access unavailable for one or more records"
               : `${selected.hospital_minutes} min · demo travel`}
           </p>
           <p className="explanation">{selected.explanation}</p>
@@ -660,6 +428,9 @@ export function RiskMap({
         </div>
       )}
       <div className="map-legend">
+        <span>
+          <i className="municipality-border-key" /> City / municipality border
+        </span>
         {!publicMode &&
           riskScale.map(({ label, color, range }) => (
             <span key={label}>
@@ -682,27 +453,25 @@ export function RiskMap({
       </div>
       {!publicMode && territoryData && (
         <label className="map-inspector">
-          Inspect barangay
+          Inspect city or municipality
           <select
-            aria-label="Inspect barangay"
+            aria-label="Inspect city or municipality"
             value={selectedId ?? ""}
             onChange={(e) => setSelectedId(e.target.value || null)}
           >
-            <option value="">Choose a community</option>
+            <option value="">Choose a city or municipality</option>
             {territoryData.features.map((f) => (
               <option key={f.properties.area_id} value={f.properties.area_id}>
-                {f.properties.name}, {f.properties.municipality}
+                {f.properties.name}
               </option>
             ))}
           </select>
         </label>
       )}
       <div className="map-caption">
-        {publicMode
-          ? `Demo deployments | ${tilesUnavailable ? "Base map unavailable" : "OpenStreetMap base map"}`
-          : territoryData
-            ? `${uploadedGeometry ? boundaries.source : geography?.source} | ${matchedCount}/${territoryData.features.length} areas matched to healthcare records | Unmatched areas: gray, no data | Scroll to zoom; drag to pan${territoryData.features[0]?.properties.level === "barangay" ? " | Zoom in for labels; hover for names" : ""}${geography?.warning ? ` | ${geography.warning}` : ""}`
-            : geographyError || "Loading real Laguna GeoJSON"}
+        {territoryData
+          ? `${uploadedGeometry ? "Verified city / municipality boundary overrides" : geography?.source} | ${territoryData.features.length} city / municipality borders${publicMode ? " | Approved demo deployments" : ` | ${matchedCount} areas with healthcare data | Gray: no data | Scores weighted by source population; totals cover available records only`}${municipalityCoverage.size ? " | Blue borders: contain assigned communities, not full municipal coverage" : ""} | Scroll to zoom; drag to pan${geography?.warning ? ` | ${geography.warning}` : ""}`
+          : geographyError || "Loading Laguna city and municipality boundaries"}
       </div>
     </div>
   );

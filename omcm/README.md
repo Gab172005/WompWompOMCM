@@ -56,7 +56,7 @@ python -m venv .venv
 .venv/Scripts/python.exe -m pip install -r requirements.txt
 Copy-Item ../.env.example .env
 # Edit .env: enable demo auth and choose a username and 12+ character password.
-.venv/Scripts/python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+.venv/Scripts/python.exe -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
 On macOS/Linux use `.venv/bin/python` and `cp ../.env.example .env`. Start the
@@ -114,7 +114,7 @@ See [verification results](docs/VERIFICATION.md), [three-minute demo script](doc
 3. For connected mode set `VITE_API_URL` to the backend HTTPS base without `/api`.
    Set `VITE_DEMO_MODE=false`; changes to Vite variables require rebuilding.
 4. Deploy Python from `omcm/backend`, install `requirements.txt`, start
-   `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Keep `OMCM_DATASET=pilot`.
+   `uvicorn main:app --host 0.0.0.0 --port $PORT`. Keep `OMCM_DATASET=pilot`.
 5. Set exact frontend origins in `OMCM_CORS_ORIGINS`; set demo credentials only
    on the server. Use HTTPS. Point `OMCM_DATABASE_PATH` at persistent storage.
 6. Verify authenticated approval, published schedules after restart, and explicit

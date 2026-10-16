@@ -9,8 +9,8 @@ import {
 } from "lucide-react";
 import { useOMCM } from "../services/store";
 import { Card } from "../components/ui";
-import { RiskMap } from "../components/RiskMap";
-export function Public() {
+import { MapView } from "../components/MapView";
+export function PublicDashboard() {
   const {
     publicData,
     today,
@@ -52,8 +52,9 @@ export function Public() {
             services.
           </p>
           <div className="notice">
-            {browserDemo && "Browser-only approval rehearsal. "}Demonstration only. These are synthetic clinics and schedules, not
-            actual health services or emergency alerts.
+            {browserDemo && "Browser-only approval rehearsal. "}Demonstration
+            only. These are synthetic clinics and schedules, not actual health
+            services or emergency alerts.
           </div>
         </div>
         {error && (
@@ -95,7 +96,13 @@ export function Public() {
                 ? "Loading…"
                 : "No schedule published"}
           </span>
-          {schedule && <small>Last updated: {new Date(schedule.updated_at).toLocaleString("en-PH")} · Approved destination; location sharing disabled.</small>}
+          {schedule && (
+            <small>
+              Last updated:{" "}
+              {new Date(schedule.updated_at).toLocaleString("en-PH")} · Approved
+              destination; location sharing disabled.
+            </small>
+          )}
         </div>
         {publicData.notices
           .filter((n) => n.date === current)
@@ -114,7 +121,7 @@ export function Public() {
               </h3>
               <span className="badge">APPROVED SCHEDULES</span>
             </div>
-            <RiskMap
+            <MapView
               clinics={schedule?.clinics ?? []}
               publicMode
               scheduleInfo={

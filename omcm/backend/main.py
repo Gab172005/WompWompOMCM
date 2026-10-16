@@ -12,11 +12,12 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from app.models.schemas import Weights, PlacementRequest, SimulationRequest, ApproveRequest, EmergencyRequest, BoundaryRequest
 from app.models.results import RiskResult, PlanResult, SimulationResult, AnalyticsResult, SchedulesResult, ScheduleResult
 from app.services.data import load_data, road_graph, travel_times
-from app.algorithms.scoring import calculate_scores
-from app.algorithms.placement import optimize
+from risk_scoring import calculate_scores
+from optimization import optimize
+from simulation import simulate_scenario
 from app.database import repository as repo
 
-load_dotenv(Path(__file__).resolve().parents[1] / ".env", encoding="utf-8-sig")
+load_dotenv(Path(__file__).resolve().parent / ".env", encoding="utf-8-sig")
 MANILA = timezone(timedelta(hours=8))
 security = HTTPBasic(auto_error=False)
 
@@ -101,16 +102,10 @@ def placement(request: PlacementRequest, actor=Depends(require_admin)):
 
 @app.post("/api/simulate", response_model=SimulationResult)
 def simulate(request: SimulationRequest, actor=Depends(require_admin)):
-    before = run_optimization(request.original)
-    after = run_optimization(request.scenario)
-    previous, updated = before["optimized"]["served_by_barangay"], after["optimized"]["served_by_barangay"]
-    changes = dict(previously_covered=before["optimized"]["metrics"]["residents_served"],
-                   newly_covered=sum(max(0, updated[key]-previous[key]) for key in previous),
-                   losing_coverage=sum(max(0, previous[key]-updated[key]) for key in previous),
-                   average_travel_delta=round(after["optimized"]["metrics"]["average_travel_minutes"]-before["optimized"]["metrics"]["average_travel_minutes"], 2),
-                   utilization_delta=round(after["optimized"]["metrics"]["capacity_utilization"]-before["optimized"]["metrics"]["capacity_utilization"], 2))
-    return dict(before=before, after=after, changes=changes,
-                note="Coverage changes compare aggregate appointments within each barangay, not identified individuals. Published schedules are unchanged.")
+    try:
+        return simulate_scenario(request)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
 
 
 @app.get("/api/analytics", response_model=AnalyticsResult)

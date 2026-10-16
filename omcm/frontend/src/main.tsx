@@ -28,14 +28,14 @@ import {
   CircleHelp,
 } from "lucide-react";
 import { Provider, useOMCM } from "./services/store";
-import { Overview } from "./pages/Overview";
+import { Dashboard } from "./components/Dashboard";
 import { Risk } from "./pages/Risk";
-import { Optimization } from "./pages/Optimization";
-import { Simulator } from "./pages/Simulator";
+import { AdminDashboard } from "./pages/AdminDashboard";
+import { DriverTracking } from "./pages/DriverTracking";
 import { Schedules } from "./pages/Schedules";
 import { Analytics } from "./pages/Analytics";
 import { Settings } from "./pages/Settings";
-import { Public } from "./pages/Public";
+import { PublicDashboard } from "./pages/PublicDashboard";
 import "leaflet/dist/leaflet.css";
 import "./styles/app.css";
 const links = [
@@ -53,7 +53,7 @@ const links = [
 ];
 function Layout() {
   const {
-    barangays,
+    municipalities,
     username,
     signOut,
     requireAdmin,
@@ -106,7 +106,10 @@ function Layout() {
           <div className="pilot-label">
             <span className="live-dot" />
             <strong>Laguna pilot</strong>
-            <small>{barangays.length} barangays · demo health data</small>
+            <small>
+              {municipalities.length} cities / municipalities with data · demo
+              health data
+            </small>
           </div>
           <Link className="nav-item" to="/public" target="_blank">
             <Globe size={18} />
@@ -155,9 +158,15 @@ function Layout() {
                 {username ? username.slice(0, 2).toUpperCase() : "LG"}
               </div>
               <span>
-                <strong>{browserDemo ? "Browser demo" : username || "LGU planner"}</strong>
+                <strong>
+                  {browserDemo ? "Browser demo" : username || "LGU planner"}
+                </strong>
                 <small>
-                  {browserDemo ? "Local rehearsal only" : username ? "Demo admin · sign out" : "Demo mode · sign in"}
+                  {browserDemo
+                    ? "Local rehearsal only"
+                    : username
+                      ? "Demo admin · sign out"
+                      : "Demo mode · sign in"}
                 </small>
               </span>
               {username ? <LogOut size={15} /> : <LogIn size={15} />}
@@ -165,8 +174,19 @@ function Layout() {
           </div>
         </header>
         <main className="main-content">
-          <nav className="operations-nav" aria-label="Product modes"><NavLink to="/optimization">Operations</NavLink><NavLink to="/simulator">Simulator</NavLink><Link to="/public">Public View</Link><NavLink to="/settings">Data & Methods</NavLink></nav>
-          {browserDemo && <div className="browser-demo-banner">Browser-only demo · Plans are saved on this browser and origin. Local approval rehearses publication; it does not publish an LGU service.</div>}
+          <nav className="operations-nav" aria-label="Product modes">
+            <NavLink to="/optimization">Operations</NavLink>
+            <NavLink to="/simulator">Simulator</NavLink>
+            <Link to="/public">Public View</Link>
+            <NavLink to="/settings">Data & Methods</NavLink>
+          </nav>
+          {browserDemo && (
+            <div className="browser-demo-banner">
+              Browser-only demo · Plans are saved on this browser and origin.
+              Local approval rehearses publication; it does not publish an LGU
+              service.
+            </div>
+          )}
           {error && (
             <div className="error global-alert" role="alert">
               <span>{error}</span>
@@ -250,16 +270,17 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <BrowserRouter>
       <Provider>
         <Routes>
-          <Route path="/public" element={<Public />} />
-          <Route path="/clinics" element={<Public />} />
+          <Route path="/public" element={<PublicDashboard />} />
+          <Route path="/clinics" element={<PublicDashboard />} />
           <Route element={<Layout />}>
-            <Route index element={<Overview />} />
+            <Route index element={<Dashboard />} />
             <Route path="risk" element={<Risk />} />
-            <Route path="optimization" element={<Optimization />} />
-            <Route path="admin" element={<Optimization />} />
-            <Route path="dashboard" element={<Overview />} />
-            <Route path="dashboard/admin" element={<Optimization />} />
-            <Route path="simulator" element={<Simulator />} />
+            <Route path="optimization" element={<AdminDashboard />} />
+            <Route path="admin" element={<AdminDashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="dashboard/admin" element={<AdminDashboard />} />
+            <Route path="simulator" element={<DriverTracking />} />
+            <Route path="driver" element={<DriverTracking />} />
             <Route path="schedules" element={<Schedules />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="settings" element={<Settings />} />

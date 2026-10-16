@@ -1,29 +1,29 @@
 import { useOMCM } from "../services/store";
 import { Card, NeedBadge, number, PageHeader } from "../components/ui";
-import { RiskMap } from "../components/RiskMap";
+import { MapView } from "../components/MapView";
 export function Risk() {
-  const { barangays } = useOMCM();
+  const { municipalities: barangays } = useOMCM();
   return (
     <>
       <PageHeader
         eyebrow="COMMUNITY INTELLIGENCE"
         title="Healthcare risk map"
-        description="Select a location for its need score, contributing factors, hospital access, and preventive services."
+        description="Select a city or municipality for population-weighted healthcare need, contributing factors, and available services."
       />
       <Card className="full-map">
-        <RiskMap showRoads />
+        <MapView showRoads />
       </Card>
       <Card>
         <div className="card-title">
-          <h3>Barangay intelligence register</h3>
+          <h3>City / municipality intelligence register</h3>
           <span className="badge">DEMO DATA</span>
         </div>
         <div className="table-scroll">
           <table>
             <thead>
               <tr>
-                <th>Rank / Barangay</th>
-                <th>Population</th>
+                <th>Rank / City or municipality</th>
+                <th>Represented population</th>
                 <th>Disease / 1,000</th>
                 <th>Vulnerability</th>
                 <th>Hospital travel</th>

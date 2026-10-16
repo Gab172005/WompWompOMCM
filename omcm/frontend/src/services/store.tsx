@@ -14,6 +14,8 @@ import {
   isBrowserDemo,
 } from "./api";
 import { defaultConfig } from "./defaults";
+import { useMunicipalities } from "../hooks/useMunicipalities";
+import type { Municipality } from "./municipalities";
 export { defaultWeights, defaultConfig } from "./defaults";
 import type {
   Barangay,
@@ -31,6 +33,7 @@ interface State {
   browserDemo: boolean;
   setDraft: (plan: Plan) => void;
   barangays: Barangay[];
+  municipalities: Municipality[];
   sites: Site[];
   roads: Road[];
   hospitals: Hospital[];
@@ -81,6 +84,10 @@ export function Provider({ children }: { children: ReactNode }) {
   });
   const [config, setConfig] = useState<Config>(defaultConfig),
     [plan, setPlan] = useState<Plan | null>(null);
+  const { municipalities } = useMunicipalities(
+    plan?.barangays ?? barangays,
+    boundaries,
+  );
   const [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -214,6 +221,7 @@ export function Provider({ children }: { children: ReactNode }) {
           setPlan(draft);
         },
         barangays,
+        municipalities,
         sites,
         roads,
         hospitals,

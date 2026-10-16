@@ -2,10 +2,10 @@ import { Link } from "react-router-dom";
 import { ArrowRight, CheckCircle2, MapPin } from "lucide-react";
 import { useOMCM } from "../services/store";
 import { Card, number, PageHeader, PlanMetrics } from "../components/ui";
-import { RiskMap } from "../components/RiskMap";
+import { MapView } from "../components/MapView";
 import { ComparisonChart } from "../components/Charts";
 import { PlanningControls } from "../components/PlanningControls";
-export function Optimization() {
+export function AdminDashboard() {
   const { plan } = useOMCM();
   return (
     <>
@@ -24,7 +24,7 @@ export function Optimization() {
       )}
       <PlanMetrics />
       <Card className="full-map">
-        <RiskMap />
+        <MapView />
       </Card>
       {plan && (
         <>

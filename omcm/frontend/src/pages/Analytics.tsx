@@ -13,13 +13,21 @@ import {
 import { api } from "../services/api";
 import type { Simulation } from "../types";
 export function Analytics() {
-  const { barangays, plan, config, sites, requireAdmin, setError } = useOMCM();
+  const {
+    municipalities: barangays,
+    barangays: sourceRecords,
+    plan,
+    config,
+    sites,
+    requireAdmin,
+    setError,
+  } = useOMCM();
   const [flood, setFlood] = useState<Simulation | null>(null),
     [busy, setBusy] = useState(false);
   function download() {
     const quote = (s: string) => `"${s.replaceAll('"', '""')}"`;
     const text = [
-      "id,name,population,demand,need_score,disease_per_1000,vulnerable_residents,data_status",
+      "psgc,name,represented_population,demand,need_score,disease_per_1000,vulnerable_residents,source_records,data_status",
       ...barangays.map((b) =>
         [
           b.id,
@@ -29,6 +37,7 @@ export function Analytics() {
           b.score,
           b.disease_per_1000,
           b.vulnerable_residents,
+          b.source_ids.length,
           "synthetic_demo",
         ].join(","),
       ),
@@ -38,7 +47,7 @@ export function Analytics() {
     );
     const a = document.createElement("a");
     a.href = url;
-    a.download = "omcm-demo-analytics.csv";
+    a.download = "omcm-municipal-analytics.csv";
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -49,7 +58,7 @@ export function Analytics() {
       const affected = sites
         .filter(
           (s) =>
-            (barangays.find((b) => b.id === s.barangay_id)?.factors.flood ??
+            (sourceRecords.find((b) => b.id === s.barangay_id)?.factors.flood ??
               0) >= 60,
         )
         .map((s) => s.id);
@@ -94,8 +103,8 @@ export function Analytics() {
         <Card>
           <h3>Population vulnerability</h3>
           <p>
-            Children and elderly residents in the eight highest-need demo
-            barangays.
+            Children and elderly residents in the eight highest-need cities and
+            municipalities with available demo data.
           </p>
           <VulnerabilityChart barangays={barangays} />
         </Card>
@@ -111,7 +120,7 @@ export function Analytics() {
               <thead>
                 <tr>
                   <th>Disease burden / 1,000</th>
-                  <th>Barangays</th>
+                  <th>Cities / municipalities</th>
                 </tr>
               </thead>
               <tbody>
@@ -177,8 +186,25 @@ export function Analytics() {
         </Card>
       </div>
       <div className="two-grid">
-        <Card><h3>Disease burden distribution</h3><p>Synthetic cases per 1,000 residents, grouped by burden.</p><DiseaseDistribution barangays={barangays}/></Card>
-        <Card><h3>Travel-time comparison</h3>{plan ? <TravelChart plan={plan}/> : <div className="empty-state"><p>Generate an allocation to compare calculated travel times.</p></div>}<p className="tiny">Patient-allocation-weighted shortest paths on the demo network; not live traffic.</p></Card>
+        <Card>
+          <h3>Disease burden distribution</h3>
+          <p>Synthetic cases per 1,000 residents, grouped by burden.</p>
+          <DiseaseDistribution barangays={barangays} />
+        </Card>
+        <Card>
+          <h3>Travel-time comparison</h3>
+          {plan ? (
+            <TravelChart plan={plan} />
+          ) : (
+            <div className="empty-state">
+              <p>Generate an allocation to compare calculated travel times.</p>
+            </div>
+          )}
+          <p className="tiny">
+            Patient-allocation-weighted shortest paths on the demo network; not
+            live traffic.
+          </p>
+        </Card>
       </div>
       <Card>
         <div className="card-title">

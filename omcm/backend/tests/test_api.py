@@ -1,7 +1,7 @@
 from datetime import timedelta
 import pytest
 pytestmark = pytest.mark.usefixtures("demo_data")
-from app.main import today
+from main import today
 
 
 def test_public_data_and_auth(client, auth):

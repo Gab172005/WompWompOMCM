@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { SlidersHorizontal, Upload, Database, LockKeyhole } from "lucide-react";
 import { useOMCM, defaultWeights } from "../services/store";
+import { parseLagunaGeometry } from "../services/maps";
 import { api } from "../services/api";
 import type { BoundaryData, Factor } from "../types";
 import { Card, PageHeader } from "../components/ui";
 const descriptions: Record<Factor, string> = {
   disease: "Cases per 1,000 residents ÷ 100, capped at 1",
   vulnerability: "(Children + elderly) ÷ population ÷ 0.60, capped at 1",
-  accessibility: "Synthetic hospital-access minutes ÷ 60; capped at 1 in road pilot",
+  accessibility:
+    "Synthetic hospital-access minutes ÷ 60; capped at 1 in road pilot",
   poverty: "Poverty percentage ÷ 100",
   flood: "Synthetic flood exposure index ÷ 100",
 };
@@ -108,9 +110,9 @@ export function Settings() {
             Need = Σ (normalized indicator × normalized weight) × 100
           </div>
           <p className="tiny">
-            Scores recalculate in the active planning mode after each change. Missing
-            inputs use visible conservative demo estimates. Existing published
-            schedules remain unchanged.
+            Scores recalculate in the active planning mode after each change.
+            Missing inputs use visible conservative demo estimates. Existing
+            published schedules remain unchanged.
           </p>
         </Card>
         <div className="stack">
@@ -146,10 +148,11 @@ export function Settings() {
               Supply GeoJSON boundaries
             </h3>
             <p>
-              Real Laguna boundaries are bundled with the application. Upload
-              verified WGS84 Polygon/MultiPolygon features with Laguna PSGC codes
-              (psgc, adm4_psgc, or adm3_psgc) and area names to replace them.
-              Legacy uploads without geographic identifiers are not displayed.
+              All 30 Laguna city and municipality boundaries are bundled. Upload
+              verified WGS84 Polygon/MultiPolygon features with Laguna PSGC
+              codes (psgc or adm3_psgc ending in 000) and city / municipality
+              names to replace matching areas. Legacy uploads without geographic
+              identifiers are not displayed.
             </p>
             <label className="file-label">
               {uploading ? "Validating upload…" : "Choose GeoJSON file"}
@@ -167,12 +170,15 @@ export function Settings() {
                   setUploading(true);
                   setError("");
                   try {
-                    const geojson = JSON.parse(await file.text());
+                    const geojson = parseLagunaGeometry(
+                      JSON.parse(await file.text()),
+                      "municipality",
+                    );
                     setBoundaries(
                       await api<BoundaryData>("/boundaries", { geojson }),
                     );
                     setMessage(
-                      "Boundary upload saved. Real Laguna features with PSGC identifiers appear on Healthcare Risk Map.",
+                      "Boundary upload saved. Laguna city and municipality borders appear on Healthcare Risk Map.",
                     );
                   } catch (error) {
                     setError((error as Error).message);

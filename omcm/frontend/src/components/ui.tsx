@@ -51,12 +51,12 @@ export function PageHeader({
   );
 }
 export function Statistics() {
-  const { barangays, plan, config } = useOMCM();
+  const { municipalities: barangays, plan, config } = useOMCM();
   const stats = [
     {
-      label: "Pilot population",
+      label: "Represented population",
       value: number(barangays.reduce((s, b) => s + b.population, 0)),
-      detail: `${barangays.length} barangays ? estimated population`,
+      detail: `${barangays.length} cities / municipalities with data`,
       icon: Users,
       color: "blue",
     },

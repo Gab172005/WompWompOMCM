@@ -29,7 +29,7 @@ export function RankingChart({
     <div
       className="chart"
       role="img"
-      aria-label="Barangays ranked by calculated healthcare need"
+      aria-label="Cities and municipalities ranked by calculated healthcare need"
     >
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
@@ -102,7 +102,7 @@ export function RiskDistribution({ barangays }: { barangays: Barangay[] }) {
       </ResponsiveContainer>
       <div className="donut-center">
         <strong>{barangays.length}</strong>
-        <span>barangays</span>
+        <span>cities / towns</span>
       </div>
     </div>
   );
@@ -164,13 +164,11 @@ export function VulnerabilityChart({ barangays }: { barangays: Barangay[] }) {
     <div className="chart" role="img" aria-label="Population vulnerability">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
-          data={barangays
-            .slice(0, 8)
-            .map((b) => ({
-              name: b.name.replace("Demo ", ""),
-              Vulnerable: b.vulnerable_residents,
-              Other: b.population - b.vulnerable_residents,
-            }))}
+          data={barangays.slice(0, 8).map((b) => ({
+            name: b.name.replace("Demo ", ""),
+            Vulnerable: b.vulnerable_residents,
+            Other: b.population - b.vulnerable_residents,
+          }))}
         >
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis
@@ -191,14 +189,86 @@ export function VulnerabilityChart({ barangays }: { barangays: Barangay[] }) {
 }
 
 export function DiseaseDistribution({ barangays }: { barangays: Barangay[] }) {
-  const data = [[0,25],[25,50],[50,75],[75,Infinity]].map(([low,high]) => ({
-    name: Number.isFinite(high) ? `${low}–<${high}` : '75+',
-    Barangays: barangays.filter(b => b.disease_per_1000 >= low && b.disease_per_1000 < high).length,
+  const data = [
+    [0, 25],
+    [25, 50],
+    [50, 75],
+    [75, Infinity],
+  ].map(([low, high]) => ({
+    name: Number.isFinite(high) ? `${low}–<${high}` : "75+",
+    Municipalities: barangays.filter(
+      (b) => b.disease_per_1000 >= low && b.disease_per_1000 < high,
+    ).length,
   }));
-  return <div className="chart" role="img" aria-label="Disease burden distribution by cases per 1,000 residents"><ResponsiveContainer width="100%" height="100%"><BarChart data={data}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#edf1f4"/><XAxis dataKey="name" tick={{fontSize:11}}/><YAxis allowDecimals={false} tick={{fontSize:11}}/><Tooltip contentStyle={chartStyle}/><Bar dataKey="Barangays" fill="#dc9a54" radius={[5,5,0,0]} maxBarSize={50}/></BarChart></ResponsiveContainer></div>;
+  return (
+    <div
+      className="chart"
+      role="img"
+      aria-label="Disease burden distribution by cases per 1,000 residents"
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data}>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            vertical={false}
+            stroke="#edf1f4"
+          />
+          <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+          <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+          <Tooltip contentStyle={chartStyle} />
+          <Bar
+            dataKey="Municipalities"
+            fill="#dc9a54"
+            radius={[5, 5, 0, 0]}
+            maxBarSize={50}
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
 }
 
 export function TravelChart({ plan }: { plan: Plan }) {
-  const data=[{name:'OMCM',Minutes:plan.optimized.metrics.average_travel_minutes},{name:'Population baseline',Minutes:plan.baseline.metrics.average_travel_minutes}];
-  return <div className="chart" role="img" aria-label="Average travel minutes for OMCM versus population baseline"><ResponsiveContainer width="100%" height="100%"><BarChart data={data} layout="vertical" margin={{left:10,right:20}}><CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#edf1f4"/><XAxis type="number" tick={{fontSize:11}}/><YAxis type="category" dataKey="name" width={120} tick={{fontSize:10}}/><Tooltip contentStyle={chartStyle}/><Bar dataKey="Minutes" fill="#678b9e" radius={[0,5,5,0]} barSize={32}/></BarChart></ResponsiveContainer></div>;
+  const data = [
+    { name: "OMCM", Minutes: plan.optimized.metrics.average_travel_minutes },
+    {
+      name: "Population baseline",
+      Minutes: plan.baseline.metrics.average_travel_minutes,
+    },
+  ];
+  return (
+    <div
+      className="chart"
+      role="img"
+      aria-label="Average travel minutes for OMCM versus population baseline"
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={data}
+          layout="vertical"
+          margin={{ left: 10, right: 20 }}
+        >
+          <CartesianGrid
+            strokeDasharray="3 3"
+            horizontal={false}
+            stroke="#edf1f4"
+          />
+          <XAxis type="number" tick={{ fontSize: 11 }} />
+          <YAxis
+            type="category"
+            dataKey="name"
+            width={120}
+            tick={{ fontSize: 10 }}
+          />
+          <Tooltip contentStyle={chartStyle} />
+          <Bar
+            dataKey="Minutes"
+            fill="#678b9e"
+            radius={[0, 5, 5, 0]}
+            barSize={32}
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
 }

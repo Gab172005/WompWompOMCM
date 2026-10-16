@@ -1,18 +1,12 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, MapPinned, ShieldCheck, ArrowUpRight } from "lucide-react";
 import { useOMCM } from "../services/store";
-import {
-  Card,
-  NeedBadge,
-  number,
-  PageHeader,
-  Statistics,
-} from "../components/ui";
-import { RiskMap } from "../components/RiskMap";
-import { RankingChart, RiskDistribution } from "../components/Charts";
-import { PlanningControls } from "../components/PlanningControls";
-export function Overview() {
-  const { barangays, plan, publicData, today } = useOMCM();
+import { Card, NeedBadge, number, PageHeader, Statistics } from "./ui";
+import { MapView } from "./MapView";
+import { RankingChart, RiskDistribution } from "./Charts";
+import { PlanningControls } from "./PlanningControls";
+export function Dashboard() {
+  const { municipalities: barangays, plan, publicData, today } = useOMCM();
   return (
     <>
       <PageHeader
@@ -35,14 +29,17 @@ export function Overview() {
                 <MapPinned size={18} />
                 Community healthcare need
               </h3>
-              <p>Explore real Laguna boundaries and matched healthcare records</p>
+              <p>
+                All 30 city / municipality borders, with available health data
+                combined by area
+              </p>
             </div>
             <Link to="/risk" className="text-link">
               Open map
               <ArrowUpRight size={15} />
             </Link>
           </div>
-          <RiskMap />
+          <MapView />
         </Card>
         <Card className="priority-card">
           <div className="card-title">
@@ -52,7 +49,10 @@ export function Overview() {
             </div>
             <span className="badge">TOP 5</span>
           </div>
-          <p>Ranked by the adjustable healthcare need model.</p>
+          <p>
+            Ranked by population-weighted healthcare need across available
+            records.
+          </p>
           <div className="priority-list">
             {barangays.slice(0, 5).map((b, i) => (
               <Link to="/risk" key={b.id} className="priority-item">
@@ -70,7 +70,7 @@ export function Overview() {
             ))}
           </div>
           <Link className="text-link bottom-link" to="/analytics">
-            View all barangay rankings
+            View all city / municipality rankings
             <ArrowRight size={15} />
           </Link>
           <div className="safe-note">

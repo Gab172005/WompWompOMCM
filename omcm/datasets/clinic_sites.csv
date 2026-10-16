@@ -1,0 +1,9 @@
+id,barangay_id,name,lat,lng,capacity,eligible,verified,hazards,source
+P01,403411001,Illustrative site: Anos,14.181299,121.232227,240,True,False,,OSRM-snapped road point; facility suitability unverified
+P02,403411003,Illustrative site: Bambang,14.17804,121.21848,240,True,False,,OSRM-snapped road point; facility suitability unverified
+P03,403411004,Illustrative site: Batong Malake,14.170539,121.242283,240,True,False,,OSRM-snapped road point; facility suitability unverified
+P04,403411006,Illustrative site: Bayog,14.192315,121.246076,240,True,False,flood-403411006,OSRM-snapped road point; facility suitability unverified
+P05,403411008,Illustrative site: Maahas,14.176591,121.256594,240,True,False,,OSRM-snapped road point; facility suitability unverified
+P06,403411010,Illustrative site: Mayondon,14.187377,121.238206,240,True,False,,OSRM-snapped road point; facility suitability unverified
+P07,403402003,Illustrative site: Dila,14.180309,121.286839,240,True,False,flood-403402003,OSRM-snapped road point; facility suitability unverified
+P08,403402017,Illustrative site: San Nicolas,14.182402,121.284089,240,True,False,,OSRM-snapped road point; facility suitability unverified

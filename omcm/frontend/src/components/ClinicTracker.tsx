@@ -21,7 +21,7 @@ export interface MapLayers {
   coverage: boolean;
   eta: boolean;
 }
-export function FleetTrackerMap({
+export function ClinicTracker({
   pilot,
   plan,
   config,

@@ -8,7 +8,7 @@ if (!(Test-Path -LiteralPath (Join-Path $backendRoot '.env'))) { Write-Host 'Dem
 $backendProcess = $null
 $frontendProcess = $null
 try {
-    $backendProcess = Start-Process -FilePath $pythonExe -ArgumentList @('-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', '8000') -WorkingDirectory $backendRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $backendRoot 'server.log') -RedirectStandardError (Join-Path $backendRoot 'server-error.log')
+    $backendProcess = Start-Process -FilePath $pythonExe -ArgumentList @('-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', '8000') -WorkingDirectory $backendRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $backendRoot 'server.log') -RedirectStandardError (Join-Path $backendRoot 'server-error.log')
     $nodeExe = (Get-Command node).Source
     $viteEntry = Join-Path $frontendRoot 'node_modules/vite/bin/vite.js'
     $frontendProcess = Start-Process -FilePath $nodeExe -ArgumentList @("`"$viteEntry`"", '--host', '127.0.0.1', '--port', '5173', '--strictPort') -WorkingDirectory $frontendRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $frontendRoot 'server.log') -RedirectStandardError (Join-Path $frontendRoot 'server-error.log')

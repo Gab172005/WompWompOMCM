@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 import pytest
-from app.algorithms.placement import optimize
+from optimization import optimize
 from app.models.schemas import PlacementRequest
 from app.services.data import load_data
 from app.services.pilot import road_evidence, active_hazards

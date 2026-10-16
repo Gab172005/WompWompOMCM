@@ -1,5 +1,5 @@
 from ortools.sat.python import cp_model
-from app.algorithms.scoring import calculate_scores
+from risk_scoring import calculate_scores
 from app.services.data import load_data, road_graph, travel_times, validate_references
 from app.services.pilot import active_hazards, road_evidence
 

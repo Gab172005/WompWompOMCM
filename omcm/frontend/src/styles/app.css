@@ -1900,7 +1900,7 @@ dd {
 .choropleth-map .leaflet-interactive {
   cursor: pointer;
 }
-.barangay-label.leaflet-tooltip {
+.municipality-label.leaflet-tooltip {
   background: #ffffffb8;
   border: 0;
   border-radius: 1px;
@@ -1911,14 +1911,14 @@ dd {
   font-weight: 650;
   pointer-events: none;
 }
-.barangay-label.light-label {
+.municipality-label.light-label {
   background: #7f1d1d80;
   color: #fff;
 }
-.barangay-label::before {
+.municipality-label::before {
   display: none;
 }
-.barangay-label-compact {
+.municipality-label-compact {
   display: none;
 }
 .risk-hover {
@@ -1964,15 +1964,15 @@ dd {
     flex-wrap: wrap;
     gap: 5px;
   }
-  .barangay-label.leaflet-tooltip {
+  .municipality-label.leaflet-tooltip {
     font-size: 8px;
   }
 }
 @media (max-width: 600px) {
-  .barangay-label-full {
+  .municipality-label-full {
     display: none;
   }
-  .barangay-label-compact {
+  .municipality-label-compact {
     display: inline;
   }
 }
@@ -2511,3 +2511,5 @@ dd {
     max-height: 320px;
   }
 }
+
+.map-legend .municipality-border-key { border: 2px solid #475569; background: transparent; }

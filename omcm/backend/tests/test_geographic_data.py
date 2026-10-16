@@ -1,8 +1,8 @@
 from app.services.data import load_data, road_graph, travel_times, load_geographic_data
-from app.algorithms.scoring import calculate_scores
+from risk_scoring import calculate_scores
 from app.models.schemas import Weights, PlacementRequest
 from app.models.results import RiskResult
-from app.algorithms.placement import optimize
+from optimization import optimize
 
 
 def test_supplied_geography_and_network(monkeypatch):
