@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { WorkspaceLink as Link } from "../components/WorkspaceLink";
 import { ArrowRight, CheckCircle2, MapPin } from "lucide-react";
 import { useOMCM } from "../services/store";
 import { Card, number, PageHeader, PlanMetrics } from "../components/ui";

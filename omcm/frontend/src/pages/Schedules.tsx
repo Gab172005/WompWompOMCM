@@ -5,7 +5,7 @@ import {
   AlertTriangle,
   ExternalLink,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { WorkspaceLink as Link } from "../components/WorkspaceLink";
 import { useOMCM } from "../services/store";
 import { api } from "../services/api";
 import { Card, PageHeader } from "../components/ui";
