@@ -2,6 +2,7 @@
 import json
 import math
 import pandas as pd
+from app.services.road_segments import route_segments
 
 
 def load_pilot_data(path):
@@ -23,20 +24,27 @@ def load_pilot_data(path):
     return pd.DataFrame(rows), dict(**data, roads=roads), data["metadata"]
 
 
-def active_hazards(network, level):
-    return {h["properties"]["id"] for h in network["hazards"]["features"]
-            if level == "severe" or (level == "moderate" and h["properties"]["level"] == "moderate")}
+def active_hazards(network, level, municipality_levels=None):
+    municipalities = {b["id"]: b["municipality"] for b in network["barangays"]}
+    levels = municipality_levels or {}
+    active = set()
+    for hazard in network["hazards"]["features"]:
+        props = hazard["properties"]
+        selected = levels.get(municipalities[props["barangay_id"]], level)
+        if selected == "severe" or (selected == "moderate" and props["level"] == "moderate"):
+            active.add(props["id"])
+    return active
 
 
 def road_evidence(network, request):
-    blocked = active_hazards(network, request.flood_level) | set(request.closed_roads)
+    blocked = active_hazards(network, request.flood_level, request.municipality_flood_levels) | set(request.closed_roads)
     times, excluded = {}, set(request.flooded_sites)
     sites = {s["id"]: s for s in network["sites"]}
     for s in sites.values():
         if blocked.intersection(s.get("hazards", [])):
             excluded.add(s["id"])
     for route in network["routes"]:
-        unsafe = bool(blocked.intersection(route["blocked_by"]))
+        unsafe = bool(blocked.intersection(route["blocked_by"])) or bool(set(request.closed_roads).intersection(route_segments(route)))
         if route["origin_id"] == "depot":
             if unsafe:
                 excluded.add(route["site_id"])

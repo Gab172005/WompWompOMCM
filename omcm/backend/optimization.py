@@ -86,13 +86,19 @@ def optimize(request):
     excluded = set(request.flooded_sites)
     if "routes" in network:
         times, excluded = road_evidence(network, request)
-        hazards = active_hazards(network, request.flood_level)
+        hazards = active_hazards(network, request.flood_level, request.municipality_flood_levels)
         affected = {h["properties"]["barangay_id"] for h in network["hazards"]["features"] if h["properties"]["id"] in hazards}
         frame = frame.copy()
         frame["scenario_flood"] = frame.id.isin(affected)
+        frame["scenario_flood_exposure"] = [
+            max(float(row["flood_exposure"]), {"none": 0, "moderate": 50, "severe": 100}[request.municipality_flood_levels[row["municipality"]]])
+            if row["municipality"] in request.municipality_flood_levels
+            else (100 if row["id"] in affected else float(row["flood_exposure"]))
+            for row in frame.to_dict("records")
+        ]
     else:
         times = travel_times(road_graph(frame, network, request.closed_roads))
-    barangays = calculate_scores(frame, network, times, request.weights, request.outbreak_barangays, request.outbreak_multiplier)
+    barangays = calculate_scores(frame, network, times, request.weights, request.outbreak_barangays, request.outbreak_multiplier, request.municipality_outbreak_multipliers)
     sites = [s for s in network["sites"] if s["eligible"] and s["id"] not in excluded
              and (request.eligible_sites is None or s["id"] in request.eligible_sites)]
     if request.manual_sites is not None:

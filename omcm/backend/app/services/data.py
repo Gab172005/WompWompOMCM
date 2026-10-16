@@ -110,8 +110,14 @@ def travel_times(graph):
 
 
 def validate_references(request, frame, network):
+    unknown = (set(request.municipality_flood_levels) | set(request.municipality_outbreak_multipliers)) - (set(frame["municipality"].dropna()) if "municipality" in frame else set())
+    if unknown:
+        raise ValueError("Unknown municipality: " + ", ".join(sorted(unknown)))
     site_ids = {s["id"] for s in network["sites"]}
     road_ids = {r["id"] for r in network["roads"]}
+    if "routes" in network:
+        from app.services.road_segments import route_segments
+        road_ids.update(segment for route in network["routes"] for segment in route_segments(route))
     for values, valid, name in [(request.eligible_sites, site_ids, "staging site"),
                                 (request.flooded_sites, site_ids, "flooded site"),
                                 (request.manual_sites, site_ids, "manual site"),

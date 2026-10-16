@@ -7,7 +7,7 @@ FACTORS = {"population": "population percentile", "disease": "elevated disease b
            "accessibility": "limited hospital access", "poverty": "economic vulnerability", "flood": "flood exposure"}
 
 
-def calculate_scores(frame, network, times, weights: Weights, outbreaks=(), multiplier=1):
+def calculate_scores(frame, network, times, weights: Weights, outbreaks=(), multiplier=1, municipality_multipliers=None):
     output = []
     normalized_weights = weights.model_dump()
     total = sum(normalized_weights.values())
@@ -29,7 +29,7 @@ def calculate_scores(frame, network, times, weights: Weights, outbreaks=(), mult
             return value
 
         pop = int(row["population"])
-        outbreak = multiplier if row["id"] in outbreaks else 1
+        outbreak = (municipality_multipliers or {}).get(row.get("municipality"), multiplier if row["id"] in outbreaks else 1)
         disease_per_1000 = indicator("disease_cases", pop * .05) / pop * 1000 * outbreak
         vulnerable = min(pop, indicator("children", pop * .25) + indicator("elderly", pop * .10))
         reachable = [(times.get(row["id"], {}).get(h["barangay_id"], float("inf")), h["name"]) for h in network["hospitals"]]
@@ -39,6 +39,8 @@ def calculate_scores(frame, network, times, weights: Weights, outbreaks=(), mult
             nearest_name = "Synthetic hospital-access indicator (no verified facility)"
         if row.get("scenario_flood"):
             row["flood_exposure"] = 100
+        if "scenario_flood_exposure" in row:
+            row["flood_exposure"] = row["scenario_flood_exposure"]
         raw = dict(population=population_by_id[row["id"]], disease=disease_per_1000 / 100, vulnerability=vulnerable / pop / .6,
                    accessibility=nearest_minutes / 60, poverty=indicator("poverty_pct", 50) / 100,
                    flood=indicator("flood_exposure", 50) / 100)
