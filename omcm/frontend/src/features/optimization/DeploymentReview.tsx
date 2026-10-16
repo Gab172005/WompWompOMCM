@@ -1,20 +1,9 @@
 import { useState } from "react";
-import {
-  CalendarCheck,
-  Check,
-  AlertTriangle,
-  ExternalLink,
-} from "lucide-react";
-import { WorkspaceLink as Link } from "../../components/WorkspaceLink";
+import { CalendarCheck, Check, AlertTriangle } from "lucide-react";
 import { useOMCM } from "../../store/LegacyProvider";
 import { api } from "../../services/api";
-import { Card, PageHeader } from "../../components/ui/LegacyUI";
-import { PlanningControls } from "../optimization/PlanningControls";
-export function addDays(date: string, days: number) {
-  const value = new Date(`${date}T12:00:00Z`);
-  value.setUTCDate(value.getUTCDate() + days);
-  return value.toISOString().slice(0, 10);
-}
+import { Card } from "../../components/ui/LegacyUI";
+import { addDays } from "../../services/dates";
 const allServices = [
   "Primary care",
   "Blood pressure screening",
@@ -23,13 +12,12 @@ const allServices = [
   "Diabetes screening",
   "Health education",
 ];
-export function Schedules() {
+export function DeploymentReview() {
   const {
     plan,
     config,
     updateConfig,
     sites,
-    publicData,
     today,
     username,
     browserDemo,
@@ -77,18 +65,6 @@ export function Schedules() {
   }
   return (
     <>
-      <PageHeader
-        eyebrow="LGU REVIEW & APPROVAL"
-        title="From recommendation to deployment"
-        description="Review tomorrow’s draft, apply a manual placement if needed, then approve the public schedule."
-        action={
-          <Link className="secondary" to="/public" target="_blank">
-            Open public view
-            <ExternalLink size={15} />
-          </Link>
-        }
-      />
-      <PlanningControls />
       <div className="two-grid">
         <Card>
           <div className="card-title">
@@ -315,54 +291,6 @@ export function Schedules() {
           </form>
         </Card>
       </div>
-      <Card>
-        <div className="card-title">
-          <h3>Published schedules</h3>
-          <span className="badge">
-            {browserDemo ? "SAVED IN THIS BROWSER" : "PERSISTED IN SQLITE"}
-          </span>
-        </div>
-        {publicData.schedules.length ? (
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Status</th>
-                  <th>Hours (Philippine time)</th>
-                  <th>Clinics</th>
-                  <th>Services</th>
-                </tr>
-              </thead>
-              <tbody>
-                {publicData.schedules.map((s) => (
-                  <tr key={s.date}>
-                    <td>{s.date}</td>
-                    <td>
-                      <span className="badge">{s.status}</span>
-                    </td>
-                    <td>
-                      {s.start_time}–{s.end_time}
-                    </td>
-                    <td>{s.clinics.length}</td>
-                    <td>{s.services.join(", ")}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="empty-state">
-            <p>No schedule has been approved yet.</p>
-          </div>
-        )}
-        {publicData.notices.map((n) => (
-          <div className="notice" key={n.id}>
-            <strong>{n.date} · Demo emergency notice</strong>
-            <p>{n.text}</p>
-          </div>
-        ))}
-      </Card>
     </>
   );
 }

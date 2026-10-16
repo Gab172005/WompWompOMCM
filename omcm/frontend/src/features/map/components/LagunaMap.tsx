@@ -10,6 +10,7 @@ import {
 } from "../../../services/googleMapsLoader";
 import { Modal } from "../../../components/ui/Modal";
 import { Button } from "../../../components/ui/Button";
+import { Settings2 } from "lucide-react";
 export function LagunaMap(props: MapProps) {
   const [ready, setReady] = useState(false),
     [error, setError] = useState("");
@@ -46,8 +47,15 @@ export function LagunaMap(props: MapProps) {
         )}
       </div>
       <div className="workspace-engine">
-        <button onClick={() => setSettings(true)}>
-          {google ? "Google Maps" : "OpenStreetMap"} · Map settings
+        <button
+          aria-label={`${google ? "Google Maps" : "OpenStreetMap"} · Map settings`}
+          title="Map settings"
+          onClick={() => setSettings(true)}
+        >
+          <Settings2 size={16} aria-hidden="true" />
+          <span className="map-engine-label">
+            {google ? "Google Maps" : "OpenStreetMap"} · Map settings
+          </span>
         </button>
       </div>
       {error && (

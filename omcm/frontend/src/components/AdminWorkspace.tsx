@@ -3,7 +3,6 @@ import { useLocation } from "react-router-dom";
 import { GeoJSON, Pane } from "react-leaflet";
 import { WorkspaceNavigation } from "./WorkspaceLink";
 import { AdminDashboard } from "../features/optimization/AdminDashboard";
-import { Schedules } from "../features/schedules/Schedules";
 import { NeedWeights } from "./NeedWeights";
 import { MapView } from "../features/map/components/MapView";
 import { ClinicTracker } from "../features/tracking/FleetTracker";
@@ -24,9 +23,7 @@ export function AdminWorkspace() {
   const { plan, config, barangays, username, browserDemo, requireAdmin } =
     useOMCM();
   const [panel, setPanel] = useState(
-    pathname.includes("optimization") ||
-      pathname.includes("schedules") ||
-      pathname.includes("settings")
+    pathname.includes("optimization") || pathname.includes("settings")
       ? "optimization"
       : "",
   );
@@ -159,14 +156,6 @@ export function AdminWorkspace() {
   }
   function navigate(path: string) {
     setPanel("optimization");
-    if (path.includes("schedules"))
-      setTimeout(
-        () =>
-          document
-            .querySelector(".proposal-review")
-            ?.scrollIntoView({ block: "start" }),
-        0,
-      );
     if (path.includes("settings"))
       setTimeout(
         () =>
@@ -302,10 +291,6 @@ export function AdminWorkspace() {
             Close Clinic Optimization
           </button>
           <AdminDashboard />
-          <details className="proposal-review" open>
-            <summary>Accept recommendation · Approve and publish</summary>
-            <Schedules />
-          </details>
           <div className="need-weights-section">
             <NeedWeights />
           </div>

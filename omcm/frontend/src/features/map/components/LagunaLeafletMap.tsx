@@ -12,11 +12,12 @@ function Interaction({
   data,
   selectedPsgc,
   recenterTrigger,
+  zoomDelta,
 }: { data: FeatureCollection | null } & Pick<
   MapProps,
-  "selectedPsgc" | "recenterTrigger"
+  "selectedPsgc" | "recenterTrigger" | "zoomDelta"
 >) {
-  useMapInteraction(data, selectedPsgc, recenterTrigger);
+  useMapInteraction(data, selectedPsgc, recenterTrigger, zoomDelta);
   return null;
 }
 export function LagunaLeafletMap(props: MapProps) {
@@ -49,6 +50,7 @@ export function LagunaLeafletMap(props: MapProps) {
       <MapContainer
         center={[LAGUNA_CENTER.lat, LAGUNA_CENTER.lng]}
         zoom={10}
+        zoomSnap={0.1}
         minZoom={9}
         maxZoom={17}
         maxBounds={[
@@ -65,6 +67,7 @@ export function LagunaLeafletMap(props: MapProps) {
           data={data}
           selectedPsgc={props.selectedPsgc}
           recenterTrigger={props.recenterTrigger}
+          zoomDelta={props.zoomDelta}
         />
         {mask && (
           <GeoJSON

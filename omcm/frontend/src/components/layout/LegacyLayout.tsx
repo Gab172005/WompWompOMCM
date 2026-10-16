@@ -2,11 +2,10 @@ import React from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   HeartPulse,
-  LayoutDashboard,
+  CalendarDays,
   Map,
   Crosshair,
   CloudRain,
-  CalendarDays,
   ChartNoAxesCombined,
   Settings as SettingsIcon,
   Globe,
@@ -20,11 +19,9 @@ import {
 } from "lucide-react";
 import { useOMCM } from "../../store/LegacyProvider";
 const links = [
-  { path: "/overview", label: "Overview", icon: LayoutDashboard },
   { path: "/risk", label: "Healthcare Risk Map", icon: Map },
   { path: "/admin", label: "Clinic Optimization", icon: Crosshair },
   { path: "/driver", label: "Disaster Simulator", icon: CloudRain },
-  { path: "/schedules", label: "Clinic Schedules", icon: CalendarDays },
   {
     path: "/analytics",
     label: "Data and Analytics",

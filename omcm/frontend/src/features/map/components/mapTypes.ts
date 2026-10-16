@@ -20,4 +20,5 @@ export interface MapProps {
   onSelectClinic: (clinicId: string) => void;
   disruptions: RoadDisruption[];
   recenterTrigger: number;
+  zoomDelta: number;
 }

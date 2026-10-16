@@ -1,5 +1,16 @@
 # Verification record
 
+## Floating map controls, 2026-10-16
+
+Removed the Overview and Schedules pages and their routes/navigation. The map
+uses floating search and planning buttons, an expandable Layers control and
+corner zoom/recenter controls. Contextual tools share one side sheet, with a
+bottom sheet on mobile. Deployment review now belongs to Clinic Optimization.
+
+Verified frontend lint, production build, 59 unit tests and all three browser
+suites. Browser checks cover removed routes, keyboard search, layer controls,
+zoom, desktop/mobile planning, connected approval and the retained fleet flows.
+
 ## Integration of origin/main, 2026-10-16
 
 Merged the upstream changes into the reorganized application. New Python services

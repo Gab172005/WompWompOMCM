@@ -1093,7 +1093,7 @@ export function DriverTracking({
                         simulation: plan.simulation,
                       });
                       setBranchNotice(
-                        "Simulation applied to planner draft. Published schedules are unchanged; review and approve separately in Schedules.",
+                        "Simulation applied to planner draft. Published schedules are unchanged; review and approve separately in Clinic Optimization.",
                       );
                     } catch (e) {
                       setError((e as Error).message);
@@ -1106,7 +1106,7 @@ export function DriverTracking({
                 Apply simulation to draft
               </button>
             ) : plan.plan_id ? (
-              <Link className="primary" to="/schedules">
+              <Link className="primary" to="/admin#deployment-review">
                 Review & approve plan
                 <ArrowRight size={16} />
               </Link>

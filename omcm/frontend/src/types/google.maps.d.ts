@@ -7,6 +7,7 @@ declare namespace google {
       constructor(mapDiv: HTMLElement, opts?: MapOptions);
       setCenter(latLng: LatLng | LatLngLiteral): void;
       setZoom(zoom: number): void;
+      getZoom(): number | undefined;
       fitBounds(
         bounds: LatLngBounds | LatLngBoundsLiteral,
         padding?: number | Padding,

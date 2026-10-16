@@ -19,8 +19,8 @@ export function DeploymentApproval({ plan }: { plan: ClinicPlan }) {
         {approvedPlan
           ? `Saved snapshot: ${approvedPlan.clinics.length} clinics. `
           : ""}
-        Local rehearsal saved in this browser. Publish connected plans through
-        Clinic Schedules.
+        Local rehearsal saved in this browser. Publish connected plans in Clinic
+        Optimization at /workspace.
       </p>
     </div>
   );

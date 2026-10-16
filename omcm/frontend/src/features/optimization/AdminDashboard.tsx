@@ -1,11 +1,25 @@
-import { WorkspaceLink as Link } from "../../components/WorkspaceLink";
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { DeploymentReview } from "./DeploymentReview";
 import { ArrowRight, CheckCircle2, MapPin } from "lucide-react";
 import { useOMCM } from "../../store/LegacyProvider";
-import { Card, number, PageHeader, PlanMetrics } from "../../components/ui/LegacyUI";
+import {
+  Card,
+  number,
+  PageHeader,
+  PlanMetrics,
+} from "../../components/ui/LegacyUI";
 import { ComparisonChart } from "../analytics/Charts";
 import { PlanningControls } from "./PlanningControls";
 export function AdminDashboard() {
   const { plan } = useOMCM();
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash === "#deployment-review")
+      document
+        .getElementById("deployment-review")
+        ?.scrollIntoView({ block: "start" });
+  }, [hash]);
   return (
     <>
       <PageHeader
@@ -28,10 +42,10 @@ export function AdminDashboard() {
         <>
           <div className="section-heading">
             <h2>Recommended staging locations</h2>
-            <Link className="primary" to="/schedules">
+            <a className="primary" href="#deployment-review">
               Accept recommendation & review
               <ArrowRight size={16} />
-            </Link>
+            </a>
           </div>
           <div className="three-grid">
             {plan.optimized.clinics.map((c, i) => (
@@ -165,6 +179,10 @@ export function AdminDashboard() {
           <div className="notice">{plan.notes.join(" ")}</div>
         </>
       )}
+      <details className="proposal-review" id="deployment-review" open>
+        <summary>Review and publish deployment</summary>
+        <DeploymentReview />
+      </details>
     </>
   );
 }

@@ -199,7 +199,7 @@ export function Provider({ children }: { children: ReactNode }) {
       if (version === configVersion.current) {
         setPlan(result);
         setMessage(
-          "Draft placement generated. Review and approve it on Clinic Schedules.",
+          "Draft placement generated. Review and approve it in Clinic Optimization.",
         );
       }
     } catch (e) {
@@ -222,7 +222,7 @@ export function Provider({ children }: { children: ReactNode }) {
         setPlan(result);
         setNightlyUpdated(result.created_at ?? "");
         setMessage(
-          "Nightly optimization complete. Tomorrow’s draft is ready in Schedules for officer review. Nothing has been published.",
+          "Nightly optimization complete. Tomorrow’s draft is ready in Clinic Optimization for officer review. Nothing has been published.",
         );
       }
     } catch (e) {

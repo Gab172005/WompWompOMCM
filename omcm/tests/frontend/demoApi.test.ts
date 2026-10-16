@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import raw from "../../frontend/public/assets/pilot/pilot.json";
 import { demoApi, manilaDay } from "../../frontend/src/services/demoApi";
 import { defaultConfig } from "../../frontend/src/services/defaults";
-import { addDays } from "../../frontend/src/features/schedules/Schedules";
+import { addDays } from "../../frontend/src/services/dates";
 import type { Plan, PublicData, Simulation } from "../../frontend/src/types";
 
 beforeEach(() => {

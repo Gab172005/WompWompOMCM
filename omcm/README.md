@@ -1,13 +1,13 @@
 # OMCM — Optimized Mobile Clinic Mapper
 
 A React + TypeScript map workspace and Python + FastAPI planning service for
-Laguna. The workspace combines **testing's map-first layout and tools** with
-**main's navy/teal palette, white cards, typography and shared UI styling**.
+Laguna. A full-screen map uses a floating search box, tool buttons, a Layers
+control and corner zoom controls, with contextual panels for planning tools.
 
 Select a municipality, compare heatmaps, adjust clinic placements, test flood,
 morbidity and road-closure scenarios, and play simulated clinic movements.
-Main's overview, server-backed optimizer, schedules, analytics, settings and
-read-only public dashboard remain available.
+The server-backed optimizer, analytics, settings and read-only public dashboard
+remain available. Deployment review and publication live inside optimization.
 
 ## Run the frontend
 
@@ -64,7 +64,8 @@ omcm/
 │   │   ├── components/
 │   │   │   ├── layout/
 │   │   │   │   ├── AppLayout.tsx
-│   │   │   │   ├── TopBar.tsx
+│   │   │   │   ├── MapControls.tsx
+│   │   │   │   ├── MapNavigation.tsx
 │   │   │   │   ├── SidePanel.tsx
 │   │   │   │   ├── FloatingControls.tsx
 │   │   │   │   └── LegacyLayout.tsx  Main's supporting-page navigation
@@ -118,7 +119,7 @@ omcm/
 │   │   │   ├── chatbot/
 │   │   │   │   ├── ChatbotPanel.tsx
 │   │   │   │   └── ChatMessage.tsx
-│   │   │   └── overview/, schedules/, analytics/, settings/, public/
+│   │   │   └── analytics/, settings/, public/
 │   │   ├── store/
 │   │   │   ├── useAppStore.ts        Zustand workspace state
 │   │   │   └── LegacyProvider.tsx    API/auth/schedules for retained pages
@@ -179,10 +180,8 @@ uses `useAppStore.ts` and the feature panels listed above.
 | `/`, `/risk` | Laguna map workspace |
 | `/optimization` | Workspace with optimization panel open |
 | `/simulator` | Workspace with scenario builder and playback open |
-| `/overview`, `/dashboard` | Main's overview |
-| `/admin`, `/dashboard/admin` | Server-backed barangay placement optimizer |
+| `/admin`, `/dashboard/admin` | Server-backed placement optimizer and deployment review |
 | `/driver` | Main's detailed road-fixture fleet simulator |
-| `/schedules` | Review and approve server-backed schedules |
 | `/analytics`, `/settings` | Existing analytics and data/method settings |
 | `/public`, `/clinics` | Read-only approved public schedules |
 
@@ -195,7 +194,7 @@ to baseline when it closes. Reopening restores the configured scenario.
 **Workspace approval is a local rehearsal.** It saves a snapshot in this browser,
 and changing plan inputs invalidates it. It does not publish to the public
 dashboard. For publication, generate a server-backed plan on `/admin` or
-`/schedules` and approve it on `/schedules`. Those pages use the existing API and
+`/workspace`, then use its deployment review controls. These tools use the existing API and
 SQLite workflow. The municipality workspace and the 20-barangay server pilot
 have different inputs and scoring formulas; they are intentionally identified
 in the interface and are not interchangeable deployments.

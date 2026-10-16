@@ -35,6 +35,7 @@ interface LagunaGoogleMapProps {
   onSelectClinic: (clinicId: string) => void;
   disruptions: RoadDisruption[];
   recenterTrigger: number;
+  zoomDelta: number;
   onAuthFailure?: (message: string) => void;
 }
 
@@ -53,10 +54,19 @@ export function LagunaGoogleMap({
   onSelectClinic,
   disruptions,
   recenterTrigger,
+  zoomDelta,
   onAuthFailure,
 }: LagunaGoogleMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const previousZoom = useRef(zoomDelta);
+  useEffect(() => {
+    const change = zoomDelta - previousZoom.current;
+    previousZoom.current = zoomDelta;
+    const map = mapInstanceRef.current;
+    if (map && change)
+      map.setZoom(Math.max(10, Math.min(15, (map.getZoom() ?? 11) + change)));
+  }, [zoomDelta]);
   const maskPolygonRef = useRef<google.maps.Polygon | null>(null);
   const hospitalMarkersRef = useRef<google.maps.Marker[]>([]);
   const clinicMarkersRef = useRef<google.maps.Marker[]>([]);
@@ -130,7 +140,7 @@ export function LagunaGoogleMap({
       },
       mapTypeId: "roadmap",
       disableDefaultUI: true,
-      zoomControl: true,
+      zoomControl: false,
       styles: [
         {
           featureType: "administrative.province",

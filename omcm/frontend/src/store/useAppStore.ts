@@ -18,6 +18,7 @@ interface AppState {
   sidePanelOpen: boolean;
   panel: Panel;
   recenterTrigger: number;
+  zoomDelta: number;
   clinicCount: number;
   manualSiteOverrides: Record<string, string>;
   scenario: SimulationScenario;
@@ -51,9 +52,10 @@ export const useAppStore = create<AppState>()(
       activeMetric: "score",
       showHospitals: true,
       showClinics: true,
-      sidePanelOpen: true,
+      sidePanelOpen: false,
       panel: null,
       recenterTrigger: 0,
+      zoomDelta: 0,
       clinicCount: 3,
       manualSiteOverrides: {},
       scenario: emptyScenario(),

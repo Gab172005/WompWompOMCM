@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { X } from "lucide-react";
-import { TopBar } from "./TopBar";
+import { MapControls } from "./MapControls";
+import { MapNavigation } from "./MapNavigation";
 import { SidePanel } from "./SidePanel";
 import { FloatingControls } from "./FloatingControls";
 import { LagunaMap } from "../../features/map/components/LagunaMap";
@@ -38,9 +39,8 @@ export function AppLayout() {
   };
   return (
     <div
-      className={`workspace ${state.panel ? "has-tool-panel" : ""} ${state.panel === "simulation" ? "is-simulating" : ""}`}
+      className={`workspace ${state.panel ? "has-tool-panel" : state.sidePanelOpen ? "has-detail-panel" : ""} ${state.panel === "simulation" ? "is-simulating" : ""}`}
     >
-      <TopBar />
       <main className="workspace-stage" aria-label="Laguna planning map">
         <LagunaMap
           municipalities={municipalities}
@@ -59,10 +59,13 @@ export function AppLayout() {
           }
           disruptions={disruptions}
           recenterTrigger={state.recenterTrigger}
+          zoomDelta={state.zoomDelta}
         />
-        <SidePanel />
+        <MapControls />
+        {!state.panel && <SidePanel />}
         <FloatingControls />
         <MapLegend />
+        <MapNavigation />
         {state.panel && (
           <aside
             className="workspace-panel tool-panel card"
@@ -92,10 +95,7 @@ export function AppLayout() {
         {state.panel === "simulation" && <SimulationPlayback />}
         <ClinicTracker />
       </main>
-      <footer className="workspace-footer">
-        <span>OMCM · Laguna pilot</span>
-        <span>Synthetic planning data · Local workspace</span>
-      </footer>
+      <div className="map-disclaimer">OMCM · Illustrative planning data</div>
     </div>
   );
 }
