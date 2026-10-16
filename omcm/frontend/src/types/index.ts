@@ -1,6 +1,11 @@
 import type { FeatureCollection } from "geojson";
 export type Factor =
-  "population" | "disease" | "vulnerability" | "accessibility" | "poverty" | "flood";
+  | "population"
+  | "disease"
+  | "vulnerability"
+  | "accessibility"
+  | "poverty"
+  | "flood";
 export type Weights = Record<Factor, number>;
 export interface Barangay {
   id: string;
@@ -29,6 +34,7 @@ export interface Barangay {
   rank: number;
 }
 export interface Site {
+  facility_type?: "school" | "barangay_hall" | "health_center" | null;
   id: string;
   barangay_id: string;
   name: string;
@@ -65,6 +71,7 @@ export interface Clinic extends Site {
   reason: string;
 }
 export interface Metrics {
+  unserved_population?: number | null;
   residents_served: number;
   high_priority_reached: number;
   weighted_demand: number;

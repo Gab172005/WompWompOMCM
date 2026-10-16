@@ -60,7 +60,7 @@ def main():
     sites = []
     for i, (municipality, name) in enumerate(hosts):
         b = next(b for b in inputs if b["municipality"].startswith(municipality) and key(b["name"]) == key(name))
-        sites.append(dict(id=f"P{i+1:02}", barangay_id=b["id"], name=f"Illustrative site: {b['name']}", lat=b["lat"], lng=b["lng"], capacity=240, eligible=True, verified=False, source="OSRM-snapped road point; facility suitability unverified"))
+        sites.append(dict(id=f"P{i+1:02}", barangay_id=b["id"], name=f"Illustrative site: {b['name']}", lat=b["lat"], lng=b["lng"], capacity=240, facility_type=["school", "barangay_hall", "health_center"][i % 3], eligible=True, verified=False, source="OSRM-snapped road point; facility suitability unverified"))
     depot = next(b for b in inputs if b["name"] == "Timugan")
     origins = [dict(id="depot", lat=depot["lat"], lng=depot["lng"])] + inputs
     routes, requests = [], []
