@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone, date
 from pathlib import Path
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -112,6 +112,51 @@ def simulate(request: SimulationRequest, actor=Depends(require_admin)):
     try:
         return simulate_scenario(request)
     except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
+@app.post("/api/explanations")
+def explanations(request: SimulationRequest, actor=Depends(require_admin)):
+    from app.services.explanations import get_provider
+    from app.services.pilot import road_evidence
+    try:
+        provider = get_provider()
+        evidence = simulate_scenario(request)
+        _, network, _ = load_data()
+        excluded = set(request.scenario.flooded_sites)
+        if "routes" in network:
+            _, excluded = road_evidence(network, request.scenario)
+        names = [s["name"] for s in network["sites"] if s["id"] in excluded]
+        evidence["exclusions"] = ["Sites excluded by selected flooding or blocked depot access: " + (", ".join(names) or "none") + "."]
+        return dict(text=provider.explain(evidence), provider="deterministic")
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
+@app.post("/api/chat")
+def chat(body: dict = Body(...), actor=Depends(require_admin)):
+    from app.services.chat import reply
+    from app.services.pilot import road_evidence
+    from pydantic import ValidationError
+    messages = body.get("messages")
+    if not isinstance(messages, list) or not 1 <= len(messages) <= 40:
+        raise HTTPException(422, "Provide 1–40 chat messages.")
+    for message in messages:
+        if not isinstance(message, dict) or set(message) != {"role", "content"} or message["role"] not in ("user", "assistant") or not isinstance(message["content"], str) or not 1 <= len(message["content"].strip()) <= 4000:
+            raise HTTPException(422, "Messages require a user/assistant role and 1–4000 characters.")
+    if messages[-1]["role"] != "user":
+        raise HTTPException(422, "The final message must be from the user.")
+    try:
+        request = SimulationRequest.model_validate({"original": body.get("original", {}), "scenario": body.get("scenario", {})})
+        evidence = simulate_scenario(request)
+        _, network, _ = load_data()
+        excluded = set(request.scenario.flooded_sites)
+        if "routes" in network:
+            _, excluded = road_evidence(network, request.scenario)
+        names = [site["name"] for site in network["sites"] if site["id"] in excluded]
+        evidence["exclusions"] = ["Flood or blocked-depot exclusions: " + (", ".join(names) or "none") + "."]
+        return reply(evidence, messages)
+    except (ValueError, ValidationError) as error:
         raise HTTPException(422, str(error)) from error
 
 
