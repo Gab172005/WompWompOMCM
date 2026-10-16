@@ -23,8 +23,9 @@ def csv_bytes(rows, fields):
 def dataset_exports():
     pilot = json.loads((ROOT / "backend/data/pilot.json").read_text(encoding="utf-8"))
     return {
-        "barangays.geojson": (ROOT / "frontend/public/data/pilot/barangays.geojson").read_bytes(),
-        "municipalities.geojson": (ROOT / "frontend/public/data/geo/laguna_municipalities.geojson").read_bytes(),
+        "barangays.geojson": (ROOT / "frontend/public/assets/pilot/barangays.geojson").read_bytes(),
+        "laguna_municipalities.geojson": (ROOT / "frontend/public/assets/geo/laguna_municipalities.geojson").read_bytes(),
+        "hospitals.csv": csv_bytes([{**h, "services": "|".join(h.get("services", []))} for h in pilot["hospitals"]], ["id", "name", "lat", "lng", "services"]),
         "population.csv": csv_bytes(pilot["barangays"], [
             "id", "psgc", "name", "municipality", "population", "children", "elderly",
             "lat", "lng", "poverty_pct", "flood_exposure", "healthcare_access_time_minutes",
@@ -34,7 +35,7 @@ def dataset_exports():
             "id", "psgc", "name", "municipality", "disease_cases", "source_date", "confidence",
         ]),
         "flood_hazards.geojson": (json.dumps(pilot["hazards"], ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8"),
-        "clinic_sites.csv": csv_bytes([
+        "candidate_sites.csv": csv_bytes([
             {**site, "hazards": "|".join(site["hazards"])} for site in pilot["sites"]
         ], ["id", "barangay_id", "name", "lat", "lng", "capacity", "eligible", "verified", "hazards", "source"]),
     }
@@ -51,7 +52,7 @@ def main():
                 raise SystemExit(f"Dataset export is missing or stale: {name}")
         else:
             target.write_bytes(content)
-    print("Dataset exports verified." if args.check else "Exported six dataset files (including municipality borders).")
+    print("Dataset exports verified." if args.check else "Exported dataset tables and geometry.")
 
 
 if __name__ == "__main__":

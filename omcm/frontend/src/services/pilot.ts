@@ -61,11 +61,11 @@ export interface Pilot {
 }
 let pending: Promise<Pilot> | undefined;
 export function loadPilot() {
-  pending ??= fetch(`${import.meta.env.BASE_URL}data/pilot/pilot.json`)
+  pending ??= fetch(`${import.meta.env.BASE_URL}assets/pilot/pilot.json`)
     .then(async (r) => {
       if (!r.ok)
         throw new Error(
-          "Road fixture missing. Restore public/data/pilot or run scripts/build-road-pilot.py.",
+          "Road fixture missing. Restore public/assets/pilot or run scripts/build-road-pilot.py.",
         );
       const data = (await r.json()) as Pilot;
       if (

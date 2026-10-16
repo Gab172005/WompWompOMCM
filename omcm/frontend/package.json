@@ -8,9 +8,10 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run",
-    "test:e2e": "node tests/e2e.mjs",
+    "test:e2e": "node ../tests/frontend/e2e.mjs",
     "lint": "eslint . --max-warnings 0",
-    "format": "prettier --write src"
+    "format": "prettier --write src",
+    "test:e2e:legacy": "node ../tests/frontend/legacy-e2e.mjs"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
@@ -19,7 +20,8 @@
     "react-dom": "^19.1.0",
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.6.0",
-    "recharts": "^3.0.0"
+    "recharts": "^3.0.0",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

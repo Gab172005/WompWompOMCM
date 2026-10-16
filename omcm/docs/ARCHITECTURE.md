@@ -1,140 +1,87 @@
-# OMCM architecture
+# Architecture
 
-## Retained stack and migration
+The application has a feature-organized React frontend and a FastAPI backend.
+The [README](../README.md) is the current directory and route reference.
 
-React 19 / TypeScript / Vite, Leaflet, React Router and Recharts remain the
-frontend. FastAPI, Pydantic, OR-Tools and SQLite remain the backend. No paid map
-service or additional hosted database is needed. Google was not previously
-integrated and no Google key is required; the existing legal OSM map provider
-is retained. No Google-derived content is downloaded or cached.
+## Frontend
 
-The default dataset is now a bounded 20-barangay Los Baños–Bay road pilot.
-The original 681-row geography and full provincial boundary files remain intact.
-`OMCM_DATASET=province` retains the legacy provincial analysis for research;
-its adjacency estimates are not driving routes and it is not the fleet-demo
-configuration. Use `pilot` for the simulator and coordinated approval workflow.
+`main.tsx` renders `app/App.tsx`. `AppProviders` owns the router and error boundary;
+`routes.tsx` distinguishes workspace, supporting admin pages and public routes.
 
-## Data and routing
+`components/layout/AppLayout.tsx` composes the full map canvas, top bar,
+municipality intelligence panel, map filters, legend and a mutually exclusive
+optimization, simulation or assistant panel. `styles/globals.css` preserves
+main's original design and appends responsive workspace rules.
 
-`frontend/scripts/build-road-pilot.py` joins the existing PhilAtlas seed locations
-to the bundled 2023 PSGC polygons. It validates geometry, uses an interior point
-when a seed is outside its polygon, and validates the snapped candidate endpoint
-belongs to its named barangay. Sites are explicitly illustrative road locations,
-not verified halls, schools, hospitals or operational facilities.
+Workspace state lives in Zustand (`store/useAppStore.ts`). The shared
+`features/optimization/usePlanningResults.ts` hook derives municipality scores,
+fleet recommendations and road disruptions. Transient selection, layers, panels,
+manual placements and playback remain in memory. Only the locally accepted
+proposal snapshot is persisted to localStorage. Plan input changes invalidate
+approval and reset playback. Closing simulation returns the map to baseline;
+the configured conditions remain available when simulation reopens.
 
-The importer obtains 168 directed OSRM legs in 21 throttled multi-waypoint
-requests. Each origin is followed by a candidate and then the origin again;
-only outbound legs are retained. `continue_straight=false` allows turns at
-waypoints. Coordinates are assembled from real returned step geometries. A
-request manifest and response hashes are included. No straight-line substitutes,
-traffic data or Google cache are used. Importer dependencies are separate from
-normal runtime dependencies.
+The Leaflet renderer composes municipality heatmap styling, hospital and clinic
+markers, road disruptions and routes. Geographic assets live in
+`public/assets/geo`. Map interaction and sizing are in `useMapInteraction`.
+Google Maps is an optional renderer; no configured key means Leaflet/OSM.
+`Modal` uses a native dialog for keyboard focus and Escape handling.
 
-The same `pilot.json` is copied to the frontend and backend; a test checks byte
-equality. It contains inputs, sites, depot, road geometry/duration, synthetic
-hazard polygons and precomputed geometry intersections. Frontend-only planning
-and Python planning therefore use the same evidence and constraints. They use
-different algorithms and may choose different feasible assignments.
+Main's supporting pages remain in their relevant feature folders.
+`store/LegacyProvider.tsx` manages their existing API, credentials, drafts,
+boundary uploads and public schedules. This provider is mounted only for those
+routes; the municipality workspace does not need backend initialization.
 
-Road-access time is `ceil(OSRM duration seconds / 60)` from a community point
-to a site. It excludes walking to that point, queues and traffic. Hospital
-access is a separate explicitly synthetic indicator: there is no verified
-hospital inventory. Flood safety is relative to the demonstration overlays only.
+## Two explicit planning datasets
 
-## Scoring and allocation
+The municipality workspace retains testing's 30-municipality illustrative data
+and browser priority heuristic (`services/lagunaData.ts`). Its four-factor score
+and example route waypoints are separate from the server pilot.
 
-Defaults: disease 30%, vulnerability 20%, access deficit 20%, poverty 15%, flood
-15%. All sliders normalize by their sum; an all-zero configuration is rejected.
-Clipped indicators are incidence per 1,000 divided by 100, vulnerable share
-divided by 0.60, hospital-access minutes divided by 60, poverty / 100, and flood
-index / 100. These are illustrative scales, not clinical thresholds. Population
-determines synthetic daily appointment demand (2.5%), not the need score.
+The server-backed fleet pilot retains main's 20 Los Baños–Bay barangay inputs,
+eight staging candidates, directed OSRM route fixtures, five-factor risk score,
+capacity constraints and Python allocation. Its fixtures are mirrored under
+`backend/data` and `frontend/public/assets/pilot` for standalone deployments.
+Do not translate a workspace proposal into an approved server schedule: the
+identifiers, inputs, routes and scoring contracts differ.
 
-The Python model uses binary site selection and integer demand allocations.
-Demand may split across sites, but each barangay's sum cannot exceed its demand.
-Allocation is limited by both clinic and site capacity, the travel threshold,
-eligibility, fleet size and scenario route accessibility. It maximizes need-
-weighted appointments, then shorter travel and fewer sites. One solver worker
-and fixed seed are used; the UI distinguishes proven optimality from feasibility.
+The new workspace's approval is labeled a local rehearsal. Server publication
+requires a server-generated draft and authenticated approval via the retained
+schedule workflow. Public routes read approved snapshots, never simulated
+positions. The assistant is local and rule-based; it does not call an AI API.
 
-The browser reference heuristic enumerates candidate subsets and allocates
-descending-priority demand to the closest available selected site. It is
-deterministic and labeled **Heuristic (demo)**; enumeration does not make the
-greedy assignment stage globally optimal. The baseline selects feasible sites
-in descending host population and fills them in descending community population
-under the same restrictions. Neither mode treats total population as care delivered.
+## Backend
 
-## Simulation and scenario state
+`main.py` creates the application, starts the repository and loads data, adds
+CORS/compression middleware, and mounts four routers:
 
-The shared Provider owns the current input configuration and proposed Plan.
-Simulator controls edit a pending scenario; the map reflects pending scores and
-hazards, playback pauses, and the previous results are labeled stale until
-reoptimization. **Reoptimize tomorrow** finishes the optimized day's planned
-travel, advances the simulated date by one day and automatically plays the new
-deployment from each vehicle's previous final position. This uses the final
-positions even when playback is paused mid-route or the baseline is being
-previewed. The first day is dated tomorrow relative to the server's Philippine
-date. The explicit demo tour starts a fresh day 1 from the depot.
+| Router | Responsibility |
+| --- | --- |
+| municipalities | Risk calculations, community/hospital data, analytics, boundaries |
+| optimization | Authenticated draft generation |
+| simulation | Before/after scenario comparison |
+| clinics | Fleet data, auth/health status, schedules, publication and audit |
 
-The Plan's frontend-only `simulation` state records the day, date and starting
-positions keyed by stable clinic IDs, and survives navigation between app pages.
-`services/fleet.ts` matches vehicles to proposed sites by feasible route count,
-then minimum relocation time. It reuses the directed host-barangay OSRM legs
-whose start and end coordinates exactly match the staging points. It never
-reverses a route or adds a straight connector. Unchanged assignments stay in
-place; temporarily unavailable vehicles retain their positions for a later day.
-New vehicles start at the depot. Reset and seeking operate within the current
-day; a stationary fleet gets a one-minute check-in timeline. Failed optimization
-requests leave the day and paused positions intact.
+`config.py` loads the environment and provides shared authentication/date
+dependencies. `models/municipality.py`, `clinic.py`, `scenario.py` and `results.py`
+contain the existing strict request/response contracts.
 
-If a scenario blocks relocation from a previous site, the vehicle stays there
-with a Blocked status, and that actual position carries forward. The planner
-still proposes destination coverage using its existing depot-based feasibility
-model, so the simulator explicitly labels coverage as conditional on arrival and
-withholds its approval link until relocation routes are available. No automatic
-publication or changes to approved schedules occur during day transitions.
+Services own scoring, allocation, route graphs, flood selection, scenario
+comparison, fixture loading and SQLite persistence. The optimizer uses a fixed
+seed, one worker and a deterministic search-work budget for repeatable results.
+Directed road evidence excludes hazard-intersecting fixtures; it does not invent
+safe diversions. Simulations leave approved schedules unchanged. Publication
+retains authenticated, transactional draft review and audit behavior.
 
-`useSimulationClock` advances one requestAnimationFrame clock. Route lengths are
-precomputed with cumulative haversine distances. `vehicleAt` locates the current
-segment with binary search and interpolates on that segment. Departure offsets,
-ETA, distance, heading, speed, trail, progress and status all derive from elapsed
-time, making seeking reversible. Background-frame gaps are capped to avoid a
-large jump when returning to a hidden tab. Duration is provider-modeled; constant
-distance speed along the route is an animation assumption, not turn-by-turn GPS.
+## Tests and datasets
 
-Moderate and severe floods use selected *real community polygons* as explicitly
-synthetic inundation footprints. A closure uses an actual returned route segment
-with a small approximately four-meter intersection buffer. Any intersecting
-demand route is removed. A site with an affected depot route is excluded.
-There is no inferred alternative route and no claim of arbitrary avoid-edge
-support. Disease surges change incidence and demand; flooded communities also
-increase their flood score contribution.
+All test sources are under `tests/frontend` and `tests/backend`. Vite and
+TypeScript resolve the external test directory using frontend dependencies.
+Pytest config supports running from either `omcm` or `omcm/backend`.
+Browser suites launch isolated servers and avoid the application's database.
 
-## Approval and modes
-
-Connected mode retains server-verified demo Basic authentication. A read-only
-tour can run the browser heuristic without credentials; it has no publishable
-server plan ID. Signing in generates a server-owned draft for separate review.
-Ordinary approval is for tomorrow or later, cannot replace an existing date,
-and transactionally writes schedule, plan status, timestamp and audit record.
-Today's plan or a previously published date requires a separately confirmed
-emergency override with a public notice. Publication loads the stored plan;
-clients cannot submit a replacement allocation through the approval endpoint.
-
-If the initial health request fails or `VITE_DEMO_MODE=true`, the frontend
-explicitly enters **browser-only demo**. The same typed API boundary routes
-supported operations to the local heuristic and a distinct localStorage key.
-Local approval is a rehearsal, visible only on that browser/origin. It never
-sends an unauthenticated publication to a server. After a successful connection,
-later API errors are reported rather than switching persistence modes mid-run.
-Reload to retry backend connectivity. Public pages read approved schedules only;
-they never render simulator markers as live locations. GPS sharing is disabled.
-
-## Limits
-
-OSM tiles require internet; offline road fixtures and calculations do not.
-The tile-error UI supports retry. No live GPS, traffic, forecast, actual flood
-extent, validated disease prediction, official patient count or production LGU
-identity system is provided. Homogeneous service-compatible clinics are assumed.
-SQLite needs persistent hosting storage. The browser demo is not a multi-user
-database. Production rollout needs verified site suitability and input datasets.
+`datasets/` contains inspectable exports with the requested canonical filenames.
+`backend/export_datasets.py --check` verifies them against runtime fixtures.
+Source attribution and synthetic-data limitations are in
+[SOURCES.md](../datasets/SOURCES.md). None of the example medical indicators or
+deployment recommendations is a live operational feed.

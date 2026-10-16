@@ -7,7 +7,7 @@ from urllib.request import urlopen
 
 COMMIT = "8eeead560246863c8c820c31ca6fbca81a279477"
 BASE = f"https://raw.githubusercontent.com/faeldon/philippines-json-maps/{COMMIT}/"
-DEST = Path(__file__).resolve().parents[1] / "public/data/geo"
+DEST = Path(__file__).resolve().parents[1] / "public/assets/geo"
 
 
 def fetch(path):

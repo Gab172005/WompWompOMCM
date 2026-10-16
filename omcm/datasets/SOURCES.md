@@ -6,7 +6,7 @@ capacity, demand, surge and hazard value in the default pilot.
 
 | Asset | Origin / date | License / resolution | Limitations |
 | --- | --- | --- | --- |
-| Laguna polygons | [philippines-json-maps](https://github.com/faeldon/philippines-json-maps), commit `8eeead560246863c8c820c31ca6fbca81a279477`, 2023 snapshot; already present at audit | Upstream MIT license copied under `frontend/public/data/geo/LICENSE.txt`; barangay and municipality polygons | Simplified upstream geometry; not an official current cadastral survey. Original source metadata and SHA256 hashes retained. |
+| Laguna polygons | [philippines-json-maps](https://github.com/faeldon/philippines-json-maps), commit `8eeead560246863c8c820c31ca6fbca81a279477`, 2023 snapshot; already present at audit | Upstream MIT license copied under `frontend/public/assets/geo/LICENSE.txt`; barangay and municipality polygons | Simplified upstream geometry; not an official current cadastral survey. Original source metadata and SHA256 hashes retained. |
 | Community seed points and names | Supplied `backend/data/barangays.csv`; [PhilAtlas Laguna list](https://www.philatlas.com/lists/barangays-laguna.html), recorded retrieval 2026-10-15 | Existing user-supplied geographic records; individual source URLs retained in pilot inputs | No population or disease counts were downloaded from this source. Redistribution rights for the supplied CSV were not independently established. Pilot matches exact municipality-qualified names and attaches PSGC from the boundary snapshot. |
 | Road geometry and durations | [FOSSGIS OSRM car service](https://routing.openstreetmap.de/about.html), obtained 2026-10-15; exact URLs and response hashes in `pilot.json.provenance` | [OpenStreetMap ODbL 1.0](https://www.openstreetmap.org/copyright), attributed to OSM contributors and OSRM/FOSSGIS; directed road legs | Modeled free-flow routes, not traffic. Road age and real closures are not independently verified. Endpoints are road-snapped. No turn-by-turn operational navigation is promised. |
 | Basemap | [OSM standard tiles](https://operations.osmfoundation.org/policies/tiles/), requested interactively at runtime | OSM attribution shown on every map | Requires internet. No bulk tile downloads, offline tile archive, proxy caching or prefetching. Use a suitable tile service/self-hosting if traffic grows. |
@@ -17,11 +17,11 @@ capacity, demand, surge and hazard value in the default pilot.
 
 ## Bundled files and import
 
-- `frontend/public/data/pilot/pilot.json`: 20 community inputs with PSGC keys,
+- `frontend/public/assets/pilot/pilot.json`: 20 community inputs with PSGC keys,
   source/date/confidence, eight sites, one care-reference example, depot, 168
   road legs, four synthetic flood footprints and one synthetic closure.
-- `frontend/public/data/pilot/barangays.geojson`: the 20 unchanged upstream
-  features. The full 681-feature file is retained in `data/geo`.
+- `frontend/public/assets/pilot/barangays.geojson`: the 20 unchanged upstream
+  features. The full 681-feature file is retained in `frontend/public/assets/geo`.
 - `backend/data/pilot.json`: identical copy for self-contained Python deployment.
 - `frontend/scripts/build-road-pilot.py`: reproducible join, validation and import.
 - `backend/data/route-cache/`: ignored raw responses; request hashes are bundled.

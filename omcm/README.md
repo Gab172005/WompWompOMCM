@@ -1,20 +1,17 @@
 # OMCM — Optimized Mobile Clinic Mapper
 
-A working Laguna mobile-clinic planning and fleet-simulation demo. The default
-pilot contains **20 real Los Baños–Bay barangay polygons**, eight illustrative
-staging sites, **168 attributed OSRM road-route fixtures**, capacity-aware
-allocation, disaster scenarios, three independently moving clinic vehicles,
-and a separate approved public schedule.
+A React + TypeScript map workspace and Python + FastAPI planning service for
+Laguna. The workspace combines **testing's map-first layout and tools** with
+**main's navy/teal palette, white cards, typography and shared UI styling**.
 
-**Illustrative synthetic data — not reported disease cases.** Population,
-health, poverty, hospital-access indicators, capacities, flood conditions and
-closures are synthetic. Boundaries and road geometries have real geographic
-sources. Staging points are explicitly illustrative, not verified facilities.
-No live traffic, driver GPS or disease surveillance is connected.
+Select a municipality, compare heatmaps, adjust clinic placements, test flood,
+morbidity and road-closure scenarios, and play simulated clinic movements.
+Main's overview, server-backed optimizer, schedules, analytics, settings and
+read-only public dashboard remain available.
 
-## Run the browser demo immediately
+## Run the frontend
 
-Requires Node.js 22+ and npm. No map/API key is needed.
+Requires Node.js 22+ and npm. OpenStreetMap needs no API key.
 
 ```powershell
 cd omcm/frontend
@@ -22,67 +19,187 @@ npm ci
 npm run dev
 ```
 
-Open **http://127.0.0.1:5173/simulator** and click **Demo tour · 3 clinics**.
-If the backend is unavailable, an explicit browser-only banner appears.
-Calculations and local approval rehearsal work from bundled data; the street
-basemap needs internet. `frontend/.env.example` documents optional configuration.
-Set `VITE_DEMO_MODE=true` in `frontend/.env` for an explicitly standalone demo.
+Open **http://127.0.0.1:5173/**. The map workspace works without the backend.
+Basemap tiles require internet. Copy `frontend/.env.example` to `frontend/.env`
+for optional API, Google Maps or Firebase configuration. Google Maps is optional;
+the map settings dialog also accepts a browser-restricted key. Firebase remains
+an optional configuration adapter; it does not replace schedule storage.
 
-Browser schedules are isolated in localStorage for this browser and origin.
-They do not publish an LGU service or reach other devices. Public View shows
-only locally approved schedules and never simulation markers as live GPS.
+## Run the backend
 
-## Run with the Python optimizer and persistent shared schedules
-
-On Windows with Python 3.13 and Node.js installed:
-
-```powershell
-cd omcm
-powershell -ExecutionPolicy Bypass -File .\setup.ps1
-powershell -ExecutionPolicy Bypass -File .\start.ps1
-```
-
-Setup preserves an existing `backend/.env`; otherwise it asks for local demo
-credentials. Credentials stay server-side. Open the same simulator URL. The
-read-only tour works without signing in; server draft generation and publication
-require the configured administrator. Review the generated server draft before
-approving it. API documentation: **http://127.0.0.1:8000/docs**.
-
-Manual backend setup:
+From another terminal, with Python 3.13 installed:
 
 ```powershell
 cd omcm/backend
 python -m venv .venv
 .venv/Scripts/python.exe -m pip install -r requirements.txt
 Copy-Item ../.env.example .env
-# Edit .env: enable demo auth and choose a username and 12+ character password.
+# Set OMCM_ADMIN_USERNAME and a 12+ character OMCM_ADMIN_PASSWORD in .env.
 .venv/Scripts/python.exe -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-On macOS/Linux use `.venv/bin/python` and `cp ../.env.example .env`. Start the
-frontend in another terminal. Keep `OMCM_DATASET=pilot` for the fleet demo.
-Reload the frontend to reconnect after starting a previously unavailable API.
+API docs: **http://127.0.0.1:8000/docs**. On macOS/Linux use `.venv/bin/python`.
+The existing `setup.ps1` and `start.ps1` are also available from `omcm/`.
+Keep `OMCM_DATASET=pilot` for the server-backed Los Baños–Bay fleet pilot.
+API mutations require the configured demo administrator; public schedules are
+read-only. SQLite stores connected drafts, approved schedules and audit events.
 
-## What works
+## Project structure
 
-- Real OSM basemap, red need polygons, matching PSGC inspection, score breakdown,
-  source/confidence labels, facility/site layers, route fit and recenter controls.
-- Configurable weights, fleet size, clinic capacity and road-access threshold.
-- Python OR-Tools MCLP-style allocation with site and vehicle capacity limits;
-  deterministic browser reference heuristic when explicitly in demo mode.
-- Population-first baseline using the same constraints, unserved communities,
-  and before/after scenario metrics. Demand is daily appointments, not all residents.
-- Play/pause/resume/reset, 1×/5×/20×/60×, reversible seeking, per-vehicle departure,
-  ETA, heading, remaining distance, trails, selection and follow controls.
-- Moderate/severe synthetic flood footprints, a map-visible synthetic closure,
-  disease surge and fleet shortage. Intersecting fixture routes are excluded;
-  no unverified safe reroute is claimed.
-- Separate draft and published snapshots, explicit next-day approval, confirmed
-  emergency revisions and notices. Connected publication is authenticated and
-  transactional; local demo approval is visibly labeled as a rehearsal.
-- Existing routes remain: `/`, `/risk`, `/optimization`, `/simulator`,
-  `/schedules`, `/analytics`, `/settings`, `/public`; aliases include `/admin`,
-  `/dashboard`, `/dashboard/admin`, `/clinics`.
+```text
+omcm/
+├── frontend/                         React + TypeScript + Vite
+│   ├── public/assets/
+│   │   ├── geo/                      Boundaries, province mask, source/license
+│   │   └── pilot/                    Browser copy of the road pilot fixtures
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── App.tsx               Application composition
+│   │   │   ├── AppProviders.tsx      Router and error boundary
+│   │   │   └── routes.tsx            Workspace, admin tools and public access
+│   │   ├── components/
+│   │   │   ├── layout/
+│   │   │   │   ├── AppLayout.tsx
+│   │   │   │   ├── TopBar.tsx
+│   │   │   │   ├── SidePanel.tsx
+│   │   │   │   ├── FloatingControls.tsx
+│   │   │   │   └── LegacyLayout.tsx  Main's supporting-page navigation
+│   │   │   └── ui/
+│   │   │       ├── Button.tsx
+│   │   │       ├── Card.tsx
+│   │   │       ├── Modal.tsx         Native dialog with focus/escape handling
+│   │   │       └── LegacyUI.tsx      Shared metrics for retained pages
+│   │   ├── features/
+│   │   │   ├── map/
+│   │   │   │   ├── components/
+│   │   │   │   │   ├── LagunaMap.tsx
+│   │   │   │   │   ├── LagunaLeafletMap.tsx
+│   │   │   │   │   ├── LagunaGoogleMap.tsx
+│   │   │   │   │   ├── HeatmapLayer.tsx
+│   │   │   │   │   ├── MunicipalityLayer.tsx
+│   │   │   │   │   ├── HospitalMarkers.tsx
+│   │   │   │   │   ├── ClinicMarkers.tsx
+│   │   │   │   │   ├── RouteLayer.tsx
+│   │   │   │   │   └── MapLegend.tsx
+│   │   │   │   └── hooks/useMapInteraction.ts
+│   │   │   ├── municipalities/
+│   │   │   │   ├── MunicipalitySearch.tsx
+│   │   │   │   ├── MunicipalityPanel.tsx
+│   │   │   │   ├── MunicipalityMetrics.tsx
+│   │   │   │   └── MunicipalityRanking.tsx
+│   │   │   ├── filters/
+│   │   │   │   ├── FilterControls.tsx
+│   │   │   │   ├── HeatmapSelector.tsx
+│   │   │   │   └── LayerToggles.tsx
+│   │   │   ├── optimization/
+│   │   │   │   ├── OptimizationPanel.tsx
+│   │   │   │   ├── ClinicCountInput.tsx
+│   │   │   │   ├── PlacementRecommendations.tsx
+│   │   │   │   ├── ManualPlacement.tsx
+│   │   │   │   ├── DeploymentApproval.tsx
+│   │   │   │   └── usePlanningResults.ts
+│   │   │   ├── simulation/
+│   │   │   │   ├── SimulationPanel.tsx
+│   │   │   │   ├── ScenarioBuilder.tsx
+│   │   │   │   ├── FloodControls.tsx
+│   │   │   │   ├── MorbidityControls.tsx
+│   │   │   │   ├── RoadBlockageTool.tsx
+│   │   │   │   ├── SimulationPlayback.tsx
+│   │   │   │   └── SimulationResults.tsx
+│   │   │   ├── tracking/
+│   │   │   │   ├── ClinicTracker.tsx
+│   │   │   │   ├── ClinicDetails.tsx
+│   │   │   │   ├── ClinicStatus.tsx
+│   │   │   │   └── useClinicAnimation.ts
+│   │   │   ├── chatbot/
+│   │   │   │   ├── ChatbotPanel.tsx
+│   │   │   │   └── ChatMessage.tsx
+│   │   │   └── overview/, schedules/, analytics/, settings/, public/
+│   │   ├── store/
+│   │   │   ├── useAppStore.ts        Zustand workspace state
+│   │   │   └── LegacyProvider.tsx    API/auth/schedules for retained pages
+│   │   ├── services/                API, maps, Firebase and planning adapters
+│   │   ├── types/                   municipality.ts, clinic.ts, simulation.ts
+│   │   ├── hooks/                   Retained pilot hooks
+│   │   ├── styles/globals.css       Main's design plus workspace layout rules
+│   │   └── main.tsx                 React entry point
+│   ├── scripts/                     Geographic/pilot import tools
+│   └── package.json
+├── backend/
+│   ├── main.py                      App creation, middleware and router mounting
+│   ├── config.py                    Environment and demo authentication
+│   ├── routers/
+│   │   ├── municipalities.py
+│   │   ├── optimization.py
+│   │   ├── simulation.py
+│   │   └── clinics.py
+│   ├── services/
+│   │   ├── risk_scoring.py
+│   │   ├── clinic_optimizer.py
+│   │   ├── route_service.py
+│   │   ├── flood_analysis.py
+│   │   ├── simulation_engine.py
+│   │   ├── data.py                  Fixture loading and reference validation
+│   │   ├── pilot.py                 Directed road evidence
+│   │   └── repository.py            SQLite persistence
+│   ├── models/                      municipality.py, clinic.py, scenario.py,
+│   │                                results.py (validated API responses)
+│   ├── data/                        Runtime pilot and provincial seed inputs
+│   ├── export_datasets.py
+│   └── requirements.txt
+├── datasets/
+│   ├── laguna_municipalities.geojson
+│   ├── population.csv
+│   ├── disease_cases.csv
+│   ├── flood_hazards.geojson
+│   ├── hospitals.csv
+│   ├── candidate_sites.csv
+│   ├── barangays.geojson            Additional geometry for the server pilot
+│   └── SOURCES.md
+├── tests/
+│   ├── frontend/                    Unit tests and both browser suites
+│   └── backend/                     API/engine/export tests and small fixtures
+├── docs/
+├── .env.example
+└── README.md
+```
+
+Additional map and fleet components inside the feature folders support main's
+retained pages. `Legacy` identifies those existing adapters; the new workspace
+uses `useAppStore.ts` and the feature panels listed above.
+
+## Routes and data flow
+
+| URL | Purpose |
+| --- | --- |
+| `/`, `/risk` | Laguna map workspace |
+| `/optimization` | Workspace with optimization panel open |
+| `/simulator` | Workspace with scenario builder and playback open |
+| `/overview`, `/dashboard` | Main's overview |
+| `/admin`, `/dashboard/admin` | Server-backed barangay placement optimizer |
+| `/driver` | Main's detailed road-fixture fleet simulator |
+| `/schedules` | Review and approve server-backed schedules |
+| `/analytics`, `/settings` | Existing analytics and data/method settings |
+| `/public`, `/clinics` | Read-only approved public schedules |
+
+Workspace interactions update Zustand. `usePlanningResults` derives municipality
+scores, recommendations and disruptions from testing's browser heuristic.
+Changing one manual site keeps the other clinics; occupied sites cannot be
+selected twice. Scenario conditions apply while the simulator is open and revert
+to baseline when it closes. Reopening restores the configured scenario.
+
+**Workspace approval is a local rehearsal.** It saves a snapshot in this browser,
+and changing plan inputs invalidates it. It does not publish to the public
+dashboard. For publication, generate a server-backed plan on `/admin` or
+`/schedules` and approve it on `/schedules`. Those pages use the existing API and
+SQLite workflow. The municipality workspace and the 20-barangay server pilot
+have different inputs and scoring formulas; they are intentionally identified
+in the interface and are not interchangeable deployments.
+
+The assistant provides deterministic explanations from current workspace data.
+No external AI service, live GPS, surveillance, traffic or hazard feed is connected.
+Health, routing and deployment fixtures are illustrative. See
+[data sources and limitations](datasets/SOURCES.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## Checks
 
@@ -92,37 +209,28 @@ npm run lint
 npm test
 npm run build
 npm run test:e2e
+npm run test:e2e:legacy
 cd ../backend
 .venv/Scripts/python.exe -m pytest -q
+.venv/Scripts/python.exe export_datasets.py --check
 ```
 
-The browser suite launches isolated API/Vite servers on 8001/5174 and a temporary
-SQLite database, using headless Microsoft Edge on Windows. On other platforms
-install Chromium with `npx playwright install chromium`. It exercises connected
-and browser-only workflows and saves 1440px/390px screenshots under
-`frontend/test-results`. It never uses your application's database or password.
+The new workspace browser suite runs an isolated Vite instance on port 5175.
+The retained connected-workflow suite uses ports 8001/5174 and a temporary
+database. On Windows the suites use headless Edge; elsewhere install Chromium
+with `npx playwright install chromium`. Screenshots go to
+`frontend/test-results/`. Test sources live under `tests/`; frontend dependencies
+remain installed once in `frontend/node_modules`.
 
-See [verification results](docs/VERIFICATION.md), [three-minute demo script](docs/DEMO_SCRIPT.md),
-[implementation audit](docs/IMPLEMENTATION_PLAN.md), [architecture and assumptions](docs/ARCHITECTURE.md),
-[API contracts](docs/API.md), and [data sources/import instructions](datasets/SOURCES.md).
+Regenerate the inspectable dataset exports with
+`backend/.venv/Scripts/python.exe backend/export_datasets.py` from `omcm/`.
+Exports mirror the server pilot and bundled boundary assets; they are not live
+data downloads. See [API contracts](docs/API.md) for the unchanged `/api` endpoints.
 
-## Deployment checklist
+## Deployment
 
-1. Run the checks above. Preview `/simulator`, reset scenarios, and verify tiles.
-2. For Vercel use root `omcm/frontend`, build `npm run build`, output `dist`.
-   Existing `vercel.json` supports deep links. Static browser demo needs no API key.
-3. For connected mode set `VITE_API_URL` to the backend HTTPS base without `/api`.
-   Set `VITE_DEMO_MODE=false`; changes to Vite variables require rebuilding.
-4. Deploy Python from `omcm/backend`, install `requirements.txt`, start
-   `uvicorn main:app --host 0.0.0.0 --port $PORT`. Keep `OMCM_DATASET=pilot`.
-5. Set exact frontend origins in `OMCM_CORS_ORIGINS`; set demo credentials only
-   on the server. Use HTTPS. Point `OMCM_DATABASE_PATH` at persistent storage.
-6. Verify authenticated approval, published schedules after restart, and explicit
-   fallback messaging when the API is unavailable. Never treat local demo approval
-   as server publication. No external deployment was performed by this upgrade.
-
-No production identity system, operational site validation, live GPS, actual
-hazard/health feeds or traffic service is included. Production use requires those
-inputs and operational review. The original provincial data and historical README
-are retained in [the archive](docs/LEGACY_README.md); their adjacency estimates
-are not the new fleet simulator's road model.
+For Vercel use root `omcm/frontend`, build `npm run build`, output `dist`.
+For FastAPI use root `omcm/backend`, install `requirements.txt`, and start
+`uvicorn main:app --host 0.0.0.0 --port $PORT`. Set `VITE_API_URL` to the HTTPS
+backend base, configure exact `OMCM_CORS_ORIGINS`, and keep the SQLite database on
+persistent storage. Existing `vercel.json` and `render.yaml` remain available.

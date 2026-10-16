@@ -1,6 +1,10 @@
-# Three-minute judge walkthrough
+# Three-minute retained fleet walkthrough
 
-Use `http://127.0.0.1:5173/simulator`. Preflight: internet for OSM tiles; wait for
+Use `http://127.0.0.1:5173/driver`. The new map workspace is at `/`; use its
+Optimize, Simulate and Assistant buttons for the municipality tools described
+in the [README](../README.md). This walkthrough covers the retained server pilot.
+
+Preflight: internet for OSM tiles; wait for
 the actual roads and lake to render. No map key is required. Use the default
 `pilot` dataset. For a completely independent rehearsal, set frontend
 `VITE_DEMO_MODE=true` and restart Vite. For shared server publication, run both

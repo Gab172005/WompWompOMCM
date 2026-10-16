@@ -1,8 +1,13 @@
 const base = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 let authorization = "";
 let browserDemo = import.meta.env.VITE_DEMO_MODE === "true";
-export function enableBrowserDemo() { browserDemo = true; authorization = ""; }
-export function isBrowserDemo() { return browserDemo; }
+export function enableBrowserDemo() {
+  browserDemo = true;
+  authorization = "";
+}
+export function isBrowserDemo() {
+  return browserDemo;
+}
 export function setCredentials(username: string, password: string) {
   authorization =
     "Basic " +

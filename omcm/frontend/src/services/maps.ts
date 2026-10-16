@@ -157,14 +157,14 @@ export function matchAreas(
 
 let pending: Promise<Geography> | undefined;
 export function loadLagunaGeography(): Promise<Geography> {
-  // Vite copies public/data/geo to /data/geo. Replace these files with verified
+  // Vite copies public/assets/geo to /assets/geo. Replace these files with verified
   // WGS84 Laguna boundary data; no generated geometry is used on failure.
   pending ??= (async () => {
     const warnings: string[] = [];
     let mapping: AreaMapping = {};
     try {
       const aliases = await fetch(
-        `${import.meta.env.BASE_URL}data/geo/laguna_record_mapping.json`,
+        `${import.meta.env.BASE_URL}assets/geo/laguna_record_mapping.json`,
       );
       if (aliases.ok) {
         const value = await aliases.json();
@@ -191,7 +191,7 @@ export function loadLagunaGeography(): Promise<Geography> {
       try {
         const filename = "laguna_municipalities.geojson";
         const response = await fetch(
-          `${import.meta.env.BASE_URL}data/geo/${filename}`,
+          `${import.meta.env.BASE_URL}assets/geo/${filename}`,
         );
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const geojson = parseLagunaGeometry(await response.json(), level);
@@ -209,7 +209,7 @@ export function loadLagunaGeography(): Promise<Geography> {
       }
     }
     throw new Error(
-      `${warnings.join(" ")} Add verified Laguna GeoJSON in /data/geo/.`,
+      `${warnings.join(" ")} Add verified Laguna GeoJSON in /assets/geo/.`,
     );
   })();
   return pending;

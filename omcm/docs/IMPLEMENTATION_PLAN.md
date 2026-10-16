@@ -1,4 +1,8 @@
-# Implementation audit and plan
+# Historical implementation audit and plan
+
+This records the earlier main-branch implementation. For the current feature
+folders, optional Google Maps engine and workspace routes, see the
+[README](../README.md) and [architecture](ARCHITECTURE.md).
 
 Audit: 2026-10-15. Existing stack: Vite/React 19/TypeScript, Leaflet,
 Recharts, FastAPI/Pydantic, OR-Tools, NetworkX, SQLite, npm lockfile and a

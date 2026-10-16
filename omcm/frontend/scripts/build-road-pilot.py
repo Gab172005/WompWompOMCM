@@ -18,7 +18,7 @@ import httpx
 from shapely.geometry import shape, Point, LineString
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / "frontend/public/data/pilot"
+OUT = ROOT / "frontend/public/assets/pilot"
 CACHE = ROOT / "backend/data/route-cache"
 BASE = os.getenv("OMCM_OSRM_URL", "https://routing.openstreetmap.de/routed-car")
 
@@ -30,7 +30,7 @@ def key(value):
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     CACHE.mkdir(parents=True, exist_ok=True)
-    all_geo = json.loads((ROOT / "frontend/public/data/geo/laguna_barangays.geojson").read_text(encoding="utf-8"))
+    all_geo = json.loads((ROOT / "frontend/public/assets/geo/laguna_barangays.geojson").read_text(encoding="utf-8"))
     source = list(csv.DictReader((ROOT / "backend/data/barangays.csv").open(encoding="utf-8-sig")))
     names = {"Calo", "Dila", "Maitim", "San Agustin", "San Antonio", "San Isidro", "San Nicolas", "Tagumpay"}
     rows = [r for r in source if (r["city_municipality"].startswith("Los") and r["barangay_name"] not in {"Bagong Silang", "Putho Tuntungin"}) or (r["city_municipality"] == "Bay" and r["barangay_name"] in names)]
