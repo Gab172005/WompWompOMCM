@@ -1,8 +1,7 @@
-import { Link } from "react-router-dom";
+import { WorkspaceLink as Link } from "../components/WorkspaceLink";
 import { ArrowRight, CheckCircle2, MapPin } from "lucide-react";
 import { useOMCM } from "../services/store";
 import { Card, number, PageHeader, PlanMetrics } from "../components/ui";
-import { MapView } from "../components/MapView";
 import { ComparisonChart } from "../components/Charts";
 import { PlanningControls } from "../components/PlanningControls";
 export function AdminDashboard() {
@@ -15,6 +14,7 @@ export function AdminDashboard() {
         description="Maximize priority-weighted daily demand within safe site, travel, and clinic-capacity constraints."
       />
       <PlanningControls detailed />
+
       {!plan && (
         <div className="notice">
           Choose your parameters and generate a placement. Results are
@@ -23,15 +23,13 @@ export function AdminDashboard() {
         </div>
       )}
       <PlanMetrics />
-      <Card className="full-map">
-        <MapView />
-      </Card>
+
       {plan && (
         <>
           <div className="section-heading">
             <h2>Recommended staging locations</h2>
             <Link className="primary" to="/schedules">
-              Review & approve
+              Accept recommendation & review
               <ArrowRight size={16} />
             </Link>
           </div>
@@ -46,6 +44,12 @@ export function AdminDashboard() {
                   <CheckCircle2 size={19} color="#218d82" />
                 </div>
                 <h3>{c.name}</h3>
+                {c.facility_type && (
+                  <span className="badge">
+                    {c.facility_type.replaceAll("_", " ")} · synthetic,
+                    unverified
+                  </span>
+                )}
                 <p>{c.reason}</p>
                 <div className="capacity-bar">
                   <span style={{ width: `${c.utilization}%` }} />
@@ -82,6 +86,13 @@ export function AdminDashboard() {
               <p>
                 The baseline chooses the most populated eligible hubs and fills
                 appointments in population order under the same restrictions.
+                Positive improvement means better performance; travel and
+                unserved demand are better when lower. Residents reached
+                represent estimated daily appointments, not total population
+                coverage. Flood-safe accessibility is the share of daily demand
+                served through scenario-safe routes. Unserved population is
+                represented population minus residents allocated an appointment
+                today; it does not measure unmet clinical need.
               </p>
               <table className="comparison-table">
                 <thead>
@@ -89,25 +100,49 @@ export function AdminDashboard() {
                     <th>Metric</th>
                     <th>OMCM</th>
                     <th>Baseline</th>
+                    <th>Improvement</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(
                     [
                       ["Appointments served", "residents_served"],
+                      ["High-risk residents reached", "high_priority_reached"],
                       ["Priority-weighted demand", "weighted_demand"],
                       ["Average travel (min)", "average_travel_minutes"],
-                      ["Unserved demand", "unserved_demand"],
                       [
-                        "Flood-safe allocations (%)",
+                        "Unserved population (daily estimate)",
+                        "unserved_population",
+                      ],
+                      ["Unserved daily appointment demand", "unserved_demand"],
+                      [
+                        "Flood-safe accessibility (%)",
                         "flood_safe_accessibility_pct",
                       ],
                     ] as const
                   ).map(([label, key]) => (
                     <tr key={key}>
                       <td>{label}</td>
-                      <td>{number(plan.optimized.metrics[key])}</td>
-                      <td>{number(plan.baseline.metrics[key])}</td>
+                      <td>
+                        {plan.optimized.metrics[key] == null
+                          ? "Unavailable"
+                          : number(plan.optimized.metrics[key]!)}
+                      </td>
+                      <td>
+                        {plan.baseline.metrics[key] == null
+                          ? "Unavailable"
+                          : number(plan.baseline.metrics[key]!)}
+                      </td>
+                      <td>
+                        {plan.baseline.metrics[key] == null ||
+                        plan.optimized.metrics[key] == null
+                          ? "N/A"
+                          : plan.baseline.metrics[key] === 0
+                            ? plan.optimized.metrics[key] === 0
+                              ? "0%"
+                              : "N/A (zero baseline)"
+                            : `${number(((plan.optimized.metrics[key]! - plan.baseline.metrics[key]!) / plan.baseline.metrics[key]!) * 100 * (["average_travel_minutes", "unserved_demand", "unserved_population"].includes(key) ? -1 : 1))}%`}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

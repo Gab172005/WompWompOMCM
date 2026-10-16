@@ -51,6 +51,7 @@ class RiskResult(BaseModel):
 
 
 class SiteResult(BaseModel):
+    facility_type: Literal["school", "barangay_hall", "health_center"] | None = None
     id: str
     barangay_id: str
     name: str
@@ -76,6 +77,8 @@ class ClinicResult(SiteResult):
 
 
 class MetricsResult(BaseModel):
+    # Optional for persisted drafts created before Build Step 3.
+    unserved_population: Nonnegative | None = None
     residents_served: Nonnegative
     high_priority_reached: Nonnegative
     weighted_demand: Annotated[float, Field(ge=0)]

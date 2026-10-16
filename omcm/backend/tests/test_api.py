@@ -11,7 +11,7 @@ def test_public_data_and_auth(client, auth):
     assert client.post("/api/optimize", json={}, auth=("wrong", "wrong")).status_code == 401
     assert client.get("/api/auth/me", auth=auth).status_code == 200
     assert client.post("/api/risk/calculate", json={"disease":-1}, auth=auth).status_code == 422
-    assert client.post("/api/risk/calculate", json=dict(disease=0,vulnerability=0,accessibility=0,poverty=0,flood=0), auth=auth).status_code == 422
+    assert client.post("/api/risk/calculate", json=dict(population=0,disease=0,vulnerability=0,accessibility=0,poverty=0,flood=0), auth=auth).status_code == 422
     assert client.post("/api/optimize", json={"clinic_count":-1}, auth=auth).status_code == 422
 
 
@@ -78,3 +78,35 @@ def test_concurrent_approvals_cannot_overwrite(client, auth):
         outcomes = list(pool.map(lambda _: client.post("/api/schedules/approve", json=payload, auth=auth).status_code, range(2)))
     assert sorted(outcomes) == [200, 409]
     assert len(client.get("/api/audit", auth=auth).json()["events"]) == 1
+
+
+def test_need_sensitivity(client, auth):
+    assert client.post("/api/risk/sensitivity", json={}).status_code == 401
+    response = client.post("/api/risk/sensitivity?top_k=3", json={}, auth=auth)
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["baseline_ids"]) == 3
+    assert len(result["trials"]) == 12
+    assert client.post("/api/risk/sensitivity?top_k=0", json={}, auth=auth).status_code == 422
+
+
+def test_draft_override_keeps_today_fixed_until_emergency_publication(client, auth):
+    from app.database import repository as repo
+    first = client.post('/api/optimize', json={'clinic_count': 1, 'manual_sites': ['S01']}, auth=auth).json()
+    assert repo.get_plan(first['plan_id'])['status'] == 'draft'
+    assert client.get('/api/schedules').json()['schedules'] == []
+    payload = dict(plan_id=first['plan_id'], deployment_date=today().isoformat(),
+                   notice='Demo: emergency clinic arrangements for today.', confirmed=True)
+    assert client.post('/api/schedules/emergency-override', json=payload, auth=auth).status_code == 200
+    active = client.get('/api/schedules').json()
+    revised = client.post('/api/optimize', json={'clinic_count': 1, 'manual_sites': ['S02']}, auth=auth).json()
+    assert [c['id'] for c in revised['optimized']['clinics']] == ['S02']
+    assert client.get('/api/schedules').json() == active
+    ordinary = dict(plan_id=revised['plan_id'], deployment_date=today().isoformat())
+    assert client.post('/api/schedules/approve', json=ordinary, auth=auth).status_code == 422
+    assert client.get('/api/schedules').json() == active
+    ordinary['deployment_date'] = (today() + timedelta(days=1)).isoformat()
+    assert client.post('/api/schedules/approve', json=ordinary, auth=auth).status_code == 200
+    published = client.get('/api/schedules').json()
+    assert next(s for s in published['schedules'] if s['date'] == today().isoformat()) == active['schedules'][0]
+    assert next(s for s in published['schedules'] if s['date'] == ordinary['deployment_date'])['clinics'][0]['id'] == 'S02'

@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import raw from "../../public/data/pilot/pilot.json";
 import { defaultConfig } from "./defaults";
 import { scorePilot, type Pilot } from "./pilot";
-import { parseLagunaGeometry } from "./maps";
+import { matchAreas, parseLagunaGeometry } from "./maps";
 import {
   aggregateMunicipalities,
   coveredMunicipalities,
@@ -23,6 +23,7 @@ const indicators = (value: number): Weights => ({
   accessibility: value,
   poverty: value,
   flood: value,
+  population: value,
 });
 const record = (changes: Partial<Barangay> = {}): Barangay => ({
   ...scores[0],
@@ -42,6 +43,35 @@ const record = (changes: Partial<Barangay> = {}): Barangay => ({
 });
 
 describe("municipal healthcare summaries", () => {
+  it("matches the barangay layer to the same records used by municipal rollups", () => {
+    const boundaries = parseLagunaGeometry(
+      JSON.parse(
+        readFileSync("public/data/geo/laguna_barangays.geojson", "utf8"),
+      ),
+      "barangay",
+    );
+    const matches = matchAreas(boundaries, scores, {});
+    expect(boundaries.features).toHaveLength(681);
+    expect(Object.values(matches).filter(Boolean)).toHaveLength(20);
+    for (const area of aggregateMunicipalities(geometry, scores)) {
+      const children = boundaries.features
+        .filter((f) => `${f.properties.area_id.slice(0, 6)}000` === area.id)
+        .flatMap((f) =>
+          matches[f.properties.area_id] ? [matches[f.properties.area_id]!] : [],
+        );
+      expect(children.map((b) => b.id).sort()).toEqual(
+        [...area.source_ids].sort(),
+      );
+      expect(children.reduce((sum, b) => sum + b.population, 0)).toBe(
+        area.population,
+      );
+      expect(
+        children.reduce((sum, b) => sum + b.score * b.population, 0) /
+          area.population,
+      ).toBeCloseTo(area.score, 2);
+    }
+  });
+
   it("groups the pilot into its two municipalities and preserves source totals", () => {
     const municipalities = aggregateMunicipalities(geometry, scores);
     expect(geometry.features).toHaveLength(30);

@@ -61,3 +61,5 @@ evaluate include [PSA/PSGC](https://psa.gov.ph/classification/psgc),
 None of those agencies supplied this demo's health/hazard values, and barangay-
 level availability is not assumed. Revalidate travel and eligibility before
 using any plan operationally.
+
+Build Step 3: pilot sites carry synthetic `facility_type` assignments (school, barangay_hall, health_center). Categories are demo assumptions, not verified facility identities. Existing road points, capacities, and route evidence are unchanged.

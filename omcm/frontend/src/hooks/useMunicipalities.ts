@@ -34,19 +34,8 @@ export function useMunicipalities(
       return null;
     }
   }, [boundaries?.geojson]);
-  const territoryData = useMemo(() => {
-    if (!uploadedGeometry) return geography?.geojson;
-    if (!geography) return uploadedGeometry;
-    const overrides = new Map(
-      uploadedGeometry.features.map((f) => [f.properties.area_id, f]),
-    );
-    return {
-      ...geography.geojson,
-      features: geography.geojson.features.map(
-        (f) => overrides.get(f.properties.area_id) ?? f,
-      ),
-    };
-  }, [geography, uploadedGeometry]);
+  // Navigation and masking always use the complete, source-verified snapshot.
+  const territoryData = geography?.geojson;
   const municipalities = useMemo(
     () =>
       territoryData

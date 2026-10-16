@@ -93,3 +93,34 @@ def test_outbreak_and_reduced_clinics():
     assert by_id(outbreak)["B01"]["demand"] == by_id(normal)["B01"]["demand"] * 3
     assert by_id(outbreak)["B01"]["score"] > by_id(normal)["B01"]["score"]
     assert len(outbreak["optimized"]["clinics"]) <= 1
+
+
+def test_population_percentile_and_small_high_risk_priority():
+    frame, network, _ = load_data()
+    frame.loc[:, "population"] = 100000
+    frame.loc[0, "population"] = 100
+    frame.loc[:, "disease_cases"] = 0
+    frame.loc[0, "disease_cases"] = 10
+    weights = Weights(disease=90, population=10, vulnerability=0, accessibility=0, poverty=0, flood=0)
+    scores = calculate_scores(frame, network, travel_times(road_graph(frame, network)), weights)
+    assert scores[0]["id"] == frame.iloc[0].id
+    assert scores[0]["factors"]["population"] == 5
+    assert all(0 <= value <= 100 for b in scores for value in b["factors"].values())
+    assert all(abs(sum(b["contributions"].values()) - b["score"]) < .04 for b in scores)
+
+
+def test_sensitivity_detects_membership_and_stable_ties():
+    from risk_scoring import sensitivity_check
+    weights = Weights(disease=50, population=50, vulnerability=0, accessibility=0, poverty=0, flood=0)
+    def row(id, disease, population):
+        factors = {key: 0 for key in weights.model_dump()}
+        factors.update(disease=disease, population=population)
+        return dict(id=id, score=50, factors=factors)
+    result = sensitivity_check([row("a", 100, 0), row("b", 0, 100)], weights, top_k=1)
+    assert result["baseline_ids"] == ["a"]
+    assert not result["membership_stable"]
+    assert any(t["factor"] == "population" and t["change"] == 5 and t["top_ids"] == ["b"] for t in result["trials"])
+    stable = sensitivity_check([row("a", 100, 0), row("b", 0, 100)], weights, top_k=100)
+    assert stable["top_k"] == 2
+    assert stable["membership_stable"]
+    assert not stable["order_stable"]

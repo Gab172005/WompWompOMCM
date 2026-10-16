@@ -5,7 +5,7 @@ import {
   AlertTriangle,
   ExternalLink,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { WorkspaceLink as Link } from "../components/WorkspaceLink";
 import { useOMCM } from "../services/store";
 import { api } from "../services/api";
 import { Card, PageHeader } from "../components/ui";
@@ -96,8 +96,9 @@ export function Schedules() {
             <span className="badge">OPTIONAL</span>
           </div>
           <p>
-            Choose explicit hubs, then generate again. Capacity, eligibility,
-            flood, and travel restrictions still apply.
+            Keep the recommendation or override its sites. Start with the
+            recommended hubs, change any selection, then generate again.
+            Capacity, eligibility, flood, and travel restrictions still apply.
           </p>
           <label className="checkbox">
             <input
@@ -129,13 +130,33 @@ export function Schedules() {
               ))}
             </div>
           )}
-          <h4>Latest draft</h4>
+          <h4>
+            Draft plan for tomorrow · {today ? addDays(today, 1) : "Loading…"}
+          </h4>
+          <p className="notice">
+            Today’s active plan stays locked. Generating or editing a draft does
+            not change published schedules. Final deployment decisions belong to
+            LGU health officers.
+          </p>
           {plan ? (
             <>
               <p className="tiny">
-                Plan {plan.plan_id?.slice(0, 8)} ·{" "}
+                DRAFT · Plan {plan.plan_id?.slice(0, 8)} ·{" "}
                 {plan.optimized.solver_status}
               </p>
+              {config.manual_sites === null && (
+                <button
+                  className="secondary"
+                  type="button"
+                  onClick={() =>
+                    updateConfig({
+                      manual_sites: plan.optimized.clinics.map((c) => c.id),
+                    })
+                  }
+                >
+                  Override recommended sites
+                </button>
+              )}
               {plan.optimized.clinics.map((c) => (
                 <div className="draft-site" key={c.id}>
                   <CalendarCheck size={20} />
@@ -280,12 +301,14 @@ export function Schedules() {
                 ? "Publishing…"
                 : emergency
                   ? "Confirm emergency revision"
-                  : "Approve deployment"}
+                  : "Approve and publish"}
             </button>
             <p className="tiny">
-              {browserDemo ? "Local browser approval rehearsal · no server authentication" : username
-                ? `Signed in as ${username} · demo-only access`
-                : "Server-verified administrator sign-in required."}{" "}
+              {browserDemo
+                ? "Local browser approval rehearsal · no server authentication"
+                : username
+                  ? `Signed in as ${username} · demo-only access`
+                  : "Server-verified administrator sign-in required."}{" "}
               Normal approval is for tomorrow or later and cannot replace an
               existing published schedule.
             </p>
@@ -295,7 +318,9 @@ export function Schedules() {
       <Card>
         <div className="card-title">
           <h3>Published schedules</h3>
-          <span className="badge">{browserDemo ? "SAVED IN THIS BROWSER" : "PERSISTED IN SQLITE"}</span>
+          <span className="badge">
+            {browserDemo ? "SAVED IN THIS BROWSER" : "PERSISTED IN SQLITE"}
+          </span>
         </div>
         {publicData.schedules.length ? (
           <div className="table-scroll">
