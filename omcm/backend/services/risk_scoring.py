@@ -3,28 +3,33 @@ import math
 import numpy as np
 from models.municipality import Weights
 
-FACTORS = {"disease": "elevated disease burden", "vulnerability": "a large vulnerable population",
+FACTORS = {"population": "population percentile", "disease": "elevated disease burden", "vulnerability": "a large vulnerable population",
            "accessibility": "limited hospital access", "poverty": "economic vulnerability", "flood": "flood exposure"}
 
 
-def calculate_scores(frame, network, times, weights: Weights, outbreaks=(), multiplier=1):
+def calculate_scores(frame, network, times, weights: Weights, outbreaks=(), multiplier=1, municipality_multipliers=None):
     output = []
     normalized_weights = weights.model_dump()
     total = sum(normalized_weights.values())
     for key in normalized_weights:
         normalized_weights[key] /= total
+    # Average-rank percentile limits outlier population leverage; other inputs are rates.
+    population_percentiles = frame["population"].rank(method="average", pct=True)
+    population_by_id = dict(zip(frame["id"], population_percentiles))
     for row in frame.to_dict("records"):
         warnings = ["Synthetic demonstration estimates; not validated clinical indicators."]
+        if row.get("geography_level") == "municipality":
+            warnings.append("Estimated municipal indicators; not barangay observations.")
 
         def indicator(key, default):
             value = row.get(key)
             if value is None or (isinstance(value, (float, int)) and not math.isfinite(value)):
-                warnings.append(f"Missing {key}; conservative demo estimate used.")
+                warnings.append(f"Missing {key}; estimated conservative demo value used.")
                 return default
             return value
 
         pop = int(row["population"])
-        outbreak = multiplier if row["id"] in outbreaks else 1
+        outbreak = (municipality_multipliers or {}).get(row.get("municipality"), multiplier if row["id"] in outbreaks else 1)
         disease_per_1000 = indicator("disease_cases", pop * .05) / pop * 1000 * outbreak
         vulnerable = min(pop, indicator("children", pop * .25) + indicator("elderly", pop * .10))
         reachable = [(times.get(row["id"], {}).get(h["barangay_id"], float("inf")), h["name"]) for h in network["hospitals"]]
@@ -34,7 +39,9 @@ def calculate_scores(frame, network, times, weights: Weights, outbreaks=(), mult
             nearest_name = "Synthetic hospital-access indicator (no verified facility)"
         if row.get("scenario_flood"):
             row["flood_exposure"] = 100
-        raw = dict(disease=disease_per_1000 / 100, vulnerability=vulnerable / pop / .6,
+        if "scenario_flood_exposure" in row:
+            row["flood_exposure"] = row["scenario_flood_exposure"]
+        raw = dict(population=population_by_id[row["id"]], disease=disease_per_1000 / 100, vulnerability=vulnerable / pop / .6,
                    accessibility=nearest_minutes / 60, poverty=indicator("poverty_pct", 50) / 100,
                    flood=indicator("flood_exposure", 50) / 100)
         factors = {key: round(float(np.clip(value, 0, 1)) * 100, 4) for key, value in raw.items()}
@@ -69,3 +76,34 @@ def calculate_scores(frame, network, times, weights: Weights, outbreaks=(), mult
     for i, barangay in enumerate(output):
         barangay["rank"] = i + 1
     return output
+
+
+def sensitivity_check(scores, weights: Weights, top_k=3, delta=5):
+    """One-at-a-time +/- weight-point perturbations, renormalized each time.
+
+    Compare both membership and order, breaking rounded-score ties by stable ID
+    exactly as calculate_scores does. K refers to barangay need, not clinic sites.
+    """
+    values = weights.model_dump()
+    k = min(top_k, len(scores))
+    baseline = [b["id"] for b in scores[:k]]
+    trials = []
+    for factor, weight in values.items():
+        for direction in (-1, 1):
+            adjusted = max(0, min(100, weight + direction * delta))
+            if adjusted == weight:
+                continue
+            changed = {**values, factor: adjusted}
+            total = sum(changed.values())
+            if not total:
+                continue
+            ranked = sorted(scores, key=lambda b: (
+                -round(sum(b["factors"][key] * value / total
+                           for key, value in changed.items()), 2), b["id"]))
+            ids = [b["id"] for b in ranked[:k]]
+            trials.append(dict(factor=factor, change=adjusted-weight,
+                               top_ids=ids, membership_changed=set(ids) != set(baseline),
+                               order_changed=ids != baseline))
+    return dict(top_k=k, delta=delta, baseline_ids=baseline, trials=trials,
+                membership_stable=all(not t["membership_changed"] for t in trials),
+                order_stable=all(not t["order_changed"] for t in trials))

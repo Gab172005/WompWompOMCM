@@ -13,8 +13,17 @@ class PlacementRequest(StrictModel):
     closed_roads: list[str] = Field(default_factory=list)
     outbreak_barangays: list[str] = Field(default_factory=list)
     outbreak_multiplier: float = Field(1, ge=1, le=5)
+    municipality_outbreak_multipliers: dict[str, float] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def municipality_multipliers(self):
+        if any(not 1 <= value <= 5 for value in self.municipality_outbreak_multipliers.values()):
+            raise ValueError("Municipality morbidity multipliers must be between 1 and 5.")
+        return self
+
     manual_sites: list[str] | None = None
     flood_level: Literal["none", "moderate", "severe"] = "none"
+    municipality_flood_levels: dict[str, Literal["none", "moderate", "severe"]] = Field(default_factory=dict)
 
 class ApproveRequest(StrictModel):
     plan_id: str

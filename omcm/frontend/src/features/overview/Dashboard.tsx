@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { WorkspaceLink as Link } from "../../components/WorkspaceLink";
 import { ArrowRight, MapPinned, ShieldCheck, ArrowUpRight } from "lucide-react";
 import { useOMCM } from "../../store/LegacyProvider";
 import {

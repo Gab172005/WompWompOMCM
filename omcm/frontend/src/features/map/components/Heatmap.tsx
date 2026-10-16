@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
-import { GeoJSON, useMap } from "react-leaflet";
+import { GeoJSON, Pane, useMap } from "react-leaflet";
 import { geoJSON, Path } from "leaflet";
-import type { Factor } from "../../../types";
+import type { MapMetric } from "../../../components/mapMetrics";
 import type { LagunaGeometry } from "../../../services/maps";
 import type { Municipality } from "../../../services/municipalities";
 import { riskColor } from "./choropleth";
@@ -9,18 +9,27 @@ import { riskColor } from "./choropleth";
 function FitTerritories({
   data,
   request,
+  selectedId,
 }: {
   data: LagunaGeometry;
   request: number;
+  selectedId: string | null;
 }) {
   const map = useMap();
   useEffect(() => {
     const bounds = geoJSON(data).getBounds();
+    if (!bounds.isValid()) return;
+    map.setMaxBounds(bounds);
+    const selected = data.features.find(
+      (f) => f.properties.area_id === selectedId,
+    );
+    const target = selected ? geoJSON(selected).getBounds() : bounds;
     const fit = () => {
       map.invalidateSize();
-      if (bounds.isValid())
-        map.fitBounds(bounds, {
-          paddingTopLeft: [28, 65],
+      map.setMinZoom(map.getBoundsZoom(bounds));
+      if (target.isValid())
+        map.fitBounds(target, {
+          paddingTopLeft: [selected && map.getSize().x > 700 ? 400 : 28, 65],
           paddingBottomRight: [28, 28],
           maxZoom: 13,
           animate: false,
@@ -30,7 +39,7 @@ function FitTerritories({
     const observer = new ResizeObserver(fit);
     observer.observe(map.getContainer());
     return () => observer.disconnect();
-  }, [map, data, request]);
+  }, [map, data, request, selectedId]);
   return null;
 }
 
@@ -84,6 +93,9 @@ function ReadableLabels({ layerKey }: { layerKey: string }) {
 /** Municipal choropleth with borders visible even when need shading is off. */
 export function Heatmap({
   data,
+  fullData,
+  densities,
+  densityMax,
   records,
   filter,
   layerName,
@@ -96,8 +108,11 @@ export function Heatmap({
   recenter,
 }: {
   data: LagunaGeometry;
+  fullData: LagunaGeometry;
   records: Record<string, Municipality | undefined>;
-  filter: Factor | "score";
+  filter: MapMetric;
+  densities: Record<string, number>;
+  densityMax: number;
   layerName: string;
   layerKey: string;
   selectedId: string | null;
@@ -107,20 +122,29 @@ export function Heatmap({
   publicMode: boolean;
   recenter: number;
 }) {
+  const selection: LagunaGeometry = {
+    ...fullData,
+    features: fullData.features.filter(
+      (f) => f.properties.area_id === selectedId,
+    ),
+  };
   const interaction = useRef({ selectedId, coverageIds });
   interaction.current = { selectedId, coverageIds };
   const valueOf = (record?: Municipality) =>
     record
       ? filter === "score"
         ? record.score
-        : record.factors[filter]
+        : filter === "density"
+          ? (densities[record.id] / densityMax) * 100
+          : record.factors[filter]
       : undefined;
   const borderStyle = (id: string) => ({
-    color: interaction.current.coverageIds.has(id)
-      ? "#2563eb"
-      : interaction.current.selectedId === id
+    color:
+      interaction.current.selectedId === id
         ? "#451a1a"
-        : "#475569",
+        : interaction.current.coverageIds.has(id)
+          ? "#2563eb"
+          : "#475569",
     weight:
       interaction.current.coverageIds.has(id) ||
       interaction.current.selectedId === id
@@ -129,7 +153,11 @@ export function Heatmap({
   });
   return (
     <>
-      <FitTerritories data={data} request={recenter} />
+      <FitTerritories
+        data={fullData}
+        request={recenter}
+        selectedId={selectedId}
+      />
       <GeoJSON
         key={layerKey}
         data={data}
@@ -159,7 +187,7 @@ export function Heatmap({
           if (!publicMode) {
             tip.append(
               document.createElement("br"),
-              `${layerName}: ${value == null || !Number.isFinite(value) ? "No data" : `${value.toFixed(1)}/100`}${record ? ` · Rank ${record.rank}` : ""}`,
+              `${layerName}: ${value == null || !Number.isFinite(value) ? "No data" : filter === "density" ? `${densities[id].toFixed(1)} people/km² (estimated from represented records)` : `${value.toFixed(1)}/100`}${record ? ` · Rank ${record.rank}` : ""}`,
             );
             if (record?.aggregated)
               tip.append(
@@ -199,6 +227,24 @@ export function Heatmap({
           });
         }}
       />
+      {!publicMode && selectedId && (
+        <Pane
+          name="municipality-selection"
+          style={{ zIndex: 420, pointerEvents: "none" }}
+        >
+          <GeoJSON
+            key={selectedId}
+            data={selection}
+            interactive={false}
+            style={{
+              color: "#451a1a",
+              weight: 4,
+              fill: false,
+              interactive: false,
+            }}
+          />
+        </Pane>
+      )}
       <ReadableLabels layerKey={layerKey} />
     </>
   );

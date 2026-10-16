@@ -20,6 +20,10 @@ npm run dev
 ```
 
 Open **http://127.0.0.1:5173/**. The map workspace works without the backend.
+The upstream administrative map is also available at **http://127.0.0.1:5173/workspace**.
+It retains server-backed planning, municipal scenarios, road blocking and grounded
+chat from `origin/main`; the existing map and detailed `/driver` routes remain available.
+Run `npm run test:e2e:upstream` to check its connected desktop/mobile workflows.
 Basemap tiles require internet. Copy `frontend/.env.example` to `frontend/.env`
 for optional API, Google Maps or Firebase configuration. Google Maps is optional;
 the map settings dialog also accepts a browser-restricted key. Firebase remains

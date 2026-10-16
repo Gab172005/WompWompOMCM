@@ -44,6 +44,8 @@ interface State {
   updateConfig: (changes: Partial<Config>) => void;
   plan: Plan | null;
   generate: () => Promise<void>;
+  runNightly: () => Promise<void>;
+  nightlyUpdated: string;
   busy: boolean;
   loading: boolean;
   error: string;
@@ -100,6 +102,7 @@ export function Provider({ children }: { children: ReactNode }) {
     [loginError, setLoginError] = useState("");
   const [today, setToday] = useState(""),
     [adminConfigured, setAdminConfigured] = useState(false);
+  const [nightlyUpdated, setNightlyUpdated] = useState("");
   const pending = useRef<(() => Promise<void>) | undefined>(undefined);
   const configVersion = useRef(0);
   const [browserDemo, setBrowserDemo] = useState(isBrowserDemo());
@@ -205,6 +208,29 @@ export function Provider({ children }: { children: ReactNode }) {
       setBusy(false);
     }
   }
+  async function runNightly() {
+    if (browserDemo || busy) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    const version = configVersion.current;
+    try {
+      await api("/risk/calculate", config.weights);
+      const result = await api<Plan>("/optimize", config);
+      if (version === configVersion.current) {
+        setBarangays(result.barangays);
+        setPlan(result);
+        setNightlyUpdated(result.created_at ?? "");
+        setMessage(
+          "Nightly optimization complete. Tomorrow’s draft is ready in Schedules for officer review. Nothing has been published.",
+        );
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   function signOut() {
     clearCredentials();
     setUsername("");
@@ -232,6 +258,8 @@ export function Provider({ children }: { children: ReactNode }) {
         updateConfig,
         plan,
         generate,
+        runNightly,
+        nightlyUpdated,
         busy,
         loading,
         error,

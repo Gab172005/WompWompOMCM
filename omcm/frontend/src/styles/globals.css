@@ -3208,3 +3208,128 @@ dd {
     transition: none !important;
   }
 }
+
+
+/* Upstream administrative workspace, available at /workspace. */
+.map-legend .municipality-border-key { border: 2px solid #475569; background: transparent; }
+
+.map-toolbar.map-filter-card {
+  right: auto;
+  max-width: min(380px, calc(100% - 70px));
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  padding: 10px;
+  border: 1px solid #e3eaf0;
+  border-radius: 8px;
+  background: #fffffff2;
+  box-shadow: 0 3px 12px #0002;
+  pointer-events: auto;
+}
+.map-filter-card label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.map-filter-card input[type="search"] {
+  min-width: 0;
+  width: 155px;
+}
+.map-filter-card input[type="checkbox"] {
+  width: auto;
+}
+
+.explanation-assistant { margin-bottom: 1rem; overflow-wrap: anywhere; }
+.explanation-assistant footer { padding-top: 1rem; border-top: 1px solid #dde5e8; font-weight: 600; }
+.nightly-controls { margin-top: 1rem; }
+
+/* Single-screen administrative map workspace. */
+.workspace-layout, .admin-workspace, .workspace-map { position: fixed; inset: 0; }
+.workspace-map > .fleet-map-card { height: 100%; margin: 0; padding: 0; border: 0; border-radius: 0; }
+.workspace-map .map-shell, .workspace-map .risk-map { height: 100%; border-radius: 0; }
+.workspace-map .fleet-map-title, .workspace-map .fleet-layers, .workspace-map .route-attribution { display: none; }
+.workspace-map .map-toolbar.map-filter-card { top: 16px; left: 16px; max-width: min(410px, calc(100% - 32px)); gap: 8px; }
+.workspace-map .map-filter-card > label:first-child { flex: 1 0 100%; flex-wrap: wrap; }
+.workspace-map .map-filter-card input[type="search"] { width: 100%; }
+.workspace-map .map-filter-card > span { display: none; }
+.map-metric-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.map-overlay-toggle { border-radius: 20px; padding: 7px 10px; background: white; border: 1px solid #dce7ec; }
+.map-overlay-toggle[aria-pressed="true"] { background: #d9eee9; color: #135e54; border-color: #218d82; }
+.workspace-map .leaflet-top.leaflet-left { top: 220px; }
+.workspace-map .map-detail { left: 16px; right: auto; top: 235px; bottom: 160px; width: min(360px, calc(100% - 32px)); animation: municipality-enter .2s ease-out; }
+@keyframes municipality-enter { from { transform: translateX(-110%); } to { transform: translateX(0); } }
+.municipality-barangays { padding-left: 18px; }
+.municipality-barangays li { margin-bottom: 10px; }
+.municipality-barangays span { display: block; font-size: 11px; }
+.workspace-map .map-legend { position: absolute; left: 16px; bottom: 40px; z-index: 500; max-width: min(440px, calc(100% - 32px)); padding: 12px; background: #fffffff2; border-radius: 12px; box-shadow: 0 4px 24px #14364b28; gap: 8px; }
+.workspace-map .map-caption { position: absolute; bottom: 22px; left: 16px; max-width: 65%; z-index: 450; background: #fffffff0; max-height: 18px; overflow: auto; }
+.workspace-map .map-inspector { position: absolute; top: 190px; left: 16px; z-index: 500; background: white; padding: 8px; border-radius: 12px; max-width: min(410px, calc(100% - 32px)); }
+.workspace-account { position: fixed; right: 16px; top: 16px; display: flex; gap: 8px; z-index: 800; }
+.workspace-toggles { position: absolute; top: 70px; right: 16px; z-index: 700; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; max-width: 540px; }
+.workspace-toggles button, .workspace-account .secondary { border-radius: 20px; box-shadow: 0 3px 12px #14364b28; }
+.workspace-toggles button[aria-expanded="true"] { background: #d9eee9; }
+.workspace-layout .workspace-panel { position: absolute; top: 190px; right: 16px; bottom: 42px; width: min(580px, calc(100% - 32px)); z-index: 650; overflow: auto; padding: 18px; background: #f5f8fa; border: 1px solid #dce7ec; border-radius: 16px; box-shadow: 0 4px 25px #14364b28; }
+.workspace-layout .workspace-panel[hidden] { display: none; }
+.panel-close { position: sticky; top: 0; z-index: 5; margin-bottom: 14px; }
+.workspace-layout .workspace-panel .fleet-grid, .workspace-layout .workspace-panel .two-grid, .workspace-layout .workspace-panel .three-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
+.workspace-layout .workspace-panel .fleet-sidebar { position: static; }
+.workspace-layout .workspace-panel .mobile-playback { display: none; }
+.workspace-layout .workspace-panel .fleet-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.workspace-layout .workspace-panel .page-header h1, .workspace-layout .workspace-panel .fleet-heading h1 { font-size: 26px; }
+.workspace-assistant .explanation-assistant { padding: 0; background: transparent; border: 0; margin: 0; }
+.workspace-assistant #assistant-explanation { position: fixed; top: 190px; right: 16px; bottom: 42px; width: min(580px, calc(100% - 32px)); overflow: auto; padding: 20px; background: white; border-radius: 16px; box-shadow: 0 4px 25px #14364b28; }
+.workspace-alerts { position: fixed; bottom: 24px; right: 16px; z-index: 850; max-width: min(520px, calc(100% - 32px)); }
+.workspace-alerts > div { padding: 8px; margin: 4px 0; }
+.workspace-layout .workspace-footer { position: fixed; bottom: 0; left: 0; right: 0; z-index: 800; background: #fffffff2; padding: 3px 12px; font-size: 10px; text-align: center; }
+@media (max-width: 760px) {
+  .workspace-account { top: 8px; right: 8px; }
+  .workspace-account .secondary { font-size: 10px; padding: 6px; }
+  .workspace-map .map-toolbar.map-filter-card { top: 48px; }
+  .workspace-map .map-inspector { top: 255px; }
+  .workspace-toggles { top: auto; bottom: 145px; right: 8px; max-width: calc(100% - 16px); gap: 5px; }
+  .workspace-toggles button { font-size: 10px; padding: 7px; }
+  .workspace-layout .workspace-panel, .workspace-assistant #assistant-explanation { top: 48px; bottom: 240px; right: 8px; width: calc(100% - 16px); }
+  .workspace-map .map-detail { top: 300px; bottom: 240px; }
+  .workspace-map .map-legend { bottom: 48px; font-size: 8px; padding: 8px; }
+  .workspace-map .map-caption { display: none; }
+}
+
+/* Map-first controls share one map; proposal review remains in the right card. */
+.workspace-map > .map-shell { height: 100%; }
+.workspace-map .map-filter-card { z-index: 720; }
+.municipality-results { display: flex; flex: 1 0 100%; flex-direction: column; max-height: 180px; overflow-y: auto; background: white; border-radius: 8px; }
+.municipality-results button { padding: 9px 12px; text-align: left; border: 0; background: white; }
+.municipality-results button:hover, .municipality-results button:focus { background: #e6f3ef; }
+.workspace-layout .workspace-panel { width: min(470px, calc(100% - 32px)); top: 130px; }
+.workspace-toggles { max-width: min(620px, calc(100% - 450px)); }
+.workspace-layout .workspace-panel fieldset { border: 1px solid #dce7ec; border-radius: 10px; padding: 12px; }
+.workspace-layout .workspace-panel label { margin-bottom: 12px; }
+.workspace-layout .workspace-panel input[type="range"] { width: 100%; }
+.workspace-layout .workspace-panel .proposal-review { margin: 20px 0; scroll-margin-top: 50px; }
+.workspace-layout .workspace-panel summary { cursor: pointer; font-weight: 700; padding: 10px 0; }
+.workspace-map .map-detail { top: 215px; max-height: calc(100dvh - 370px); }
+.workspace-map .leaflet-top.leaflet-left { top: 210px; left: auto; right: 8px; }
+.simulation-badge { position: absolute; left: 50%; top: 16px; transform: translateX(-50%); z-index: 710; border: 2px dashed #92400e; border-radius: 12px; background: #fffbeb; color: #78350f; padding: 8px 12px; font-size: 11px; }
+.clinic-inspector { position: absolute; right: 16px; bottom: 44px; z-index: 730; width: min(390px, calc(100% - 32px)); max-height: 35dvh; overflow: auto; padding: 16px; background: #fff; border: 2px dashed #0369a1; border-radius: 14px; box-shadow: 0 4px 24px #14364b28; }
+.clinic-inspector p { font-size: 12px; }
+.blocked-roads { max-height: 150px; overflow: auto; padding-left: 20px; }
+.blocked-roads code { font-size: 10px; overflow-wrap: anywhere; }
+.blocked-roads button { margin-left: 8px; }
+.workspace-assistant #assistant-explanation { width: min(440px, calc(100% - 32px)); top: 130px; z-index: 740; display: flex; flex-direction: column; }
+.chat-history { flex: 1; min-height: 80px; overflow-y: auto; }
+.chat-message { padding: 10px 12px; margin: 10px 0; background: #f1f5f9; border-radius: 12px; }
+.chat-message.user { margin-left: 25px; background: #e2f3ee; }
+.chat-message p { white-space: pre-wrap; font-size: 13px; }
+#assistant-explanation textarea { width: 100%; min-height: 65px; resize: vertical; }
+#assistant-explanation footer { font-size: 11px; margin-top: 12px; }
+@media (max-width: 760px) {
+  .workspace-map .map-toolbar.map-filter-card { left: 8px; max-width: calc(100% - 16px); }
+  .workspace-map .map-detail { top: auto; bottom: 170px; max-height: 38dvh; left: 8px; width: calc(100% - 16px); }
+  .workspace-layout .workspace-panel, .workspace-assistant #assistant-explanation { top: auto; bottom: 170px; max-height: 35dvh; width: calc(100% - 16px); right: 8px; padding: 12px; }
+  .workspace-toggles { max-width: calc(100% - 16px); bottom: 125px; }
+  .workspace-map .map-legend { bottom: 30px; left: 8px; max-width: calc(100% - 16px); }
+  .workspace-map .leaflet-top.leaflet-left { top: 250px; }
+  .simulation-badge { top: 250px; left: 8px; transform: none; max-width: calc(100% - 70px); }
+  .clinic-inspector { right: 8px; bottom: 170px; width: calc(100% - 16px); max-height: 38dvh; }
+  .workspace-alerts { bottom: 22px; max-height: 90px; overflow: auto; }
+}

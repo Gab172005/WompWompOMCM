@@ -9,6 +9,7 @@ import { Schedules } from "../features/schedules/Schedules";
 import { Analytics } from "../features/analytics/Analytics";
 import { Settings } from "../features/settings/Settings";
 import { PublicDashboard } from "../features/public/PublicDashboard";
+import { UpstreamWorkspace } from "../components/UpstreamWorkspace";
 /** Public routes stay read-only. API mutations retain server-side admin checks. */
 export function AppRoutes() {
   return (
@@ -23,6 +24,7 @@ export function AppRoutes() {
           </Provider>
         }
       >
+        <Route path="/workspace/*" element={<UpstreamWorkspace />} />
         <Route path="/public" element={<PublicDashboard />} />
         <Route path="/clinics" element={<PublicDashboard />} />
         <Route element={<LegacyLayout />}>

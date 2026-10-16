@@ -2,6 +2,7 @@
 import json
 import math
 import pandas as pd
+from services.road_segments import route_segments
 from services.flood_analysis import active_hazards
 
 
@@ -25,17 +26,15 @@ def load_pilot_data(path):
 
 
 
-
-
 def road_evidence(network, request):
-    blocked = active_hazards(network, request.flood_level) | set(request.closed_roads)
+    blocked = active_hazards(network, request.flood_level, request.municipality_flood_levels) | set(request.closed_roads)
     times, excluded = {}, set(request.flooded_sites)
     sites = {s["id"]: s for s in network["sites"]}
     for s in sites.values():
         if blocked.intersection(s.get("hazards", [])):
             excluded.add(s["id"])
     for route in network["routes"]:
-        unsafe = bool(blocked.intersection(route["blocked_by"]))
+        unsafe = bool(blocked.intersection(route["blocked_by"])) or bool(set(request.closed_roads).intersection(route_segments(route)))
         if route["origin_id"] == "depot":
             if unsafe:
                 excluded.add(route["site_id"])

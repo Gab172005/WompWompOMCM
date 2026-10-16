@@ -32,6 +32,7 @@ export function ClinicTracker({
   follow,
   fitRequest,
   layers,
+  onToggleRoad,
 }: {
   pilot: Pilot;
   plan: Plan | null;
@@ -43,6 +44,7 @@ export function ClinicTracker({
   follow: boolean;
   fitRequest: number;
   layers: MapLayers;
+  onToggleRoad?: (id: string) => void;
 }) {
   const map = useMap(),
     lastPan = useRef(0);
@@ -103,16 +105,28 @@ export function ClinicTracker({
               </Popup>
             </GeoJSON>
           ))}
-      {layers.hazards &&
+      {(layers.hazards || onToggleRoad) &&
         pilot.closures
-          .filter((c) => config.closed_roads.includes(c.id))
+          .filter((c) => onToggleRoad || config.closed_roads.includes(c.id))
           .map((c) => (
             <Polyline
               key={c.id}
+              className="simulation-road"
               positions={c.coordinates.map(([lng, lat]) => [lat, lng])}
-              pathOptions={{ color: "#111827", weight: 9, dashArray: "4 4" }}
+              eventHandlers={{ click: () => onToggleRoad?.(c.id) }}
+              pathOptions={{
+                color: config.closed_roads.includes(c.id)
+                  ? "#dc2626"
+                  : "#2563eb",
+                weight: 9,
+                dashArray: "4 4",
+              }}
             >
-              <Tooltip permanent>SIMULATED CLOSURE</Tooltip>
+              <Tooltip permanent>
+                {config.closed_roads.includes(c.id)
+                  ? "SIMULATED CLOSURE"
+                  : "CLICK TO BLOCK ROAD"}
+              </Tooltip>
               <Popup>
                 {c.name}. Intersecting fixture routes excluded; reroute
                 unverified.
@@ -165,6 +179,7 @@ export function ClinicTracker({
           <Fragment key={run.clinicId}>
             {layers.routes && run.route.length > 0 && (
               <Polyline
+                interactive={false}
                 positions={run.route.coordinates.map(([lng, lat]) => [
                   lat,
                   lng,
@@ -175,11 +190,12 @@ export function ClinicTracker({
                   opacity: selected === run.clinicId ? 0.9 : 0.55,
                 }}
               >
-                <Tooltip>{run.clinicId} · Proposed OSRM road route</Tooltip>
+                <Tooltip>{run.clinicId} · SIMULATED OSRM road route</Tooltip>
               </Polyline>
             )}
             {layers.trails && state.trail.length > 1 && (
               <Polyline
+                interactive={false}
                 positions={state.trail.map(([lng, lat]) => [lat, lng])}
                 pathOptions={{ color: run.color, weight: 6, opacity: 0.95 }}
               />
@@ -192,7 +208,7 @@ export function ClinicTracker({
               eventHandlers={{ click: () => setSelected(run.clinicId) }}
             >
               <Tooltip permanent={layers.eta} direction="top" offset={[0, -20]}>
-                {run.clinicId} · {state.status}
+                {run.clinicId} · SIMULATED · {state.status}
                 {!run.blockedReason && ` · ${Math.ceil(state.eta / 60)} min`}
               </Tooltip>
               <Popup>

@@ -68,7 +68,8 @@ async function inspectPolygon() {
         const p = new DOMPoint(b.x + b.width * x, b.y + b.height * y);
         if (path.isPointInFill(p)) {
           const q = p.matrixTransform(path.getScreenCTM());
-          return { x: q.x, y: q.y };
+          if (document.elementFromPoint(q.x, q.y) === path)
+            return { x: q.x, y: q.y };
         }
       }
     throw new Error("No polygon interior found");
@@ -79,14 +80,13 @@ async function inspectPolygon() {
     "available barangay records",
   );
   await expect(page.locator(".map-detail")).toContainText(
-    "Score contributions",
+    /score contributions/i,
   );
   await page
     .getByRole("button", { name: "Close municipality details" })
     .click();
-  await page
-    .getByRole("combobox", { name: "Inspect city or municipality" })
-    .selectOption("403401000");
+  await page.getByRole("searchbox", { name: "Municipality search" }).fill("Alaminos");
+  await page.getByRole("button", { name: "Alaminos", exact: true }).click();
   await expect(page.locator(".map-detail")).toContainText("Alaminos");
   await expect(page.locator(".map-detail .detail-score")).toHaveText("No data");
   await page
@@ -194,6 +194,7 @@ async function verifyConsecutiveDays() {
   await page.getByRole("link", { name: "Data & Methods", exact: true }).click();
   await page.getByRole("link", { name: "Simulator", exact: true }).click();
   await expect(day).toHaveAttribute("data-day", "4");
+  await expect(page.locator(".fleet-marker")).toHaveCount(3);
   assert.deepEqual(await positions(), finalDayThree);
   await screenshot("simulator-next-day");
   // The explicit demo tour is the only action here that begins again at the depot.
@@ -300,7 +301,7 @@ try {
   await screenshot("simulator-desktop");
   await page.getByRole("link", { name: "Review & approve plan" }).click();
   await page
-    .getByRole("button", { name: "Approve deployment", exact: true })
+    .getByRole("button", { name: "Approve and publish", exact: true })
     .click();
   await expect(
     page.getByRole("status").filter({ hasText: "Deployment approved" }),
@@ -390,7 +391,7 @@ try {
   await screenshot("simulator-browser-demo");
   await page.getByRole("link", { name: "Review & approve plan" }).click();
   await page
-    .getByRole("button", { name: "Approve deployment", exact: true })
+    .getByRole("button", { name: "Approve and publish", exact: true })
     .click();
   await expect(
     page.getByRole("status").filter({ hasText: "Deployment approved" }),

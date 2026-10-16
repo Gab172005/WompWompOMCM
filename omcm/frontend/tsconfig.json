@@ -20,6 +20,9 @@
       ],
       "@testing-library/*": [
         "./node_modules/@testing-library/*"
+      ],
+      "geojson": [
+        "./node_modules/@types/geojson"
       ]
     }
   },

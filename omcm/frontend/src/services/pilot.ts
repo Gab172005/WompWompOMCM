@@ -1,3 +1,4 @@
+import { routeSegmentIds } from "./roadSegments";
 import type { FeatureCollection, Polygon, MultiPolygon } from "geojson";
 import type {
   Allocation,
@@ -104,17 +105,26 @@ export function activeHazards(pilot: Pilot, config: Config) {
   return new Set([
     ...config.closed_roads,
     ...pilot.hazards.features
-      .filter(
-        (f) =>
-          config.flood_level === "severe" ||
-          (config.flood_level === "moderate" &&
-            f.properties.level === "moderate"),
-      )
+      .filter((f) => {
+        const municipality = pilot.barangays.find(
+          (b) => b.id === f.properties.barangay_id,
+        )?.municipality;
+        const level =
+          (municipality && config.municipality_flood_levels?.[municipality]) ||
+          config.flood_level;
+        return (
+          level === "severe" ||
+          (level === "moderate" && f.properties.level === "moderate")
+        );
+      })
       .map((f) => f.properties.id),
   ]);
 }
 export function routeSafe(route: RoadRoute, blocked: Set<string>) {
-  return !route.blocked_by.some((id) => blocked.has(id));
+  return (
+    !route.blocked_by.some((id) => blocked.has(id)) &&
+    !routeSegmentIds(route).some((id) => blocked.has(id))
+  );
 }
 export function feasibleSites(pilot: Pilot, config: Config) {
   const blocked = activeHazards(pilot, config);
@@ -135,6 +145,7 @@ export function feasibleSites(pilot: Pilot, config: Config) {
 }
 const round = (n: number, digits = 2) => Number(n.toFixed(digits));
 const factorNames: Record<keyof Weights, string> = {
+  population: "population percentile",
   disease: "disease burden",
   vulnerability: "vulnerable residents",
   accessibility: "limited hospital access",
@@ -152,12 +163,23 @@ export function scorePilot(pilot: Pilot, config: Config): Barangay[] {
   );
   return pilot.barangays
     .map((b) => {
-      const surge = config.outbreak_barangays.includes(b.id)
-        ? config.outbreak_multiplier
-        : 1;
+      const surge =
+        config.municipality_outbreak_multipliers?.[b.municipality] ??
+        (config.outbreak_barangays.includes(b.id)
+          ? config.outbreak_multiplier
+          : 1);
       const incidence = (b.disease_cases / b.population) * 1000 * surge;
       const vulnerable = Math.min(b.population, b.children + b.elderly);
       const factors: Weights = {
+        population:
+          ((pilot.barangays.filter((row) => row.population < b.population)
+            .length +
+            (pilot.barangays.filter((row) => row.population === b.population)
+              .length +
+              1) /
+              2) /
+            pilot.barangays.length) *
+          100,
         disease: Math.min(100, incidence),
         vulnerability: Math.min(100, (vulnerable / b.population / 0.6) * 100),
         accessibility: Math.min(

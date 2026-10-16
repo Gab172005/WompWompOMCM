@@ -89,6 +89,9 @@ export function PublicDashboard() {
             <RefreshCw size={15} />
             Refresh
           </button>
+          <button className="secondary" onClick={() => setDate("")}>
+            Today’s schedule
+          </button>
           <span>
             {schedule
               ? schedule.status
@@ -107,7 +110,7 @@ export function PublicDashboard() {
         {publicData.notices
           .filter((n) => n.date === current)
           .map((n) => (
-            <div className="emergency-box" role="status" key={n.id}>
+            <div className="emergency-box" role="alert" key={n.id}>
               <strong>Demo emergency schedule notice</strong>
               <p>{n.text}</p>
             </div>
@@ -176,7 +179,22 @@ export function PublicDashboard() {
         </div>
         <div className="two-grid">
           <Card>
-            <h3>Public health information</h3>
+            <h3>Health advisories</h3>
+            <span className="badge">DEMO ADVISORIES · NOT LIVE ALERTS</span>
+            <ul>
+              <li>
+                Clinic visit: review the published hours and services before
+                planning your visit.
+              </li>
+              <li>
+                Flood disruption: check LGU announcements for safe access and
+                revised clinic arrangements.
+              </li>
+              <li>
+                Health education: ask the clinic team about available dengue and
+                leptospirosis information.
+              </li>
+            </ul>
             <p>
               No verified public health advisories or live emergency feeds are
               connected to this demonstration. Check official LGU and DOH
@@ -203,6 +221,10 @@ export function PublicDashboard() {
       </main>
       <footer className="public-footer">
         OMCM · Optimized Mobile Clinic Mapper · Laguna pilot demonstration
+        <p>
+          Decision-support only. Final deployment is decided by LGU health
+          officers.
+        </p>
       </footer>
     </div>
   );
