@@ -1,0 +1,182 @@
+# CODEX TASK: REFACTOR THE EXISTING OMCM CODEBASE INTO A MAP-FIRST LGU OPERATIONS INTERFACE
+
+You are working INSIDE THE EXISTING repository for OMCM (Optimized Mobile Clinic Mapper). The current deployed simulator is https://womp-womp-omcm.vercel.app/simulator. The previous interface does not match the intended product. Your task is to inspect, refactor, and implement the requested experience IN THE EXISTING CODEBASE. Do not generate a separate demo project, replace the application with a static mockup, or stop after describing a plan.
+
+## 0. FIRST: AUDIT AND PRESERVE THE PROJECT
+1. Inspect package.json, source tree, routes, styling, map integration, data files, API clients, backend, tests, environment variables, and README. Run the app and examine its current UI if browser access is available. Use the deployed URL only as a reference; the repository is the source of truth.
+2. Identify what is already working, what can be reused, what must be replaced, and any missing credentials/datasets. Preserve working authentication, API integrations, data, and deployment configuration wherever possible. Do not delete unrelated working features.
+3. Prefer the project's current framework and compatible libraries. If it already uses React/TypeScript, continue using them. If it uses a different viable framework, adapt the architecture instead of doing an unnecessary full rewrite. Use incremental, reviewable changes.
+4. Before substantial changes, write a concise implementation plan and file-level impact summary. Then IMPLEMENT it. Do not wait for confirmation unless an irreversible action, credential, or fundamentally missing decision makes progress impossible.
+5. Never expose secrets in the frontend or commit .env values. Create/update .env.example and clear setup instructions.
+
+## 1. PRODUCT VISION / NON-NEGOTIABLE UX
+Build ONE immersive, Google Maps-style operations workspace centered on a real, interactive map of Laguna Province, Philippines. Replace the traditional multi-page simulator navigation with a persistent full-viewport map, a context-sensitive left side panel, compact floating map controls, and optional drawers/panels. The map must remain visible and mounted while filters, municipality details, optimization, simulation, and tracking are used. Do not navigate to a separate page for each tool.
+
+Visual hierarchy:
+- Top bar: OMCM logo/name, municipality search, data freshness indicator, admin/public mode indicator, account/settings as applicable.
+- Main canvas: Google Maps basemap centered on Laguna, with correct provincial and municipal geography; map fills available space.
+- Left contextual side panel: default overview; municipality details when selected; optimization; simulation scenario builder; selected clinic details. A clear back/close affordance; collapsible and responsive.
+- Floating control cards on map: heatmap metric selector, hospital/clinic/route visibility toggles, legend, simulation mode toggle, optimization drawer toggle, chatbot toggle, map reset/zoom controls.
+- Bottom floating deployment timeline/playback controls ONLY when a simulation is active.
+- Mobile/tablet: responsive drawers/sheets, never permanently cover the entire map, accessible touch targets.
+- Polished, restrained visual language: Google Maps-like clarity, readable typography, red gradient for need, consistent iconography, subtle shadows, visible selected states, loading/empty/error states. Avoid giant dashboard cards obscuring the map.
+
+## 2. REAL LAGUNA GEOGRAPHY (DO NOT FAKE THE MAP)
+- Use the existing Google Maps JavaScript API integration if present; otherwise implement a supported React Google Maps integration. Load API keys from environment configuration, handle loading/errors gracefully, and restrict map panning/initial bounds sensibly around Laguna (do not pretend to remove Google Maps geography outside the province).
+- Load accurate Laguna municipality/city boundaries from a properly sourced GeoJSON or equivalent. Prefer official/open boundary data. Use municipality/city identifiers and PSGC codes, not fragile name matching. Do not fabricate polygon shapes, coordinates, municipality boundaries, roads, or hospitals.
+- Fit map bounds to Laguna at startup. Render municipality polygons over the real basemap. On hover show name and metric; on click select, visually highlight, fit/zoom to bounds, and open the municipality detail panel. Provide a reset-to-Laguna control. Support municipality search and selection from results.
+- If available, support optional barangay-level drilldown; municipality-level interaction is required first. Show data granularity and source/last-updated metadata.
+- Implement polygon-based choropleth overlays for municipality heatmaps, not a generic rectangular grid or a point heatmap. Colors must change based on selected metric; show a clear numeric legend and no-data state.
+- Ensure boundaries and Google Maps coordinate conventions are correct (GeoJSON uses longitude,latitude). Keep overlays synchronized with selected municipality, filter, and scenario.
+
+## 3. MAP FILTERS AND LAYERS
+Floating controls must let administrators:
+- Search/focus a Laguna municipality.
+- Select one heatmap metric: Overall Healthcare Need, Population Density, Flood Risk/Vulnerability, or Morbidity. Show each metric's unit, scale, and legend. Changing the filter updates polygon fill and tooltip immediately without reloading the page.
+- Toggle verified hospital/medical-facility markers, mobile clinic markers, and planned/active routes. Show relevant marker popups with facility/clinic information.
+- Distinguish missing/estimated/simulated values from verified observations. Do not silently invent real health data.
+- Preserve the current map viewport and selected municipality when changing panels or toggles, unless the user explicitly requests a zoom/focus action.
+
+## 4. MUNICIPALITY DETAILS SIDE PANEL
+When a municipality is clicked or searched, display:
+- Name, municipality/city type, population, population density, healthcare need score (0-100 if that is the configured model), relative rank, disease burden/morbidity, flood risk, vulnerable population, and healthcare access/travel-time metrics when available.
+- Clear indication of dataset year/source and missing values; no fabricated precision.
+- A concise breakdown explaining WHY the score is high or low, using actual scoring inputs/weights.
+- Relevant nearby medical facilities and current/proposed clinic coverage.
+- Actions: focus map, select as a candidate staging location (subject to eligibility), and open optimization/scenario for this area.
+- Smoothly switch from default overview to municipality panel; a back/close button restores overview.
+
+## 5. CLINIC PLACEMENT OPTIMIZATION PANEL
+Provide a collapsible optimization panel with:
+- Number of available clinics K (integer >=1 and bounded by available units/candidate sites).
+- Editable per-clinic capacity if modeled; maximum travel time/coverage threshold; optional objective/weights and eligible staging sites.
+- Auto Optimize action that calls a REAL optimizer, not a hardcoded list or frontend-only ranking. Prefer existing backend; if Python is already used, implement FastAPI + OR-Tools or an equivalent tested solver. For a small dataset, a correct deterministic covering heuristic is an acceptable documented fallback, but label it honestly.
+- Objective: maximize priority-weighted residents/need covered within travel-time and capacity constraints, avoid double-counting covered demand, respect valid staging sites and flood/closure exclusions. Include a simple baseline (e.g. most-populated areas) for comparison.
+- Display recommended sites on the map as numbered proposed markers and in a results list: covered population/weighted need, uncovered demand, travel-time estimates, capacity utilization, and explanation of selection. Show a before/after comparison against baseline where possible.
+- Manual assignment/override: allow choosing a valid candidate site from a list or map, editing a proposal, and rerunning/validating coverage. Prevent impossible or unsafe placements with visible explanations. Distinguish DRAFT proposals from APPROVED next-day deployments.
+- Explicit Accept/Approve action (admin only) persists the deployment plan. Do not auto-publish or silently alter today's public schedule when optimization completes. Existing approved deployments must remain intact until an authorized change.
+- Gracefully handle infeasible requests and unavailable routes/datasets.
+
+## 6. SIMULATION MODE / SCENARIO BUILDER
+Simulation Mode is opt-in, visibly labeled, and isolated from real approved operations. When enabled, open a scenario builder with:
+- Municipality-specific flood severity (e.g. none/low/moderate/high or an evidence-based numeric input), with clearly labeled simulated parameters.
+- Municipality-specific morbidity surge (e.g. +0% to +200%) that affects need scores and recommendations, without changing underlying historical observations.
+- Road-blockage/route-disruption tool: select known road segments/routes or predefined closure scenarios; show closed segments visually. Do not claim Google Routes API can accept arbitrary custom road closures directly. Validate route segments against closure/hazard geometry; where avoidance cannot be computed reliably, mark the route as unsafe/unavailable and require an alternative candidate or explicitly documented routing workaround.
+- Reduced clinic count / vehicle unavailability scenario.
+- Run Scenario action: derive scenario-adjusted scores, exclude affected sites/routes, rerun optimization, compare baseline versus scenario (changed sites, covered/unserved population, travel time, flood-safe accessibility).
+- Reset Scenario action: clear all simulated changes without touching actual data or approved deployments.
+- Clear before/after visuals and readable reasons for changed recommendations.
+
+## 7. CLINIC TRACKING AND DEPLOYMENT ANIMATION
+Create a Lalamove/Life360-inspired map tracking experience with two clearly separated modes:
+A. Simulation playback (required for demo):
+- Obtain road-following route geometry from the existing routing service / Google Routes API, using encoded polylines or equivalent. Never move vehicle markers in straight lines between municipalities.
+- Animate each clinic along its route using requestAnimationFrame or equivalent, interpolating over route distance/time. Support multiple clinics simultaneously, start, pause, resume, reset, speed selection (1x/2x/5x), and a scrubber/timeline.
+- Clicking a moving clinic selects/highlights it and opens a tracking panel with clinic ID, origin, destination, status (scheduled/en route/arrived/deployed/completed), progress, remaining distance, ETA (clearly marked simulated), capacity, and route. Pan/follow selected clinic optionally.
+- Show routes, staging locations, and progress without excessive visual clutter. When a route becomes unsafe in a scenario, pause/flag it and offer an explicit recalculation workflow; do not instantly change an already approved real-world schedule.
+B. Real GPS tracking (optional if existing infrastructure permits):
+- Support an authorized driver/device location feed (browser Geolocation with permission and page active, or a suitable mobile app). Synchronize positions through existing realtime infrastructure or Firebase if already configured. Include timestamps, last-seen/stale/offline states, and authorization. Never pretend a simulated marker is live. Protect driver privacy; public views only show approved operational information.
+- Do not promise reliable browser background tracking with a locked phone.
+
+## 8. AI ASSISTANT (SECONDARY, NOT BLOCKING)
+- Floating chatbot toggle opens a small collapsible drawer without obscuring the map.
+- Chatbot can explain currently selected municipality metrics, score components, deployment recommendations, and simulation results from application state/API data.
+- If no model/API key is configured, provide useful deterministic FAQ/explanation behavior with an honest label; do not invent model-generated predictions. Never allow chat to approve deployments or silently alter operational settings.
+
+## 9. DATA / DOMAIN MODEL
+Reuse existing data and schema where sensible. Normalize IDs and define typed entities for:
+- Municipality {psgc, name, geometry, population, area, density, vulnerability, morbidity, floodRisk, healthcareAccess, needScore, rank, dataSources, updatedAt}
+- Facility {id, name, type, coordinates, services?, capacity?, verified?}
+- CandidateSite {id, municipalityPsgc, coordinates, eligible, capacity?, floodExposure?, reasonIfIneligible?}
+- Clinic {id, capacity, status, location, updatedAt, trackingMode}
+- DeploymentPlan {id, date, status:draft|approved, clinicAssignments, metrics, approvedBy?, approvedAt?}
+- Scenario {id, basePlanId?, municipalityOverrides, blockedSegments, unavailableClinics, createdAt}
+- SimulationRun {id, scenarioId, routes, frames/timing, beforeAfterMetrics, status}
+Separate OBSERVED, ESTIMATED, and SIMULATED data. Keep dates, sources, units, and data provenance. If actual data is unavailable, use a clearly labeled demo fixture and a realistic but honest fallback UI; do not imply a live health feed.
+
+## 10. ARCHITECTURE AND PROJECT ORGANIZATION
+Refactor toward feature-based folders without unnecessarily rewriting the framework:
+frontend/src/
+  app/                    # app shell, providers, routes
+  components/layout/      # top bar, side panel, floating controls
+  components/ui/          # reusable primitives
+  features/map/           # LagunaMap, MunicipalityLayer, HeatmapLayer, MapLegend, markers, routes
+  features/municipalities/# search, detail panel, metric breakdown
+  features/filters/       # metric selector, layer toggles
+  features/optimization/  # count input, proposal list, manual overrides, approval
+  features/simulation/    # scenario builder, flood/morbidity/closure controls, results, playback
+  features/tracking/      # moving markers, clinic detail, animation hook
+  features/chatbot/       # optional assistant drawer
+  store/                  # shared UI and scenario state (Zustand if appropriate)
+  services/               # API client, maps, realtime service
+  types/                  # domain types
+backend/                  # reuse existing backend, or FastAPI if appropriate
+  routers/                # municipalities, heatmap, optimization, simulation, clinics
+  services/               # scoring, optimization, routes, flood validation, simulation
+  models/
+datasets/                  # sourced GeoJSON, CSVs, fixtures and provenance README
+tests/                     # unit/integration/e2e as available
+
+Keep the map mounted once in the app shell. Avoid duplicate sources of truth: transient UI state in a shared store; persisted approved plans and authoritative data in backend/database; simulation draft state separate. Prefer modular components rather than one giant Simulator.tsx. Do not introduce unnecessary libraries.
+
+## 11. API CONTRACT (ADAPT TO EXISTING ROUTES)
+Suggested operations; adapt names to existing conventions:
+GET /api/municipalities
+GET /api/municipalities/{psgc}
+GET /api/heatmap?metric=overall|population|flood|morbidity
+GET /api/facilities
+GET /api/clinics
+POST /api/optimization/run
+POST /api/deployments/approve
+POST /api/simulations
+POST /api/simulations/{id}/run
+GET /api/simulations/{id}
+
+Return typed, validated request/response objects. Include errors and provenance. Never call Google Routes repeatedly on every animation frame; fetch/calculate route geometry once per scenario/route, cache within API terms, and animate locally. Respect Google Maps Platform usage restrictions and billing/quotas.
+
+## 12. INTERACTION AND STATE REQUIREMENTS
+- Municipality selection, search, and map polygon click must all share the same selection state.
+- Heatmap metric selection must change visible polygons and legend, not only the title.
+- Layer toggles must actually show/hide corresponding overlays.
+- Side panel switching must not remount/reset the map.
+- Optimization must use current scenario constraints only when simulation is enabled; otherwise use base data.
+- Manual overrides must recalculate feasibility/metrics before approval.
+- Simulation playback must use the route output for the current scenario and never update real clinic positions.
+- Current approved deployments must not change due to simulation or draft optimization.
+- If the current app supports public and admin views, preserve access separation and expose only safe approved deployment information publicly.
+
+## 13. PERFORMANCE, ACCESSIBILITY, RELIABILITY
+- Lazy-load expensive optional panels; memoize map data transforms and avoid redrawing all polygons for unrelated UI changes.
+- Provide loading skeletons, retry actions, error boundaries, API-key-missing message, empty/no-data states, and an explicit demo-data badge where appropriate.
+- Keyboard accessible controls, visible focus, readable contrast, mobile layout, accessible labels for icon-only buttons, responsive side panels.
+- Never commit API keys, personal GPS history, or patient-identifiable health records.
+- Handle Google API failures gracefully. Keep a useful read-only map/data experience where feasible.
+
+## 14. REQUIRED IMPLEMENTATION ORDER
+P0 (must work before polish):
+1. Audit existing app and identify reusable parts.
+2. Persistent Laguna Google Map, accurate municipality GeoJSON polygons, municipality search/click/zoom and details panel.
+3. Working heatmap metric selector, legend, hospital/clinic toggles.
+4. Collapsible optimization panel with real recomputation, recommendation markers, and manual assignment validation.
+5. Simulation mode with municipality flood/morbidity overrides, scenario results, and reset.
+6. Road-following multi-clinic deployment animation with selection and playback controls.
+P1: road-closure safety validation, plan approval persistence, comparison metrics, responsive refinements.
+P2: authorized real GPS tracking and optional AI assistant. If time constrained, do not sacrifice P0 to implement P2.
+
+## 15. ACCEPTANCE TESTS / DEMO WALKTHROUGH
+Implement tests and verify the following end-to-end:
+1. Load the app: it opens to a correctly centered Laguna Google Map, not a generic canvas or blank page.
+2. Choose Overall Need: municipalities display red choropleth fills with meaningful legend. Switch to Population Density/Flood/Morbidity: polygons visibly recolor according to actual metric values and legend updates.
+3. Search for Santa Cruz (or another actual Laguna municipality), select it, zoom/highlight boundary, open side panel showing sourced metrics and ranking. Close panel without losing map.
+4. Toggle hospitals: verified facility markers appear/disappear. Toggle clinics/routes likewise.
+5. Set clinic count to 3, run optimizer: show three valid recommended candidate sites (when at least three feasible sites exist), actual computed coverage/travel metrics, and comparison to baseline. Change clinic count: results recompute.
+6. Override one clinic site: validate eligibility, update coverage and travel metrics, preserve explicit draft/approved distinction.
+7. Enable simulation, raise flood severity and morbidity in one municipality, mark a road segment closed, rerun: hazard/closure overlays appear, scores/eligibility/routes/placement results change when inputs affect them. Show before/after metrics and why. Reset restores base data.
+8. Start simulation: three clinic markers (if three are configured) travel along actual road polylines. Pause/resume, speed up, select a clinic, inspect ETA/progress, reset. Simulated status is visibly labeled.
+9. Reload app: approved deployments persist if backend storage is configured; scenario drafts do not overwrite published schedule.
+10. Test mobile viewport, keyboard access, missing API key, missing data, backend errors, and no route available.
+
+## 16. DEFINITION OF DONE / FINAL RESPONSE
+Do not declare success based on screenshots or static markup alone. Run typecheck, lint, tests, and build (or equivalents) and fix failures. If possible, run the app locally and verify the interactions. Document any external setup required, real data limitations, API billing constraints, and features intentionally deferred. Update README and .env.example. Provide a concise summary of changed files/features, commands run, test results, remaining limitations, and exact steps to deploy to the existing Vercel project (do not deploy without the necessary permissions).
+
+Important: Deliver working code in the CURRENT repository. Avoid placeholder buttons, fabricated data masquerading as real, fake Laguna geometry, straight-line clinic motion, generic dashboards, hardcoded optimization results, and a superficial CSS-only redesign. If a required external service or dataset is unavailable, implement the best honest fallback, clearly label it, and continue with the rest of the functionality.

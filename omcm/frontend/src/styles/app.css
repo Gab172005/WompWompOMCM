@@ -2513,3 +2513,30 @@ dd {
 }
 
 .map-legend .municipality-border-key { border: 2px solid #475569; background: transparent; }
+
+/* Laguna Workspace Map Enhancements */
+.laguna-map-tooltip {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(56, 189, 248, 0.5) !important;
+  color: #f8fafc !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6) !important;
+  padding: 6px 10px !important;
+  font-family: inherit !important;
+}
+.laguna-map-tooltip::before {
+  border-top-color: rgba(15, 23, 42, 0.95) !important;
+}
+
+.hospital-marker-custom, .clinic-staging-marker, .animated-van-marker {
+  transition: transform 0.2s ease-in-out;
+}
+.hospital-marker-custom:hover, .clinic-staging-marker:hover, .animated-van-marker:hover {
+  transform: scale(1.15);
+  z-index: 1000 !important;
+}
+
+.leaflet-container {
+  font-family: inherit !important;
+  background-color: #0b1329 !important;
+}
