@@ -13,6 +13,8 @@ def test_supplied_geography_and_network(monkeypatch):
     assert frame.municipality.nunique() == 30
     assert frame.id.is_unique
     assert frame.iloc[0]["name"] == "Barangay I"
+    assert frame.iloc[0]["population"] == 2519
+    assert int(frame.population.sum()) == 3687345
     assert frame.iloc[0].lat == 14.0623
     assert all(r["source"] in set(frame.id) and r["target"] in set(frame.id) for r in network["roads"])
     graph = road_graph(frame, network)
@@ -21,9 +23,10 @@ def test_supplied_geography_and_network(monkeypatch):
     scores = calculate_scores(frame, network, travel_times(graph), Weights())
     result = RiskResult(barangays=scores, metadata=metadata)
     assert all(b.municipality and b.synthetic for b in result.barangays)
-    assert "synthetic population" in result.metadata.source
+    assert "2024 PSA Census population" in result.metadata.source
     shuffled, _, _ = load_geographic_data(frame.rename(columns={"name": "barangay_name", "municipality": "city_municipality", "lat": "latitude", "lng": "longitude"}).sample(frac=1))
     assert dict(zip(frame.source_url, frame.id)) == dict(zip(shuffled.source_url, shuffled.id))
+    assert dict(zip(frame.id, frame.population)) == dict(zip(shuffled.id, shuffled.population))
 
 
 def test_supplied_geography_optimization(monkeypatch):

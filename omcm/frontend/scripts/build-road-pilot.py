@@ -24,7 +24,24 @@ BASE = os.getenv("OMCM_OSRM_URL", "https://routing.openstreetmap.de/routed-car")
 
 
 def key(value):
-    return unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode().lower().replace(" (poblacion)", "").replace(" ", "")
+    return unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode().lower().replace("city of ", "").replace(" (poblacion)", "").replace(" ", "").replace("-", "").replace(".", "").replace(",", "")
+
+
+def load_psa_populations():
+    lookup = {}
+    municipality = None
+    with (ROOT / "datasets/population_per_barangay.csv").open(encoding="utf-8-sig") as f:
+        for row in csv.reader(f):
+            if not row or not row[0]:
+                continue
+            label = row[0]
+            if label.startswith("......") and not label.startswith("........"):
+                if row[1]:
+                    municipality = label[6:].strip()
+            elif label.startswith("........"):
+                if row[1] and municipality:
+                    lookup[(key(municipality), key(label[8:].strip()))] = int(row[1])
+    return lookup
 
 
 def main():
@@ -32,6 +49,7 @@ def main():
     CACHE.mkdir(parents=True, exist_ok=True)
     all_geo = json.loads((ROOT / "frontend/public/assets/geo/laguna_barangays.geojson").read_text(encoding="utf-8"))
     source = list(csv.DictReader((ROOT / "backend/data/barangays.csv").open(encoding="utf-8-sig")))
+    psa_populations = load_psa_populations()
     names = {"Calo", "Dila", "Maitim", "San Agustin", "San Antonio", "San Isidro", "San Nicolas", "Tagumpay"}
     rows = [r for r in source if (r["city_municipality"].startswith("Los") and r["barangay_name"] not in {"Bagong Silang", "Putho Tuntungin"}) or (r["city_municipality"] == "Bay" and r["barangay_name"] in names)]
     rows.sort(key=lambda r: (r["city_municipality"], r["barangay_name"]))
@@ -47,12 +65,13 @@ def main():
         if not polygon.covers(point):
             point = polygon.representative_point()
         seed = int(hashlib.sha256(psgc.encode()).hexdigest()[:8], 16)
-        population = 2500 + seed % 7500
+        population = psa_populations[(key(row["city_municipality"]), key(feature["properties"]["adm4_en"]))]
+        synthetic_pop = 2500 + seed % 7500
         inputs.append(dict(id=psgc, psgc=psgc, name=feature["properties"]["adm4_en"], municipality=row["city_municipality"], geography_level="barangay", lat=point.y, lng=point.x,
                            population=population, children=round(population * (.2 + seed % 12 / 100)), elderly=round(population * (.07 + seed % 6 / 100)),
-                           disease_cases=round(population * (.02 + seed % 12 / 150)), poverty_pct=20 + seed % 55,
+                           disease_cases=round(synthetic_pop * (.02 + seed % 12 / 150)), poverty_pct=20 + seed % 55,
                            flood_exposure=25 + seed % 70, demand_rate=.025, estimated=True,
-                           source="Illustrative synthetic data — not reported disease cases", source_date="2026-10-15", confidence="synthetic",
+                           source="2024 PSA Census population; illustrative synthetic health indicators — not reported disease cases", source_date="2026-10-15", confidence="synthetic",
                            geography_source=row["source_url"]))
         features.append(feature)
     assert len(inputs) == 20
@@ -118,7 +137,7 @@ def main():
         s["hazards"] = [h["properties"]["id"] for h in hazards if shape(h["geometry"]).covers(Point(s["lng"], s["lat"]))]
     stamp = datetime.now(timezone.utc).isoformat()
     data = dict(version=1, metadata=dict(synthetic=True, region="Los Baños–Bay, Laguna · 20-barangay pilot", generated_at=stamp,
-                source="2023 PSGC boundary snapshot; PhilAtlas seed coordinates; synthetic planning indicators (2026-10-15)",
+                source="2023 PSGC boundary snapshot; PhilAtlas seed coordinates; 2024 PSA Census population; synthetic planning indicators (2026-10-15)",
                 travel_times="Bundled OSRM car routes on OpenStreetMap; modeled free-flow duration, no live traffic", disease="Illustrative synthetic data — not reported disease cases"),
                 barangays=inputs, sites=sites, hospitals=[dict(id="demo-rhu", name="Illustrative care reference: Timugan", barangay_id=depot["id"], lat=depot["lat"], lng=depot["lng"], services=["Primary care"], verified=False)],
                 depot=dict(id="depot", name="Illustrative depot · Timugan", lat=routes[0]["coordinates"][0][1], lng=routes[0]["coordinates"][0][0]), routes=routes, closures=[closure], hazards=dict(type="FeatureCollection", features=hazards),

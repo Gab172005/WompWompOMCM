@@ -1,3 +1,4 @@
+import csv
 import json
 import hashlib
 import math
@@ -8,6 +9,43 @@ import pandas as pd
 from services.route_service import road_graph, travel_times, read_osm_graph
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+PSA_POPULATION_PATH = Path(__file__).resolve().parents[2] / "datasets/population_per_barangay.csv"
+PHILATLAS_PSA_ALIASES = {
+    ("liliw", "cabuyao"): ("liliw", "cabuyew"),
+    ("santa rosa", "pook"): ("santa rosa", "pooc"),
+}
+
+
+def psa_key(text):
+    text = re.sub(r"^city of\s+", "", str(text).strip().lower())
+    text = re.sub(r"\s*\(pob\.\)", "", text)
+    text = re.sub(r"\s*\(poblacion\)", "", text)
+    text = re.sub(r"\s*\(capital\)", "", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def load_psa_barangay_populations():
+    if not PSA_POPULATION_PATH.exists():
+        return {}
+    records = {}
+    municipality = None
+    with PSA_POPULATION_PATH.open(encoding="utf-8-sig") as f:
+        for row in csv.reader(f):
+            if not row or not row[0]:
+                continue
+            label = row[0]
+            if label.startswith("......") and not label.startswith("........"):
+                if len(row) > 1 and row[1]:
+                    municipality = psa_key(label[6:])
+            elif label.startswith("........"):
+                if len(row) > 3 and row[1] and municipality:
+                    bgy = psa_key(label[8:])
+                    records[municipality, bgy] = (
+                        int(row[1]),
+                        int(row[2]),
+                        int(row[3]),
+                    )
+    return records
 
 
 def load_data():
@@ -50,7 +88,29 @@ def load_geographic_data(source):
     if frame.id.duplicated().any():
         raise ValueError("Generated barangay IDs must be unique.")
     frame["geography_level"] = "barangay"
-    frame["population"] = [3400 + seed % 9700 for seed in seeds]
+    psa_populations = load_psa_barangay_populations()
+    populations = []
+    household_populations = []
+    households = []
+    for row, seed in zip(frame.to_dict("records"), seeds):
+        lookup_key = (psa_key(row["municipality"]), psa_key(row["name"]))
+        lookup_key = PHILATLAS_PSA_ALIASES.get(lookup_key, lookup_key)
+        if lookup_key in psa_populations:
+            pop, hh_pop, hh = psa_populations[lookup_key]
+        elif pd.notna(row.get("population")) and int(row["population"]) > 0:
+            pop = int(row["population"])
+            hh_pop = int(row["household_population"]) if pd.notna(row.get("household_population")) else pop
+            hh = int(row["households"]) if pd.notna(row.get("households")) else max(1, round(pop / 4))
+        else:
+            pop = 3400 + seed % 9700
+            hh_pop = pop
+            hh = max(1, round(pop / 4))
+        populations.append(pop)
+        household_populations.append(hh_pop)
+        households.append(hh)
+    frame["population"] = populations
+    frame["household_population"] = household_populations
+    frame["households"] = households
     frame["children"] = (frame.population * .25).round().astype(int)
     frame["elderly"] = (frame.population * .10).round().astype(int)
     frame["disease_cases"] = [round(pop * (.012 + seed % 15 * .006)) for pop, seed in zip(frame.population, seeds)]
@@ -89,7 +149,7 @@ def load_geographic_data(source):
                       lat=row["lat"], lng=row["lng"], services=["Primary care", "Emergency assessment"])
                  for i, row in enumerate(hosts)]
     metadata = dict(synthetic=True, region="Laguna", generated_at=str(source.retrieved_at_utc.iloc[0]),
-                    source="User-provided PhilAtlas barangay geography; synthetic population, health indicators and facilities",
+                    source="User-provided PhilAtlas barangay geography; 2024 PSA Census population; synthetic health indicators and facilities",
                     travel_times="Estimated adjacency links at 20 km/h, minimum 3 minutes; shared borders do not establish road access",
                     disease="Synthetic case counts; not clinical predictions")
     metadata["source"] += f"; {len(unresolved)} neighbor labels outside the dataset or unmatched"

@@ -201,7 +201,9 @@ in the interface and are not interchangeable deployments.
 
 The assistant provides deterministic explanations from current workspace data.
 No external AI service, live GPS, surveillance, traffic or hazard feed is connected.
-Health, routing and deployment fixtures are illustrative. See
+Barangay and municipal population counts come from the 2024 PSA Census of Population
+(`datasets/population_per_barangay.csv`, as of 01 July 2024); health, routing and
+deployment fixtures are illustrative. See
 [data sources and limitations](datasets/SOURCES.md) and [architecture](docs/ARCHITECTURE.md).
 
 ## Checks

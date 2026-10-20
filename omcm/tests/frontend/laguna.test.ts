@@ -22,6 +22,7 @@ describe("Laguna Province Geographic and Data Integrity", () => {
   });
 
   it("all municipalities have positive population and valid area within bounds", () => {
+    expect(LAGUNA_BASE_DATA.reduce((sum, m) => sum + m.population, 0)).toBe(3687345);
     LAGUNA_BASE_DATA.forEach((m) => {
       expect(m.population).toBeGreaterThan(10000);
       expect(m.area_km2).toBeGreaterThan(10);
