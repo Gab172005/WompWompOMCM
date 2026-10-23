@@ -37,7 +37,7 @@ export function BarangayBoundaryLayer({
       fillColor: isSelected
         ? "#facc15"
         : getMetricColor(metric, b ? barangayMetric(b, metric) : null),
-      fillOpacity: isSelected ? 0.7 : metric === "score" ? 0 : 0.62,
+      fillOpacity: isSelected ? 0.7 : 0.62,
       color: isSelected ? "#102c43" : "#64748b",
       weight: isSelected ? 3.5 : 0.7,
       opacity: isSelected ? 1 : 0.85,
@@ -47,6 +47,7 @@ export function BarangayBoundaryLayer({
   useEffect(() => {
     ref.current?.setStyle(style);
     ref.current?.eachLayer((layer) => {
+      layer.closeTooltip();
       const path = layer as Path & { feature: Feature };
       const b = BARANGAYS_BY_PSGC.get(
         String(path.feature.properties?.adm4_psgc),
@@ -75,13 +76,12 @@ export function BarangayBoundaryLayer({
           current.current.onSelectBarangay(b.psgc, b.municipalityPsgc);
         layer.bindTooltip(
           () => {
-            const metric =
-              current.current.activeMetric === "score"
-                ? "disasterRisk"
-                : current.current.activeMetric;
+            const metric = current.current.activeMetric;
             const value = barangayMetric(b, metric);
             const label = document.createElement("span");
             label.textContent = `${b.name}, ${b.municipality} · ${barangayMetricLabel(metric)}: ${value === null ? "Needs review" : `${value.toLocaleString()}${metric === "density" ? "/km²" : metric === "morbidity" ? " / 1,000" : "/100"}`}`;
+            if (metric === "score")
+              label.textContent += ` · Healthcare need rank #${b.needRank} of 681${b.needProvisional ? " · Provisional" : ""}`;
             return label;
           },
           { sticky: true, className: "laguna-map-tooltip" },

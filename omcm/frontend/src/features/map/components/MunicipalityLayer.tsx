@@ -28,7 +28,7 @@ export function MunicipalityLayer({
               props.activeMetric,
               props.selectedPsgc === code,
             ),
-            fillOpacity: props.activeMetric === "score" ? 0.65 : 0,
+            fillOpacity: 0,
             weight: 0,
           };
         }}

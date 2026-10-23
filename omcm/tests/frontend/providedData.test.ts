@@ -29,7 +29,7 @@ describe("Supplied Laguna datasets", () => {
     const municipality = computeLagunaMunicipalities().find((m) => m.psgc === "403401000")!;
     expect(municipality.adjustedDisasterRisk).toBe(alaminos.disasterRisk);
     expect(municipality.scoreContributions.disasterRisk).toBe(Math.round(alaminos.disasterRisk! * 2) / 10);
-    expect(barangayMetric(records[0], "score")).toBeNull();
+    expect(barangayMetric(records[0], "score")).toBe(records[0].needScore);
   });
 
   it("retains all hospital records without making up missing locations or beds", () => {

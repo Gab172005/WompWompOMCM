@@ -3,12 +3,16 @@ import { useAppStore } from "../../store/useAppStore";
 import { MunicipalityPanel } from "../../features/municipalities/MunicipalityPanel";
 import { BarangayPanel } from "../../features/municipalities/BarangayPanel";
 export function SidePanel() {
-  const { sidePanelOpen, selectedBarangayPsgc } = useAppStore();
+  const { sidePanelOpen, selectedBarangayPsgc, selectedPsgc } = useAppStore();
   if (!sidePanelOpen) return null;
   return (
     <aside
       className="workspace-panel intelligence-panel card"
-      aria-label={selectedBarangayPsgc ? "Barangay intelligence" : "Municipality intelligence"}
+      aria-label={
+        selectedBarangayPsgc
+          ? "Barangay intelligence"
+          : "Municipality intelligence"
+      }
     >
       <div className="workspace-panel-heading">
         <h2>
@@ -22,7 +26,10 @@ export function SidePanel() {
           <X size={17} />
         </button>
       </div>
-      <div className="workspace-panel-body">
+      <div
+        className="workspace-panel-body"
+        key={selectedBarangayPsgc ?? selectedPsgc ?? "province"}
+      >
         {selectedBarangayPsgc ? <BarangayPanel /> : <MunicipalityPanel />}
       </div>
     </aside>

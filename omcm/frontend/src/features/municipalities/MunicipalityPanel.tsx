@@ -3,13 +3,13 @@ import { usePlanningResults } from "../optimization/usePlanningResults";
 import { MunicipalityMetrics } from "./MunicipalityMetrics";
 import { MunicipalityRanking } from "./MunicipalityRanking";
 import { Button } from "../../components/ui/Button";
+import { BarangayRanking } from "./BarangayRanking";
 import {
   LAGUNA_BARANGAYS,
   PROVIDED_HOSPITALS,
 } from "../../services/providedData";
 export function MunicipalityPanel() {
-  const { selectedPsgc, selectMunicipality, selectBarangay, openPanel } =
-    useAppStore();
+  const { selectedPsgc, selectMunicipality, openPanel } = useAppStore();
   const { municipalities } = usePlanningResults();
   const selected = municipalities.find((m) => m.psgc === selectedPsgc);
   return (
@@ -25,26 +25,6 @@ export function MunicipalityPanel() {
             ← Province overview
           </button>
           <MunicipalityMetrics municipality={selected} />
-          <h3>Barangays ({selected.barangayCount})</h3>
-          <div className="barangay-list">
-            {LAGUNA_BARANGAYS.filter(
-              (b) => b.municipalityPsgc === selectedPsgc,
-            ).map((b) => (
-              <button
-                key={b.psgc}
-                className="workspace-text-button"
-                onClick={() => selectBarangay(b.psgc, b.municipalityPsgc)}
-              >
-                {b.name}
-                <small>
-                  {b.population.toLocaleString()} residents · Risk{" "}
-                  {b.disasterRisk === null
-                    ? "needs review"
-                    : `${b.disasterRisk}/100`}
-                </small>
-              </button>
-            ))}
-          </div>
         </>
       ) : (
         <>
@@ -73,6 +53,10 @@ export function MunicipalityPanel() {
           </p>
         </>
       )}
+      <BarangayRanking
+        key={selectedPsgc ?? "province"}
+        municipalityPsgc={selectedPsgc ?? undefined}
+      />
       <div className="workspace-button-row">
         <Button onClick={() => openPanel("optimization")}>
           Plan deployment
@@ -81,7 +65,10 @@ export function MunicipalityPanel() {
           Test scenario
         </Button>
       </div>
-      <MunicipalityRanking municipalities={municipalities} />
+      <details>
+        <summary>Municipality planning ranking</summary>
+        <MunicipalityRanking municipalities={municipalities} />
+      </details>
       <p className="workspace-note">
         Supplied barangay population, disaster screening and hospital records
         with PSGC boundary geometry. Morbidity is synthetic; vulnerability,

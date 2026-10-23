@@ -5,7 +5,13 @@ import {
   PROVIDED_HOSPITALS,
   distanceKm,
   normalizeMunicipality,
+  LAGUNA_BARANGAYS,
 } from "../../services/providedData";
+import {
+  HEALTHCARE_NEED_FACTORS,
+  type NeedFactor,
+} from "../../services/healthcareNeed";
+import { HealthcareNeedMethod } from "./HealthcareNeedMethod";
 
 const hazardLabels: Record<string, string> = {
   flood_5yr: "Flood · 5-year",
@@ -40,6 +46,67 @@ export function BarangayPanel() {
       >
         ← Municipality overview
       </button>
+      <section aria-label="Barangay healthcare need">
+        <div className="workspace-score">
+          <span>Healthcare need · planning estimate</span>
+          <strong>
+            {b.needScore.toFixed(1)}
+            <small> / 100</small>
+          </strong>
+          <span className="barangay-need-rank">
+            Healthcare need rank #{b.needRank} of {LAGUNA_BARANGAYS.length}
+          </span>
+          {b.needProvisional && (
+            <span>
+              Provisional score and rank · {b.needCoverage}% of input weight
+              available
+            </span>
+          )}
+        </div>
+        {b.needProvisional && (
+          <p className="workspace-note">
+            Unresolved inputs are excluded and the remaining weights rescaled.
+            Missing factors are not treated as zero.
+          </p>
+        )}
+        <h3>Healthcare need contributions</h3>
+        {(Object.keys(HEALTHCARE_NEED_FACTORS) as NeedFactor[]).map((key) => (
+          <div className="need-factor-row" key={key}>
+            <span>
+              {HEALTHCARE_NEED_FACTORS[key].label} ·{" "}
+              {Math.round(HEALTHCARE_NEED_FACTORS[key].weight * 100)}% base
+              weight
+              <small>
+                {b.needFactors[key] === null
+                  ? "Unavailable · excluded"
+                  : key === "incomeClass"
+                    ? `${b.incomeClass} municipality class · ${b.needFactors[key]!.toFixed(1)} / 100 resource proxy`
+                    : key === "urbanRural"
+                      ? `${b.urbanRural} · ${b.needFactors[key]!.toFixed(1)} / 100 classification proxy`
+                      : `${b.needFactors[key]!.toFixed(1)} / 100 ${key === "disasterRisk" ? "supplied index" : "percentile"}`}
+              </small>
+            </span>
+            <strong>
+              {b.needContributions[key] === null
+                ? "—"
+                : `${b.needContributions[key]!.toFixed(1)} pts`}
+            </strong>
+          </div>
+        ))}
+        <p className="workspace-note">
+          Nearest verified hospital:{" "}
+          {b.nearestHospital
+            ? `${b.nearestHospital.name}, ${b.nearestHospital.distanceKm.toFixed(2)} km straight-line distance.`
+            : "Unavailable in the supplied register."}
+        </p>
+        <HealthcareNeedMethod />
+        <button
+          className="workspace-text-button"
+          onClick={() => selectMunicipality(null)}
+        >
+          View all barangay healthcare need rankings
+        </button>
+      </section>
       <div className="workspace-score">
         <span>Disaster risk index</span>
         <strong>

@@ -29,6 +29,7 @@
   "include": [
     "src",
     "vite.config.ts",
-    "../tests/frontend/**/*.ts"
+    "../tests/frontend/**/*.ts",
+    "../tests/frontend/**/*.tsx"
   ]
 }

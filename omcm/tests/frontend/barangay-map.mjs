@@ -27,8 +27,31 @@ try {
   await page.goto("http://127.0.0.1:5176");
   await expect(page.locator(".barangay-boundary")).toHaveCount(681);
   await expect(page.locator(".municipality-boundary")).toHaveCount(30);
-  await expect(page.getByLabel("Map legend")).toContainText("Disaster risk index");
+  await expect(page.getByLabel("Map legend")).toContainText("Healthcare need");
   await expect(page.locator(".hospital-marker-custom")).toHaveCount(61);
+  const ranked = await page.evaluate(async () => {
+    const { RANKED_BARANGAYS } = await import("/src/services/providedData.ts");
+    return RANKED_BARANGAYS.map((b) => ({ psgc: b.psgc, name: b.name, municipality: b.municipality, score: b.needScore, rank: b.needRank }));
+  });
+  await page.getByRole("button", { name: "Toggle intelligence panel", exact: true }).click();
+  const ranking = page.getByRole("region", { name: "Barangay healthcare need ranking", exact: true });
+  await expect(ranking.getByRole("listitem")).toHaveCount(25);
+  await ranking.getByRole("button", { name: "Next ranks", exact: true }).click();
+  await expect(ranking.getByRole("status")).toHaveText("26–50 of 681");
+  const top = ranked[0];
+  await ranking.getByLabel("Filter barangay ranking").fill(`${top.name} ${top.municipality}`);
+  await ranking.getByRole("button", { name: new RegExp(`^Rank ${top.rank}:`) }).click();
+  const healthcareNeed = page.getByRole("region", { name: "Barangay healthcare need", exact: true });
+  await expect(healthcareNeed).toContainText(`Healthcare need rank #${top.rank} of 681`);
+  await expect(healthcareNeed).toContainText(top.score.toFixed(1));
+  await expect(healthcareNeed).toContainText("Municipality income class · 10% base weight");
+  await expect(healthcareNeed).toContainText("Urban / rural classification · 10% base weight");
+  await expect(healthcareNeed).toContainText("resource proxy");
+  await expect(healthcareNeed).toContainText("classification proxy");
+  await expect(page.locator(".workspace-panel-body")).toHaveJSProperty("scrollTop", 0);
+  await expect(page.locator(".barangay-boundary.is-selected")).toHaveCount(1);
+  await mkdir(resolve(frontend, "test-results"), { recursive: true });
+  await page.screenshot({ path: resolve(frontend, "test-results/healthcare-need-desktop.png") });
   const search = page.getByLabel("Find municipality or barangay");
   await search.fill("Alaminos");
   await page.getByRole("option", { name: /^Alaminos Municipality/ }).click();
@@ -50,6 +73,9 @@ try {
   await page.mouse.click(point.x, point.y);
   const panel = page.getByLabel("Barangay intelligence", { exact: true });
   await expect(panel).toContainText("Barangay I");
+  const selectedNeed = ranked.find((b) => b.name === "Barangay I" && b.municipality === "Alaminos");
+  await expect(healthcareNeed).toContainText(`Healthcare need rank #${selectedNeed.rank} of 681`);
+  await expect(healthcareNeed).toContainText(selectedNeed.score.toFixed(1));
   await expect(panel).toContainText("2,519");
   await expect(panel).toContainText("66.67");
   await expect(polygon).toHaveAttribute("aria-pressed", "true");
@@ -68,6 +94,7 @@ try {
   await search.fill("Dambo");
   await page.getByRole("option", { name: /Dambo, Pangil/ }).click();
   await expect(panel).toContainText("Needs review");
+  await expect(healthcareNeed).toContainText("Provisional score and rank · 80%");
   await expect(panel).toContainText("0–100/100");
   await expect(polygon).toHaveAttribute("aria-pressed", "false");
   await expect(page.locator(".barangay-boundary.is-selected")).toHaveCount(1);
@@ -84,11 +111,14 @@ try {
   await page.getByRole("option", { name: /Dambo, Pangil/ }).click();
   await expect(panel).toBeVisible();
   await expect(panel.getByRole("heading", { name: "Dambo", exact: true })).toBeVisible();
+  await expect(healthcareNeed).toContainText("Healthcare need rank #");
+  await expect(healthcareNeed).toContainText("Provisional score and rank");
   await expect(page.locator(".leaflet-zoom-anim")).toHaveCount(0);
   await page.waitForTimeout(500);
   const panelBox = await panel.boundingBox();
   const legendBox = await page.getByLabel("Map legend").boundingBox();
   const selectionBox = await page.locator(".barangay-boundary.is-selected").boundingBox();
+  if (selectionBox.width <= 0 || selectionBox.height <= 0 || selectionBox.x < 0 || selectionBox.x + selectionBox.width > 390 || selectionBox.y < 125) throw new Error("Selected barangay is outside the visible mobile map");
   if (selectionBox.y + selectionBox.height > panelBox.y) throw new Error("Selected barangay is hidden behind the mobile panel");
   if (panelBox.y + panelBox.height > legendBox.y) throw new Error("Legend overlaps barangay details");
   await page.screenshot({ path: resolve(frontend, "test-results/barangay-mobile.png") });
@@ -96,7 +126,7 @@ try {
   await page.getByRole("button", { name: "Close intelligence panel" }).click();
   await expect(panel).toHaveCount(0);
   if (errors.length) throw new Error(errors.join("\n"));
-  console.log("Barangay browser checks passed: boundaries, pointer selection, highlight, source details, filters, missing/zero risk, hospital toggle, municipality return, mobile layout and close.");
+  console.log("Barangay browser checks passed: boundaries, pointer selection, highlight, source details, filters, missing/zero risk, hospital toggle, municipality return, healthcare need scores, provincial ranking/filter/pagination, provisional ranks, mobile layout and close.");
 } finally {
   await browser?.close();
   server.kill();

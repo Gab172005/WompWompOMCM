@@ -52,7 +52,7 @@ export const useAppStore = create<AppState>()(
     (set) => ({
       selectedPsgc: null,
       selectedBarangayPsgc: null,
-      activeMetric: "disasterRisk",
+      activeMetric: "score",
       showHospitals: true,
       showClinics: true,
       sidePanelOpen: false,

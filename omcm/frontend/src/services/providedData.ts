@@ -1,9 +1,25 @@
 import dataset from "../data/laguna-datasets.json";
 import type { MapMetric, HospitalFacility } from "../types/municipality";
+import {
+  computeBarangayHealthcareNeed,
+  type BarangayHealthcareNeed,
+} from "./healthcareNeed";
+export { distanceKm } from "./healthcareNeed";
 
-export type BarangayRecord = (typeof dataset.barangays)[number];
+export type BarangayRecord = (typeof dataset.barangays)[number] &
+  BarangayHealthcareNeed;
 export type HospitalRecord = (typeof dataset.hospitals)[number];
-export const LAGUNA_BARANGAYS: BarangayRecord[] = dataset.barangays;
+export const LAGUNA_BARANGAYS: BarangayRecord[] = computeBarangayHealthcareNeed(
+  dataset.barangays,
+  dataset.hospitals,
+);
+export const RANKED_BARANGAYS = [...LAGUNA_BARANGAYS].sort(
+  (a, b) =>
+    b.needScore - a.needScore ||
+    a.municipality.localeCompare(b.municipality, "en") ||
+    a.name.localeCompare(b.name, "en") ||
+    a.psgc.localeCompare(b.psgc),
+);
 export const BARANGAYS_BY_PSGC = new Map(
   LAGUNA_BARANGAYS.map((b) => [b.psgc, b]),
 );
@@ -51,29 +67,17 @@ export function barangayMetric(
   b: BarangayRecord,
   metric: MapMetric,
 ): number | null {
-  // Healthcare need is a municipality estimate; do not invent barangay scores.
-  if (metric === "score") return null;
+  if (metric === "score") return b.needScore;
   if (metric === "disasterRisk") return b.disasterRisk;
   if (metric === "density") return b.density;
   return b.morbidity;
 }
 
 export const barangayMetricLabel = (metric: MapMetric) =>
-  metric === "score" || metric === "disasterRisk"
-    ? "Disaster risk index"
-    : metric === "density"
-      ? "Population density"
-      : "Synthetic morbidity rate";
-
-export function distanceKm(
-  a: { lat: number; lng: number },
-  b: { lat: number; lng: number },
-) {
-  const rad = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * rad,
-    dLng = (b.lng - a.lng) * rad;
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
-  return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
-}
+  metric === "score"
+    ? "Barangay healthcare need"
+    : metric === "disasterRisk"
+      ? "Disaster risk index"
+      : metric === "density"
+        ? "Population density"
+        : "Synthetic morbidity rate";

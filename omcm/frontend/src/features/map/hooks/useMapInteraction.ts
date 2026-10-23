@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useMap } from "react-leaflet";
 import { geoJSON, latLngBounds } from "leaflet";
 import type { FeatureCollection } from "geojson";
@@ -19,13 +19,7 @@ export function useMapInteraction(
     if (change) map.setZoom(map.getZoom() + change);
   }, [map, zoomDelta]);
   useEffect(() => {
-    const resize = () => map.invalidateSize();
-    const observer = new ResizeObserver(resize);
-    observer.observe(map.getContainer());
-    resize();
-    return () => observer.disconnect();
-  }, [map]);
-  useEffect(() => {
+    map.invalidateSize({ pan: false });
     map.fitBounds(
       data
         ? geoJSON(data).getBounds()
@@ -42,7 +36,9 @@ export function useMapInteraction(
         : { padding: [44, 100], animate: false },
     );
   }, [map, recenter, data]);
-  useEffect(() => {
+  const fitSelection = useCallback(() => {
+    // Read the new container dimensions before choosing desktop/mobile padding.
+    map.invalidateSize({ pan: false });
     const barangay = barangayData?.features.find(
       (f) => String(f.properties?.adm4_psgc) === selectedBarangay,
     );
@@ -60,6 +56,18 @@ export function useMapInteraction(
                 Math.min(map.getSize().y * 0.46, map.getSize().y - 320) + 148,
               ],
         maxZoom: barangay ? 16 : 13,
+        animate: false,
       });
   }, [map, data, selected, barangayData, selectedBarangay]);
+  useEffect(fitSelection, [fitSelection]);
+  useEffect(() => {
+    const resize = () => {
+      map.invalidateSize({ pan: false });
+      fitSelection();
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(map.getContainer());
+    resize();
+    return () => observer.disconnect();
+  }, [map, fitSelection]);
 }

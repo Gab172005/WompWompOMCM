@@ -264,15 +264,7 @@ export function LagunaGoogleMap({
           : null;
       return {
         fillColor: isSelected ? "#facc15" : getMetricColor(activeMetric, value),
-        fillOpacity: isSelected
-          ? 0.7
-          : isBarangay
-            ? activeMetric === "score"
-              ? 0
-              : 0.62
-            : activeMetric === "score"
-              ? 0.65
-              : 0,
+        fillOpacity: isSelected ? 0.7 : isBarangay ? 0.62 : 0,
         strokeColor: isSelected
           ? "#102c43"
           : isBarangay
@@ -295,9 +287,9 @@ export function LagunaGoogleMap({
         );
         if (!barangay) return;
         const name = `${barangay.name}, ${barangay.municipality}`;
-        const metric = activeMetric === "score" ? "disasterRisk" : activeMetric;
+        const metric = activeMetric;
         const value = barangayMetric(barangay, metric);
-        const valDisplay = `${barangayMetricLabel(metric)}: ${value === null ? "Needs review" : value + (metric === "density" ? "/km²" : metric === "morbidity" ? " / 1,000" : "/100")}`;
+        const valDisplay = `${barangayMetricLabel(metric)}: ${value === null ? "Needs review" : value + (metric === "density" ? "/km²" : metric === "morbidity" ? " / 1,000" : "/100")}${metric === "score" ? ` · Healthcare need rank #${barangay.needRank} of 681${barangay.needProvisional ? " · Provisional" : ""}` : ""}`;
 
         setHoveredInfo({
           name,
@@ -325,8 +317,6 @@ export function LagunaGoogleMap({
       );
       if (!barangay) return;
       onSelectBarangay(barangay.psgc, barangay.municipalityPsgc);
-
-
     });
 
     return () => {

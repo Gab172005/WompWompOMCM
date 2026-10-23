@@ -21,7 +21,7 @@ export function MapLegend() {
             ? "Cases / 1,000 · illustrative"
             : metric === "disasterRisk"
               ? "Index / 100 · barangay point screening"
-              : "Municipal index / 100 · planning estimate"}
+              : "Barangay index / 100 · baseline estimate"}
       </span>
       <div className="workspace-colorbar">
         {steps.map((value) => (
