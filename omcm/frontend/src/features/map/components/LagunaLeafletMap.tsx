@@ -3,10 +3,13 @@ import { MapContainer, TileLayer, GeoJSON } from "react-leaflet";
 import type { FeatureCollection } from "geojson";
 import type { MapProps } from "./mapTypes";
 import { LAGUNA_BOUNDS, LAGUNA_CENTER } from "../../../services/lagunaData";
+import { OSM_CLINIC_SNAPSHOT } from "../../../services/providedData";
+import { isDrawableOsmClinic } from "./osmClinicPopup";
 import { useMapInteraction } from "../hooks/useMapInteraction";
 import { MunicipalityLayer } from "./MunicipalityLayer";
 import { HospitalMarkers } from "./HospitalMarkers";
 import { ClinicMarkers } from "./ClinicMarkers";
+import { OsmClinicMarkers } from "./OsmClinicMarkers";
 import { RouteLayer } from "./RouteLayer";
 import { BarangayBoundaryLayer } from "./BarangayBoundaryLayer";
 function Interaction({
@@ -110,6 +113,12 @@ export function LagunaLeafletMap(props: MapProps) {
         {props.showHospitals && <HospitalMarkers hospitals={props.hospitals} />}
         <RouteLayer {...props} />
         {props.showClinics && <ClinicMarkers {...props} />}
+        {props.showOsmClinics && (
+          <OsmClinicMarkers
+            osmClinics={props.osmClinics.filter(isDrawableOsmClinic)}
+            snapshot={OSM_CLINIC_SNAPSHOT}
+          />
+        )}
       </MapContainer>
       {error && (
         <div className="workspace-map-error error" role="alert">

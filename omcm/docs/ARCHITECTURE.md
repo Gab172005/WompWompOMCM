@@ -21,8 +21,10 @@ proposal snapshot is persisted to localStorage. Plan input changes invalidate
 approval and reset playback. Closing simulation returns the map to baseline;
 the configured conditions remain available when simulation reopens.
 
-The Leaflet renderer composes municipality heatmap styling, hospital and clinic
-markers, road disruptions and routes. Geographic assets live in
+The Leaflet renderer composes municipality and barangay heatmap styling,
+hospital markers, fixed OSM clinic markers, simulated mobile-clinic markers,
+road disruptions and routes. The three facility layers have independent toggles.
+Fixed OSM facilities never enter mobile clinic selection or approved schedules. Geographic assets live in
 `public/assets/geo`. Map interaction and sizing are in `useMapInteraction`.
 Google Maps is an optional renderer; no configured key means Leaflet/OSM.
 `Modal` uses a native dialog for keyboard focus and Escape handling.
@@ -32,7 +34,19 @@ Main's supporting pages remain in their relevant feature folders.
 boundary uploads and public schedules. This provider is mounted only for those
 routes; the municipality workspace does not need backend initialization.
 
-## Two explicit planning datasets
+## Explicit planning datasets and scoring boundaries
+
+The province-wide barangay layer joins all 681 demographic/hazard records to
+PSGC geometry. [The importer](../frontend/scripts/import-laguna-datasets.py)
+embeds a validated offline clinic snapshot; [the clinic importer](../frontend/scripts/import-osm-clinics.py)
+refreshes it explicitly, not at browser runtime. [The shared scorer](../frontend/src/services/healthcareNeed.ts)
+calculates seven-factor baseline need with weights 25% morbidity, 30% hospital
+distance, 15% disaster risk, 10% density, 10% municipal income class, 5% clinic
+distance and 5% clinic provision deficit. Urban/rural is demographic context only.
+Both map engines, barangay details and ranking consume the same records from
+[providedData](../frontend/src/services/providedData.ts). Missing factors use
+available-weight rescaling; scores are rounded to one decimal before competition
+ranking. Clinic counts are mapped observations, not verified absence.
 
 The municipality workspace retains testing's 30-municipality illustrative data
 and browser priority heuristic (`services/lagunaData.ts`). Its four-factor score
@@ -83,5 +97,7 @@ Browser suites launch isolated servers and avoid the application's database.
 `datasets/` contains inspectable exports with the requested canonical filenames.
 `backend/export_datasets.py --check` verifies them against runtime fixtures.
 Source attribution and synthetic-data limitations are in
-[SOURCES.md](../datasets/SOURCES.md). None of the example medical indicators or
-deployment recommendations is a live operational feed.
+[dataset documentation](../datasets/README.md) and [OSM clinic provenance](OSM_CLINICS.md).
+None of the example medical indicators or deployment recommendations is a live
+operational feed. OSM acquisition is reproducible offline from the committed
+raw snapshot; external refresh and live basemap tiles are separate dependencies.

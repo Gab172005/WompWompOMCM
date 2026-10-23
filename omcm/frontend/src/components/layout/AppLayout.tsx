@@ -15,6 +15,8 @@ import { ClinicTracker } from "../../features/tracking/ClinicTracker";
 import { useClinicAnimation } from "../../features/tracking/useClinicAnimation";
 import { ChatbotPanel } from "../../features/chatbot/ChatbotPanel";
 import { LAGUNA_HOSPITALS } from "../../services/lagunaData";
+// Fixed OSM facilities come from the offline snapshot; they are not simulated clinics.
+import { MAPPED_OSM_CLINICS, OSM_CLINIC_SNAPSHOT } from "../../services/providedData";
 import { useAppStore } from "../../store/useAppStore";
 export function AppLayout() {
   const state = useAppStore(),
@@ -51,8 +53,10 @@ export function AppLayout() {
           activeMetric={state.activeMetric}
           showHospitals={state.showHospitals}
           showClinics={state.showClinics}
+          showOsmClinics={state.showOsmClinics}
           hospitals={LAGUNA_HOSPITALS}
           proposedClinics={plan.clinics}
+          osmClinics={MAPPED_OSM_CLINICS}
           simulationActive={state.panel === "simulation"}
           simulationProgress={state.progress}
           selectedClinicId={state.selectedClinicId}
@@ -66,7 +70,7 @@ export function AppLayout() {
         <MapControls />
         {!state.panel && <SidePanel />}
         <FloatingControls />
-        <MapLegend />
+        <MapLegend clinicSnapshot={OSM_CLINIC_SNAPSHOT} />
         <MapNavigation />
         {state.panel && (
           <aside

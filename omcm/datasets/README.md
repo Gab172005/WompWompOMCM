@@ -11,7 +11,11 @@ python3 frontend/scripts/import-laguna-datasets.py
 python3 frontend/scripts/import-laguna-datasets.py --check
 ```
 
-The generated browser bundle is `frontend/src/data/laguna-datasets.json`.
+The generated [browser bundle](../frontend/src/data/laguna-datasets.json) includes
+barangays, hospitals, fixed OSM clinic records and validated snapshot metadata.
+Generation remains offline. [The separate clinic importer](../frontend/scripts/import-osm-clinics.py)
+uses `--refresh` for explicit live acquisition; ordinary `--check` and tests do
+not query Overpass. See [clinic provenance and refresh](../docs/OSM_CLINICS.md).
 
 ## Boundary joins
 
@@ -47,29 +51,34 @@ The retained server pilot is separate from these provincial map inputs.
 ## Barangay healthcare need and ranking
 
 The default healthcare need layer calculates a separate score for every barangay
-using only the supplied inputs and joined boundary area. The model is
-`barangay-healthcare-need-v2` in `frontend/src/services/healthcareNeed.ts`.
+using supplied inputs, joined boundary area, and a validated offline OSM clinic snapshot.
+The model is [barangay-healthcare-need-v3](../frontend/src/services/healthcareNeed.ts).
 Its policy weights are explicit planning assumptions:
 
 | Factor | Weight | Value used |
 | --- | --- | --- |
-| Synthetic morbidity | 28% | Province-wide percentile of the supplied rate |
-| Disaster risk | 20% | Supplied disaster risk index, 0–100 |
-| Population density | 16% | Province-wide percentile of population / boundary area |
-| Hospital distance | 16% | Province-wide percentile of straight-line km to the nearest verified, located hospital |
+| Synthetic morbidity | 25% | Province-wide tied percentile of the supplied rate |
+| Hospital distance | 30% | Province-wide tied percentile of straight-line km to the nearest verified, located hospital |
+| Disaster risk | 15% | Supplied disaster risk index, 0–100 |
+| Population density | 10% | Province-wide tied percentile of population / boundary area |
 | Municipality income class | 10% | Class number scaled linearly over the known classes in the supplied records |
-| Urban / rural classification | 10% | Rural = 100; urban = 0 |
+| Clinic distance | 5% | Province-wide tied percentile of straight-line km to the nearest active, located in-province OSM clinic |
+| Clinic provision deficit | 5% | 100 minus the province-wide tied percentile of assigned active OSM clinics / population × 10,000 |
 
-For each percentile, the minimum is 0 and maximum 100, and equal values use their
-average tied rank divided by 680. All equal values, or a single available value,
-receive 50. The full score is `0.28*M + 0.20*R + 0.16*D + 0.16*A + 0.10*I + 0.10*U`,
-rounded to one decimal. Higher values indicate greater estimated need. The four unresolved
-risk records exclude the risk term and divide the other weighted terms by 0.80;
-they show 80% available input weight and provisional scores/ranks. Missing
-hospital access, if no verified located hospitals are available, is similarly
-excluded. Missing or unrecognized income/classification values are also excluded
-and remaining weights rescaled; those scores and ranks are provisional. No
-missing value is replaced by zero.
+Percentiles use zero-based average tied ranks divided by `n - 1`, where `n`
+is the number of available values for that factor. Untied endpoints are 0 and
+100; ties share their average percentile. All equal values, or a single available
+value, receive 50. The full score is
+`0.25*M + 0.30*H + 0.15*R + 0.10*D + 0.10*I + 0.05*C + 0.05*P`,
+rounded to one decimal. Higher values indicate greater estimated need. The four
+unresolved risk records exclude risk and divide the remaining weighted terms by
+0.85 when all other inputs are present; they show 85% available input weight and
+provisional scores/ranks. Missing hospital access and unrecognized income class
+are similarly excluded. An invalid or unavailable clinic snapshot excludes both
+clinic factors; no eligible located clinics excludes distance, while invalid
+population excludes provision. Missing values are never replaced by zero.
+A valid zero clinic count means zero mapped observations, not verified absence;
+if all valid counts/rates are equal, provision deficit is neutral 50.
 
 Income class comes from `city_municipality_income_class` in the supplied CSV.
 It describes the municipality's fiscal classification, not a barangay's or a
@@ -77,14 +86,18 @@ household's income. The data contains 1st through 4th classes, mapped to 0,
 33.33, 66.67 and 100 using `(class_number - minimum) / (maximum - minimum) * 100`.
 If all known classes are the same, the factor receives a neutral 50. Unrecognized
 class codes are unavailable. This treats lower municipal income class as a
-resource-constraint proxy. Classification comes from the barangay `urban_rural`
-field: rural adds the full 10 points, urban adds zero, and unknown values stay
-unavailable. Rural classification is an access-barrier assumption, not a claim
-that every rural barangay has less actual healthcare provision.
+resource-constraint proxy. The barangay `urban_rural` field is retained as
+source demographic context only. It contributes nothing to healthcare need,
+available-weight coverage, or ranking; changing that classification alone cannot
+change the score. Disaster risk is retained at 15%.
 
-The two new factors each receive 10%. The previous four weights are multiplied
-by 0.8, retaining their relative importance within the remaining 80%. Scores,
-rankings and contribution displays recompute together from the six factors.
+The seven production weights are explicit policy choices, not fitted or clinically
+validated coefficients. Hospital distance and clinic measures overlap as access
+proxies. OSM mapping is incomplete and does not verify facility capacity,
+services, operating status, or patient access. Distances permit cross-barangay
+access within Laguna only; excluding outside-province facilities creates
+province-edge bias. See [OSM clinic sources and refresh](../docs/OSM_CLINICS.md)
+and the [weight sensitivity report](../docs/CLINIC_SENSITIVITY.md).
 
 All 681 barangays are ranked by descending displayed score. Equal scores share
 competition ranks, e.g. 1, 2, 2, 4. Names and PSGCs order tied rows consistently.

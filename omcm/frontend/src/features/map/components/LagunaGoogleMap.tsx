@@ -10,11 +10,66 @@ import {
 import type { MapProps } from "./mapTypes";
 import {
   BARANGAYS_BY_PSGC,
+  OSM_CLINIC_SNAPSHOT,
   barangayMetric,
   barangayMetricLabel,
 } from "../../../services/providedData";
+import type { LocatedOsmClinic } from "../../../types/osmClinic";
+import {
+  osmClinicLink,
+  osmClinicPopupText,
+  osmClinicReference,
+  isDrawableOsmClinic,
+} from "./osmClinicPopup";
 interface LagunaGoogleMapProps extends MapProps {
   onAuthFailure?: (message: string) => void;
+}
+
+/**
+ * Builds popup content from DOM nodes and `textContent` only, so facility names,
+ * operators and warnings can never inject markup into the Google Maps DOM.
+ */
+function osmClinicContent(
+  clinic: LocatedOsmClinic,
+  snapshot?: { retrievedAt: string | null } | null,
+): HTMLElement {
+  const text = osmClinicPopupText(clinic, snapshot);
+  const root = document.createElement("div");
+  root.className = "osm-clinic-info-window";
+  root.style.color = "#0f172a";
+  root.style.fontFamily = "sans-serif";
+  root.style.padding = "6px";
+  root.style.maxWidth = "260px";
+  const title = document.createElement("strong");
+  title.style.fontSize = "14px";
+  title.style.color = "#6d28d9";
+  title.textContent = text.title;
+  root.appendChild(title);
+  for (const row of text.rows) {
+    const line = document.createElement("div");
+    line.style.fontSize = "12px";
+    line.style.marginTop = "4px";
+    line.textContent = row;
+    root.appendChild(line);
+  }
+  for (const warning of text.warnings) {
+    const line = document.createElement("div");
+    line.style.fontSize = "11px";
+    line.style.color = "#b45309";
+    line.style.marginTop = "4px";
+    line.textContent = `Warning: ${warning}`;
+    root.appendChild(line);
+  }
+  const link = document.createElement("a");
+  link.href = osmClinicLink(clinic);
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.style.display = "inline-block";
+  link.style.marginTop = "6px";
+  link.style.fontSize = "12px";
+  link.textContent = `OpenStreetMap ${osmClinicReference(clinic)}`;
+  root.appendChild(link);
+  return root;
 }
 
 export function LagunaGoogleMap({
@@ -25,8 +80,10 @@ export function LagunaGoogleMap({
   activeMetric,
   showHospitals,
   showClinics,
+  showOsmClinics,
   hospitals,
   proposedClinics,
+  osmClinics,
   simulationActive,
   simulationProgress,
   selectedClinicId,
@@ -48,6 +105,11 @@ export function LagunaGoogleMap({
   }, [zoomDelta]);
   const maskPolygonRef = useRef<google.maps.Polygon | null>(null);
   const hospitalMarkersRef = useRef<google.maps.Marker[]>([]);
+  const hospitalInfoRef = useRef<google.maps.InfoWindow | null>(null);
+  const hospitalListenersRef = useRef<google.maps.MapsEventListener[]>([]);
+  const osmClinicMarkersRef = useRef<google.maps.Marker[]>([]);
+  const osmClinicListenersRef = useRef<google.maps.MapsEventListener[]>([]);
+  const osmClinicInfoRef = useRef<google.maps.InfoWindow | null>(null);
   const clinicMarkersRef = useRef<google.maps.Marker[]>([]);
   const animatedMarkersRef = useRef<google.maps.Marker[]>([]);
   const disruptionPolylinesRef = useRef<google.maps.Polyline[]>([]);
@@ -95,20 +157,34 @@ export function LagunaGoogleMap({
     };
   }, []);
 
-  // Initialize Google Maps instance
+  // Report Google Maps authentication failures without leaking a window handler
+  const authFailureHandlerRef = useRef<((message: string) => void) | undefined>(
+    undefined,
+  );
+  authFailureHandlerRef.current = onAuthFailure;
   useEffect(() => {
-    // Intercept Google Maps authentication error if triggered
-    const originalAuthFailure = (window as any).gm_authFailure;
-    (window as any).gm_authFailure = () => {
+    const target = window as any;
+    // A handler left by this component's earlier mount is ours to replace, not chain.
+    const previous = target.gm_authFailure;
+    const handler = () => {
       console.warn("Google Maps authentication failed.");
-      onAuthFailure?.(
+      authFailureHandlerRef.current?.(
         "Google Maps API authentication failed. Verify API key and billing on Google Cloud Platform.",
       );
-      if (typeof originalAuthFailure === "function") {
-        originalAuthFailure();
-      }
+      // Forward only to a handler another owner installed.
+      if (typeof previous === "function") previous();
     };
+    target.gm_authFailure = handler;
+    return () => {
+      // Restore the pre-existing handler (or remove ours) so a mock or another
+      // script is not left chained to this unmounted component.
+      if (target.gm_authFailure === handler)
+        target.gm_authFailure = previous ?? undefined;
+    };
+  }, []);
 
+  // Initialize Google Maps instance
+  useEffect(() => {
     if (!containerRef.current || !window.google?.maps || mapInstanceRef.current)
       return;
 
@@ -375,8 +451,15 @@ export function LagunaGoogleMap({
   // Render Hospital Markers
   useEffect(() => {
     const map = mapInstanceRef.current;
-    hospitalMarkersRef.current.forEach((m) => m.setMap(null));
-    hospitalMarkersRef.current = [];
+    const clearHospitalLayer = () => {
+      hospitalMarkersRef.current.forEach((marker) => marker.setMap(null));
+      hospitalMarkersRef.current = [];
+      hospitalListenersRef.current.forEach((listener) => listener.remove());
+      hospitalListenersRef.current = [];
+      hospitalInfoRef.current?.close();
+      hospitalInfoRef.current = null;
+    };
+    clearHospitalLayer();
 
     if (!map || !showHospitals || !window.google?.maps) return;
 
@@ -394,23 +477,101 @@ export function LagunaGoogleMap({
         zIndex: 15,
       });
 
-      marker.addListener("click", () => {
-        const info = new google.maps.InfoWindow({
-          content: `<div style="color:#0f172a;font-family:sans-serif;padding:6px;">
-            <strong style="font-size:14px;color:#b91c1c;">${h.name}</strong><br/>
-            <small style="color:#64748b;">${h.municipality} · ${h.type}</small>
-            <div style="margin-top:6px;font-size:12px;">${h.capacity === null ? "Beds unverified" : h.capacity + " beds"} · ${h.verificationStatus || ""}</div>
-          </div>`,
-          position: { lat: h.lat, lng: h.lng },
-        });
-        info.open({ map });
-      });
+      hospitalListenersRef.current.push(
+        marker.addListener("click", () => {
+          // Same fields and layout as before, assembled as text, not HTML.
+          const root = document.createElement("div");
+          root.style.color = "#0f172a";
+          root.style.fontFamily = "sans-serif";
+          root.style.padding = "6px";
+          const name = document.createElement("strong");
+          name.style.fontSize = "14px";
+          name.style.color = "#b91c1c";
+          name.textContent = h.name;
+          const where = document.createElement("small");
+          where.style.color = "#64748b";
+          where.textContent = `${h.municipality} · ${h.type}`;
+          const detail = document.createElement("div");
+          detail.style.marginTop = "6px";
+          detail.style.fontSize = "12px";
+          detail.textContent = `${h.capacity === null ? "Beds unverified" : `${h.capacity} beds`} · ${h.verificationStatus || ""}`;
+          root.append(name, document.createElement("br"), where, detail);
+          hospitalInfoRef.current?.close();
+          const info = new google.maps.InfoWindow({
+            content: root,
+            position: { lat: h.lat, lng: h.lng },
+          });
+          hospitalInfoRef.current = info;
+          info.open({ map });
+        }),
+      );
 
       return marker;
     });
 
     hospitalMarkersRef.current = markers;
+    return clearHospitalLayer;
   }, [hospitals, showHospitals]);
+
+  // Render Fixed OSM Clinic Markers (reference layer; independent of mobile clinics)
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    // Hide and release the previous layer and its window for every outcome,
+    // including toggling off, replacement, an unready map and unmount.
+    osmClinicListenersRef.current.forEach((listener) => listener.remove());
+    osmClinicListenersRef.current = [];
+    osmClinicMarkersRef.current.forEach((m) => m.setMap(null));
+    osmClinicMarkersRef.current = [];
+    osmClinicInfoRef.current?.close();
+    osmClinicInfoRef.current = null;
+
+    const drawableClinics = osmClinics.filter(isDrawableOsmClinic);
+    if (
+      !map ||
+      !showOsmClinics ||
+      !window.google?.maps ||
+      !drawableClinics.length
+    )
+      return;
+
+    osmClinicMarkersRef.current = drawableClinics.map((clinic) => {
+      const marker = new google.maps.Marker({
+        position: { lat: clinic.lat, lng: clinic.lng },
+        map,
+        title: `OSM clinic ${osmClinicReference(clinic)}`,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 6,
+          fillColor: "#7c3aed",
+          fillOpacity: 1,
+          strokeColor: "#ffffff",
+          strokeWeight: 1.5,
+        },
+        zIndex: 12,
+      });
+      osmClinicListenersRef.current.push(
+        marker.addListener("click", () => {
+          osmClinicInfoRef.current?.close();
+          const info = new google.maps.InfoWindow({
+            content: osmClinicContent(clinic, OSM_CLINIC_SNAPSHOT),
+            position: { lat: clinic.lat, lng: clinic.lng },
+          });
+          osmClinicInfoRef.current = info;
+          info.open({ map });
+        }),
+      );
+      return marker;
+    });
+
+    return () => {
+      osmClinicListenersRef.current.forEach((listener) => listener.remove());
+      osmClinicListenersRef.current = [];
+      osmClinicMarkersRef.current.forEach((m) => m.setMap(null));
+      osmClinicMarkersRef.current = [];
+      osmClinicInfoRef.current?.close();
+      osmClinicInfoRef.current = null;
+    };
+  }, [osmClinics, showOsmClinics]);
 
   // Render Proposed Clinic Staging Markers
   useEffect(() => {

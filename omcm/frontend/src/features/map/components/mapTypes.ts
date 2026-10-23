@@ -5,6 +5,7 @@ import type {
 } from "../../../types/municipality";
 import type { RoadDisruption } from "../../../types/simulation";
 import type { Clinic } from "../../../types/clinic";
+import type { LocatedOsmClinic } from "../../../types/osmClinic";
 export interface MapProps {
   municipalities: ComputedMunicipality[];
   selectedPsgc: string | null;
@@ -14,8 +15,11 @@ export interface MapProps {
   activeMetric: MapMetric;
   showHospitals: boolean;
   showClinics: boolean;
+  showOsmClinics: boolean;
   hospitals: HospitalFacility[];
   proposedClinics: Clinic[];
+  /** Fixed OSM facilities with a supplied location; separate from mobile clinics. */
+  osmClinics: LocatedOsmClinic[];
   simulationActive: boolean;
   simulationProgress: number;
   selectedClinicId: string | null;

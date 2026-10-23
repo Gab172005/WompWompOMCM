@@ -1,0 +1,208 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 fixture",
+  "osm3s": {
+    "timestamp_osm_base": "2026-10-23T17:31:38Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+    {
+      "type": "node",
+      "id": 1001,
+      "lat": 0.055,
+      "lon": 0.055,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 2,
+      "changeset": 11,
+      "user": "fixture",
+      "uid": 1,
+      "tags": {"amenity": "clinic", "name": "Interior Node Clinic", "healthcare:speciality": "general"}
+    },
+    {
+      "type": "node",
+      "id": 1002,
+      "lat": 0.03,
+      "lon": 0.03,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 1,
+      "tags": {"healthcare": "clinic", "name": "Inside Hole Clinic"}
+    },
+    {
+      "type": "node",
+      "id": 1003,
+      "lat": 0.15,
+      "lon": 0.05,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 1,
+      "tags": {"amenity": "clinic", "name": "Barangay B Clinic"}
+    },
+    {
+      "type": "node",
+      "id": 1004,
+      "lat": 0.1,
+      "lon": 0.05,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 1,
+      "tags": {"amenity": "clinic", "name": "Boundary Shared Edge Clinic"}
+    },
+    {
+      "type": "node",
+      "id": 1005,
+      "lat": 0.05,
+      "lon": 0.3,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 1,
+      "tags": {"amenity": "clinic", "name": "Gap Clinic"}
+    },
+    {
+      "type": "node",
+      "id": 1006,
+      "lat": 1.5,
+      "lon": 1.5,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 1,
+      "tags": {"healthcare": "clinic", "name": "Far Outside Clinic"}
+    },
+    {
+      "type": "node",
+      "id": 1007,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 1,
+      "tags": {"amenity": "clinic", "name": "No Location Clinic"}
+    },
+    {
+      "type": "way",
+      "id": 2001,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 3,
+      "center": {"lat": 0.05, "lon": 0.21},
+      "nodes": [11, 12, 13, 11],
+      "tags": {"amenity": "clinic", "building": "yes", "name": "MultiPolygon Part Clinic"}
+    },
+    {
+      "type": "way",
+      "id": 2002,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 1,
+      "center": {"lat": 0.03, "lon": 0.43},
+      "nodes": [21, 22, 23, 21],
+      "tags": {"healthcare": "clinic", "name": "MultiPolygon Hole Clinic"}
+    },
+    {
+      "type": "node",
+      "id": 1008,
+      "lat": 0.062,
+      "lon": 0.065,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 1,
+      "tags": {"amenity": "clinic", "name": "Municipality Hole Clinic"}
+    },
+    {
+      "type": "node",
+      "id": 1009,
+      "lat": 0.18,
+      "lon": 0.08,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 1,
+      "tags": {"amenity": "clinic", "name": "Unmapped Enclave Clinic"}
+    },
+    {
+      "type": "node",
+      "id": 1010,
+      "lat": 0.25,
+      "lon": 0.25,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 4,
+      "tags": {"amenity": "clinic", "disused": "yes", "name": "Boolean Disused Clinic"}
+    },
+    {
+      "type": "node",
+      "id": 1011,
+      "lat": 0.26,
+      "lon": 0.25,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 4,
+      "tags": {"disused:amenity": "clinic", "name": "Prefixed Disused Clinic"}
+    },
+    {
+      "type": "node",
+      "id": 1012,
+      "lat": 0.27,
+      "lon": 0.25,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 4,
+      "tags": {"amenity": "clinic", "abandoned:amenity": "clinic", "name": "Both Forms Clinic"}
+    },
+    {
+      "type": "node",
+      "id": 1013,
+      "lat": 0.24,
+      "lon": 0.25,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 4,
+      "tags": {"amenity": "clinic", "closed": "yes", "name": "Closed Clinic"}
+    },
+    {
+      "type": "node",
+      "id": 1100,
+      "lat": 0.05,
+      "lon": 0.06,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 1,
+      "tags": {"amenity": "clinic", "name": "Twin Medical Clinic"}
+    },
+    {
+      "type": "node",
+      "id": 1101,
+      "lat": 0.0502,
+      "lon": 0.06,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 1,
+      "tags": {"amenity": "clinic", "name": "Twin  Medical Clinic!"}
+    },
+    {
+      "type": "node",
+      "id": 1001,
+      "lat": 0.055,
+      "lon": 0.055,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 2,
+      "tags": {"amenity": "clinic", "name": "Interior Node Clinic", "healthcare:speciality": "general"}
+    },
+    {
+      "type": "way",
+      "id": 3000,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 1,
+      "center": {"lat": 0.07, "lon": 0.07},
+      "tags": {"amenity": "hospital", "name": "Not A Clinic Hospital"}
+    },
+    {
+      "type": "node",
+      "id": 3001,
+      "lat": 0.04,
+      "lon": 0.06,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 1,
+      "tags": {"amenity": "doctors", "healthcare": "centre", "name": "Broader Healthcare Type"}
+    },
+    {
+      "type": "node",
+      "id": 3002,
+      "lat": 0.04,
+      "lon": 0.07,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 1,
+      "tags": {"name": "amenity=clinic Clinic"}
+    },
+    {
+      "type": "node",
+      "id": 3003,
+      "lat": 0.04,
+      "lon": 0.08,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "version": 1,
+      "tags": {"amenity": "Clinic", "name": "Case Sensitive Clinic"}
+    }
+  ]
+}

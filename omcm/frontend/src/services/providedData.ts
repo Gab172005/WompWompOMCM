@@ -1,10 +1,78 @@
 import dataset from "../data/laguna-datasets.json";
 import type { MapMetric, HospitalFacility } from "../types/municipality";
+import type {
+  ClinicDataset,
+  ClinicSnapshot,
+  LocatedOsmClinic,
+  OsmClinic,
+} from "../types/osmClinic";
 import {
   computeBarangayHealthcareNeed,
+  isLocatedClinic,
   type BarangayHealthcareNeed,
 } from "./healthcareNeed";
 export { distanceKm } from "./healthcareNeed";
+
+/**
+ * OSM clinic evidence is joined offline by the Python importer and bundled with
+ * the generated dataset (`clinics`, `clinicSnapshot`). The browser never calls
+ * Overpass and repeats no boundary assignment.
+ */
+const clinicBundle = dataset as typeof dataset & {
+  clinics?: OsmClinic[];
+  clinicSnapshot?: ClinicSnapshot;
+};
+
+/**
+ * The generated snapshot, or an explicitly invalid stand-in when a build has no
+ * clinic bundle. An unusable snapshot excludes both clinic factors; it is never
+ * read as verified zero provision.
+ */
+export const OSM_CLINIC_SNAPSHOT: ClinicSnapshot = clinicBundle.clinicSnapshot ?? {
+  valid: false,
+  retrievedAt: null,
+  osmBaseTimestamp: null,
+  endpoint: null,
+  query: null,
+  attribution: "© OpenStreetMap contributors",
+  license: "Open Database License (ODbL) 1.0",
+  rawSha256: null,
+  boundarySha256: null,
+  counts: {},
+  warnings: [
+    "No OSM clinic snapshot is bundled with this dataset build, so clinic factors are excluded.",
+  ],
+};
+
+const clinicDataset: ClinicDataset = {
+  clinics: clinicBundle.clinics ?? [],
+  clinicSnapshot: OSM_CLINIC_SNAPSHOT,
+};
+
+// Full provenance register, including coordinate-less and lifecycle-only records.
+export const PROVIDED_OSM_CLINICS: OsmClinic[] = clinicDataset.clinics;
+/**
+ * Only clinics that may appear on the map: usable snapshot, active, inside the
+ * province, valid WGS84 coordinates and not known to be outside the boundary.
+ * Every other record stays in the register above without a marker.
+ */
+export function mapEligibleOsmClinics(
+  clinics: OsmClinic[],
+  snapshotValid: boolean,
+): LocatedOsmClinic[] {
+  if (!snapshotValid) return [];
+  return clinics.filter(
+    (clinic): clinic is LocatedOsmClinic =>
+      clinic.active &&
+      clinic.inProvince &&
+      clinic.assignmentStatus !== "outside" &&
+      isLocatedClinic(clinic),
+  );
+}
+export const MAPPED_OSM_CLINICS: LocatedOsmClinic[] = mapEligibleOsmClinics(
+  PROVIDED_OSM_CLINICS,
+  OSM_CLINIC_SNAPSHOT.valid,
+);
 
 export type BarangayRecord = (typeof dataset.barangays)[number] &
   BarangayHealthcareNeed;
@@ -12,6 +80,7 @@ export type HospitalRecord = (typeof dataset.hospitals)[number];
 export const LAGUNA_BARANGAYS: BarangayRecord[] = computeBarangayHealthcareNeed(
   dataset.barangays,
   dataset.hospitals,
+  clinicDataset,
 );
 export const RANKED_BARANGAYS = [...LAGUNA_BARANGAYS].sort(
   (a, b) =>
@@ -29,6 +98,24 @@ export const MAPPED_HOSPITALS: HospitalFacility[] = PROVIDED_HOSPITALS.filter(
   (h): h is HospitalRecord & { lat: number; lng: number } =>
     h.lat !== null && h.lng !== null,
 );
+// Active, located OSM clinics the importer assigned to each barangay polygon.
+// This is separate evidence; it never enters the municipal hospital register.
+export const OSM_CLINICS_BY_BARANGAY: Map<string, LocatedOsmClinic[]> = new Map();
+for (const clinic of MAPPED_OSM_CLINICS) {
+  if (
+    !clinic.active ||
+    clinic.assignmentStatus !== "assigned" ||
+    !clinic.barangayPsgc
+  )
+    continue;
+  const records = OSM_CLINICS_BY_BARANGAY.get(clinic.barangayPsgc) ?? [];
+  records.push(clinic);
+  OSM_CLINICS_BY_BARANGAY.set(clinic.barangayPsgc, records);
+}
+for (const records of OSM_CLINICS_BY_BARANGAY.values())
+  records.sort(
+    (a, b) => a.name.localeCompare(b.name, "en") || a.id.localeCompare(b.id),
+  );
 
 export const normalizeMunicipality = (value: string) =>
   value

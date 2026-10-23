@@ -29,6 +29,9 @@
       ],
       "react/*": [
         "./node_modules/@types/react/*"
+      ],
+      "react-leaflet": [
+        "./node_modules/react-leaflet"
       ]
     }
   },

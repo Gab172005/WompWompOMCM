@@ -204,7 +204,28 @@ No external AI service, live GPS, surveillance, traffic or hazard feed is connec
 Barangay and municipal population counts come from the 2024 PSA Census of Population
 (`datasets/population_per_barangay.csv`, as of 01 July 2024); health, routing and
 deployment fixtures are illustrative. See
-[data sources and limitations](datasets/SOURCES.md) and [architecture](docs/ARCHITECTURE.md).
+[data sources and limitations](datasets/README.md), [OSM clinic provenance](docs/OSM_CLINICS.md),
+and [architecture](docs/ARCHITECTURE.md).
+
+### Barangay healthcare need and fixed clinics
+
+The default heatmap and searchable ranking use separate scores for all 681
+barangays. Production policy weights are morbidity **25%**, hospital distance
+**30%**, disaster risk **15%**, population density **10%**, municipality income
+class **10%**, OSM clinic distance **5%**, and clinic provision deficit **5%**.
+Urban/rural remains visible context but has no scoring weight. Missing factors
+are excluded with available-weight rescaling and provisional scores/ranks.
+
+Fixed **OSM clinics**, **Hospitals**, and simulated **Mobile clinics** have
+independent layer toggles; fixed facilities do not change schedules or mobile
+clinic selection. Clinic tags, location methods and acquisition provenance are
+bundled offline. OSM mapping is incomplete; clinic counts do not establish
+absence, capacity, or operating status. Distances are straight-line and
+Laguna-only, with potential province-edge bias. Weights are policy assumptions,
+not clinical coefficients. See [weight sensitivity](docs/CLINIC_SENSITIVITY.md).
+
+Refresh clinics explicitly using [the clinic importer](frontend/scripts/import-osm-clinics.py);
+ordinary dataset generation, tests and browser runtime require no Overpass access.
 
 ## Checks
 
@@ -213,19 +234,27 @@ cd omcm/frontend
 npm run lint
 npm test
 npm run build
-npm run test:e2e
-npm run test:e2e:legacy
+$env:OMCM_BROWSER_CHANNEL = "msedge"  # Windows; omit if Chromium is installed
+npm run test:barangays
+python scripts/import-osm-clinics.py --check
+python scripts/import-laguna-datasets.py --check
+python -m unittest discover -s ../tests/data -p "test_osm_clinics.py"
+node --experimental-strip-types scripts/clinic-sensitivity.mjs --check
 cd ../backend
 .venv/Scripts/python.exe -m pytest -q
 .venv/Scripts/python.exe export_datasets.py --check
 ```
 
-The new workspace browser suite runs an isolated Vite instance on port 5175.
-The retained connected-workflow suite uses ports 8001/5174 and a temporary
-database. On Windows the suites use headless Edge; elsewhere install Chromium
-with `npx playwright install chromium`. Screenshots go to
-`frontend/test-results/`. Test sources live under `tests/`; frontend dependencies
-remain installed once in `frontend/node_modules`.
+The barangay browser suite runs an isolated Vite instance on port 5176. On
+Windows select headless Edge with `OMCM_BROWSER_CHANNEL=msedge`; elsewhere install
+Chromium with `npx playwright install chromium`. Screenshots go to
+[the test-results directory](frontend/test-results/). Test sources live under
+[tests](tests/); frontend dependencies remain installed once. Historical package
+scripts `test:e2e`, `test:e2e:legacy` and `test:e2e:upstream` refer to suites not
+present in this checkout; do not treat them as successful verification.
+The backend test directory is also absent in this checkout, and the backend
+venv is not supplied. The backend commands above document the expected complete
+checkout environment, not a passing regression result for this working copy.
 
 Regenerate the inspectable dataset exports with
 `backend/.venv/Scripts/python.exe backend/export_datasets.py` from `omcm/`.

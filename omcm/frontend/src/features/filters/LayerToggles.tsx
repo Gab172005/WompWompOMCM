@@ -1,6 +1,7 @@
 import { useAppStore } from "../../store/useAppStore";
+/** Three independent layers: hospitals, proposed mobile clinics, fixed OSM clinics. */
 export function LayerToggles() {
-  const { showHospitals, showClinics } = useAppStore();
+  const { showHospitals, showClinics, showOsmClinics } = useAppStore();
   return (
     <div className="workspace-layer-toggles">
       <label>
@@ -21,7 +22,17 @@ export function LayerToggles() {
             useAppStore.setState({ showClinics: e.target.checked })
           }
         />{" "}
-        Clinics
+        Mobile clinics
+      </label>
+      <label>
+        <input
+          type="checkbox"
+          checked={showOsmClinics}
+          onChange={(e) =>
+            useAppStore.setState({ showOsmClinics: e.target.checked })
+          }
+        />{" "}
+        OSM clinics
       </label>
     </div>
   );

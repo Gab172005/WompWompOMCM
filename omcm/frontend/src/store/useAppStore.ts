@@ -15,7 +15,10 @@ interface AppState {
   selectedBarangayPsgc: string | null;
   activeMetric: MapMetric;
   showHospitals: boolean;
+  /** Mobile clinics: the proposed staging/deployment layer, not fixed facilities. */
   showClinics: boolean;
+  /** Fixed OSM clinics: a reference layer that never selects mobile clinics. */
+  showOsmClinics: boolean;
   sidePanelOpen: boolean;
   panel: Panel;
   recenterTrigger: number;
@@ -55,6 +58,7 @@ export const useAppStore = create<AppState>()(
       activeMetric: "score",
       showHospitals: true,
       showClinics: true,
+      showOsmClinics: true,
       sidePanelOpen: false,
       panel: null,
       recenterTrigger: 0,

@@ -1,8 +1,28 @@
 import { getMetricColor } from "../../../services/lagunaData";
 import { useAppStore } from "../../../store/useAppStore";
 import { metricLabels } from "../../filters/HeatmapSelector";
-export function MapLegend() {
+
+export interface ClinicSnapshotProvenance {
+  valid: boolean;
+  retrievedAt: string | null;
+  attribution: string;
+  license: string;
+}
+
+/**
+ * Legend for the active metric plus facility keys and the offline OSM snapshot
+ * provenance. "Clinic type" is stated explicitly so fixed facilities are never
+ * confused with the numbered mobile clinics.
+ */
+export function MapLegend({
+  clinicSnapshot,
+}: {
+  clinicSnapshot?: ClinicSnapshotProvenance | null;
+}) {
   const metric = useAppStore((s) => s.activeMetric);
+  const showHospitals = useAppStore((s) => s.showHospitals);
+  const showClinics = useAppStore((s) => s.showClinics);
+  const showOsmClinics = useAppStore((s) => s.showOsmClinics);
   const steps =
     metric === "disasterRisk"
       ? [0, 33.33, 66.67, 100]
@@ -50,6 +70,86 @@ export function MapLegend() {
           </span>
         )}
       </div>
+      <div
+        className="workspace-facility-keys"
+        aria-label="Facility layer keys"
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "2px 10px",
+          marginTop: 7,
+          fontSize: 9,
+          lineHeight: 1.5,
+          color: "#3f5668",
+          borderTop: "1px solid #e3eaf0",
+          paddingTop: 6,
+        }}
+      >
+        {showHospitals && (
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <i
+              className="facility-key hospital-facility-key"
+              aria-hidden="true"
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "#ef4444",
+              }}
+            />{" "}
+            Hospital
+          </span>
+        )}
+        {showClinics && (
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <i
+              className="facility-key mobile-clinic-facility-key"
+              aria-hidden="true"
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "#059669",
+              }}
+            />{" "}
+            Mobile clinic (numbered)
+          </span>
+        )}
+        {showOsmClinics && (
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <i
+              className="facility-key osm-clinic-facility-key"
+              aria-hidden="true"
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "#7c3aed",
+              }}
+            />{" "}
+            OSM clinic · fixed facility, not a mobile clinic
+          </span>
+        )}
+      </div>
+      {showOsmClinics && (
+        <small
+          className="workspace-attribution workspace-osm-clinic-attribution"
+          style={{
+            display: "block",
+            marginTop: 4,
+            fontSize: 9,
+            lineHeight: 1.4,
+            color: "#62788a",
+          }}
+        >
+          Clinic type: {clinicSnapshot?.valid === false ? "unavailable" : "OSM clinic · amenity=clinic or healthcare=clinic"} ·{" "}
+          {clinicSnapshot?.attribution || "© OpenStreetMap contributors"} ·{" "}
+          {clinicSnapshot?.license || "ODbL 1.0"} ·{" "}
+          {clinicSnapshot?.retrievedAt
+            ? `offline snapshot retrieved ${clinicSnapshot.retrievedAt}`
+            : "offline snapshot"}
+        </small>
+      )}
     </section>
   );
 }

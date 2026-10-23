@@ -1,0 +1,83 @@
+{
+  "format": "omcm-osm-clinics/1",
+  "endpoint": "https://overpass-api.de/api/interpreter",
+  "query": "[out:json][timeout:180];(nwr[\"amenity\"=\"clinic\"](13.9634909,121.0052961,14.5957714,121.6346258);nwr[\"healthcare\"=\"clinic\"](13.9634909,121.0052961,14.5957714,121.6346258);nwr[\"disused:amenity\"=\"clinic\"](13.9634909,121.0052961,14.5957714,121.6346258);nwr[\"disused:healthcare\"=\"clinic\"](13.9634909,121.0052961,14.5957714,121.6346258);nwr[\"abandoned:amenity\"=\"clinic\"](13.9634909,121.0052961,14.5957714,121.6346258);nwr[\"abandoned:healthcare\"=\"clinic\"](13.9634909,121.0052961,14.5957714,121.6346258);nwr[\"demolished:amenity\"=\"clinic\"](13.9634909,121.0052961,14.5957714,121.6346258);nwr[\"demolished:healthcare\"=\"clinic\"](13.9634909,121.0052961,14.5957714,121.6346258);nwr[\"construction:amenity\"=\"clinic\"](13.9634909,121.0052961,14.5957714,121.6346258);nwr[\"construction:healthcare\"=\"clinic\"](13.9634909,121.0052961,14.5957714,121.6346258);nwr[\"proposed:amenity\"=\"clinic\"](13.9634909,121.0052961,14.5957714,121.6346258);nwr[\"proposed:healthcare\"=\"clinic\"](13.9634909,121.0052961,14.5957714,121.6346258);nwr[\"was:amenity\"=\"clinic\"](13.9634909,121.0052961,14.5957714,121.6346258);nwr[\"was:healthcare\"=\"clinic\"](13.9634909,121.0052961,14.5957714,121.6346258););out meta center;",
+  "querySha256": "4a0b8e803b065ce6d4e4c2232bbe419a29f0fcf92c45240720c1ab2f8925a1c2",
+  "retrievedAt": "2026-10-23T17:32:47.575509+00:00",
+  "osmBaseTimestamp": "2026-10-23T17:31:38Z",
+  "overpassVersion": "0.6",
+  "bbox": [
+    13.963490883000073,
+    121.00529610100013,
+    14.595771359000022,
+    121.63462576500002
+  ],
+  "license": "ODbL-1.0",
+  "licenseUrl": "https://opendatacommons.org/licenses/odbl/1-0/",
+  "attribution": "© OpenStreetMap contributors",
+  "copyright": "https://www.openstreetmap.org/copyright",
+  "rawFile": "osm-clinics-raw.json",
+  "rawBytes": 175103,
+  "rawSha256": "d594cb60512710a1ba920918f10f678fe6752d68c385969df6ca91eb292fd660",
+  "normalizedFile": "osm-clinics-normalized.json",
+  "boundary": {
+    "barangaysFile": "frontend/public/assets/geo/laguna_barangays.geojson",
+    "barangaysSha256": "85af3374e8bbae4da9b250960c46a18f01d17df0802360d406d9d262c384f961",
+    "municipalitiesFile": "frontend/public/assets/geo/laguna_municipalities.geojson",
+    "municipalitiesSha256": "9124d1abb91eb479be4b6c0a4b43976bd8a0cf648e6321b50d2f9f4a8bf1cbc9"
+  },
+  "counts": {
+    "active": 382,
+    "activeAmbiguous": 0,
+    "activeAssigned": 98,
+    "activeInProvince": 98,
+    "activeLocatedInProvince": 98,
+    "activeNodes": 279,
+    "activeOutside": 284,
+    "activeOverpassCenters": 103,
+    "activeRelations": 0,
+    "activeUnassignedInsideProvince": 0,
+    "activeUnlocated": 0,
+    "activeWays": 103,
+    "assignedMunicipalities": 19,
+    "candidates": 385,
+    "distanceEligible": 98,
+    "duplicates": 0,
+    "inactive": 3,
+    "inactiveAssigned": 0,
+    "inactiveLocatedInProvince": 0,
+    "locatedRecords": 385,
+    "nodeRecords": 282,
+    "nonClinicElements": 0,
+    "records": 385,
+    "relationRecords": 0,
+    "suspectedDuplicates": 2,
+    "wayRecords": 103
+  },
+  "warnings": [
+    "2 pair(s) of distinct OSM elements share a normalized name within 50 m; they are flagged in provenance, not merged.",
+    "103 active clinic(s) use the Overpass bounding-box centre of a way/relation rather than an entrance.",
+    "The acquisition query did not request these lifecycle selectors, so related records may be absent rather than inactive: planned:amenity, planned:healthcare, removed:amenity, removed:healthcare, razed:amenity, razed:healthcare, destroyed:amenity, destroyed:healthcare, closed:amenity, closed:healthcare."
+  ],
+  "duplicateIds": [],
+  "suspectedDuplicates": [
+    {
+      "name": "Dr. Aldy Reyes Buan-Lazaro Medical Clinic: Internal Medicine",
+      "normalizedName": "draldyreyesbuanlazaromedicalclinicinternalmedicine",
+      "ids": [
+        "node/6688126886",
+        "node/6688137685"
+      ],
+      "distanceMeters": 15.3
+    },
+    {
+      "name": "Sumilang Super Health Center",
+      "normalizedName": "sumilangsuperhealthcenter",
+      "ids": [
+        "way/273211565",
+        "way/306281589"
+      ],
+      "distanceMeters": 39.0
+    }
+  ]
+}

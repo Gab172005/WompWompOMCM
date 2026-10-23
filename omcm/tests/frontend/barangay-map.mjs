@@ -7,14 +7,12 @@ const frontend = fileURLToPath(new URL("../../frontend", import.meta.url));
 const require = createRequire(resolve(frontend, "package.json"));
 const { chromium, expect } = require("@playwright/test");
 const server = spawn(process.execPath, ["node_modules/vite/bin/vite.js", "--host", "127.0.0.1", "--port", "5176", "--strictPort"], {
-  cwd: frontend, env: { ...process.env, VITE_DEMO_MODE: "true" }, stdio: "pipe",
+  cwd: frontend, env: { ...process.env, VITE_DEMO_MODE: "true" }, stdio: "inherit",
 });
-let browser, log = "";
-server.stdout.on("data", (data) => log += data);
-server.stderr.on("data", (data) => log += data);
+let browser;
 try {
   for (let attempt = 0; attempt < 80; attempt++) {
-    if (server.exitCode !== null) throw new Error(log);
+    if (server.exitCode !== null) throw new Error(`Vite exited with code ${server.exitCode}; see inherited server output.`);
     try { if ((await fetch("http://127.0.0.1:5176")).ok) break; } catch {}
     await new Promise((done) => setTimeout(done, 250));
   }
@@ -24,11 +22,24 @@ try {
   page.on("pageerror", (error) => errors.push(error.message));
   // Geometry and local datasets must work independently of external basemap tiles.
   await page.route("https://tile.openstreetmap.org/**", (route) => route.abort());
-  await page.goto("http://127.0.0.1:5176");
-  await expect(page.locator(".barangay-boundary")).toHaveCount(681);
+  // A cold Vite transform of the province bundle can exceed the default 30 s;
+  // wait for the app's actual geometry readiness, not external tile loading.
+  await page.goto("http://127.0.0.1:5176", { waitUntil: "domcontentloaded", timeout: 120000 });
+  await expect(page.locator(".barangay-boundary")).toHaveCount(681, { timeout: 90000 });
   await expect(page.locator(".municipality-boundary")).toHaveCount(30);
   await expect(page.getByLabel("Map legend")).toContainText("Healthcare need");
   await expect(page.locator(".hospital-marker-custom")).toHaveCount(61);
+  // Independently derive layer eligibility from the audit register, not the
+  // exported map array, so incorrect production filtering cannot bless itself.
+  const clinicState = await page.evaluate(async () => {
+    const { PROVIDED_OSM_CLINICS, MAPPED_OSM_CLINICS, OSM_CLINIC_SNAPSHOT } = await import("/src/services/providedData.ts");
+    const eligible = PROVIDED_OSM_CLINICS.filter((c) => c.active && c.inProvince && c.assignmentStatus !== "outside" && c.assignmentStatus !== "unlocated" && typeof c.lat === "number" && Number.isFinite(c.lat) && Math.abs(c.lat) <= 90 && typeof c.lng === "number" && Number.isFinite(c.lng) && Math.abs(c.lng) <= 180);
+    return { count: eligible.length, actualIds: MAPPED_OSM_CLINICS.map((c) => c.id).sort(), expectedIds: eligible.map((c) => c.id).sort(), valid: OSM_CLINIC_SNAPSHOT.valid };
+  });
+  expect(clinicState.valid).toBe(true);
+  expect(clinicState.count).toBeGreaterThan(0);
+  expect(clinicState.actualIds).toEqual(clinicState.expectedIds);
+  await expect(page.locator(".osm-clinic-marker-custom")).toHaveCount(clinicState.count);
   const ranked = await page.evaluate(async () => {
     const { RANKED_BARANGAYS } = await import("/src/services/providedData.ts");
     return RANKED_BARANGAYS.map((b) => ({ psgc: b.psgc, name: b.name, municipality: b.municipality, score: b.needScore, rank: b.needRank }));
@@ -45,9 +56,11 @@ try {
   await expect(healthcareNeed).toContainText(`Healthcare need rank #${top.rank} of 681`);
   await expect(healthcareNeed).toContainText(top.score.toFixed(1));
   await expect(healthcareNeed).toContainText("Municipality income class · 10% base weight");
-  await expect(healthcareNeed).toContainText("Urban / rural classification · 10% base weight");
+  await expect(healthcareNeed).toContainText("Clinic distance · 5% base weight");
+  await expect(healthcareNeed).toContainText("Clinic provision deficit · 5% base weight");
+  await expect(healthcareNeed).toContainText("demographic context, not scored");
+  await expect(healthcareNeed).not.toContainText("Urban / rural classification · 10% base weight");
   await expect(healthcareNeed).toContainText("resource proxy");
-  await expect(healthcareNeed).toContainText("classification proxy");
   await expect(page.locator(".workspace-panel-body")).toHaveJSProperty("scrollTop", 0);
   await expect(page.locator(".barangay-boundary.is-selected")).toHaveCount(1);
   await mkdir(resolve(frontend, "test-results"), { recursive: true });
@@ -87,14 +100,28 @@ try {
   await page.getByLabel("Heatmap layer").selectOption("density");
   await expect(polygon).toHaveAttribute("fill", "#facc15");
   await page.getByLabel("Heatmap layer").selectOption("disasterRisk");
+  const osmToggle = page.getByRole("checkbox", { name: "OSM clinics", exact: true });
+  const mobileToggle = page.getByRole("checkbox", { name: "Mobile clinics", exact: true });
+  const mobileCount = await page.locator(".clinic-staging-marker").count();
+  await osmToggle.uncheck();
+  await expect(page.locator(".osm-clinic-marker-custom")).toHaveCount(0);
+  await expect(page.locator(".hospital-marker-custom")).toHaveCount(61);
+  await expect(page.locator(".clinic-staging-marker")).toHaveCount(mobileCount);
+  await osmToggle.check();
+  await expect(page.locator(".osm-clinic-marker-custom")).toHaveCount(clinicState.count);
+  await mobileToggle.uncheck();
+  await expect(page.locator(".clinic-staging-marker")).toHaveCount(0);
+  await expect(page.locator(".osm-clinic-marker-custom")).toHaveCount(clinicState.count);
+  await mobileToggle.check();
   await page.getByRole("checkbox", { name: "Hospitals", exact: true }).uncheck();
   await expect(page.locator(".hospital-marker-custom")).toHaveCount(0);
+  await expect(page.locator(".osm-clinic-marker-custom")).toHaveCount(clinicState.count);
   await page.getByRole("checkbox", { name: "Hospitals", exact: true }).check();
   await page.keyboard.press("Escape");
   await search.fill("Dambo");
   await page.getByRole("option", { name: /Dambo, Pangil/ }).click();
   await expect(panel).toContainText("Needs review");
-  await expect(healthcareNeed).toContainText("Provisional score and rank · 80%");
+  await expect(healthcareNeed).toContainText("Provisional score and rank · 85%");
   await expect(panel).toContainText("0–100/100");
   await expect(polygon).toHaveAttribute("aria-pressed", "false");
   await expect(page.locator(".barangay-boundary.is-selected")).toHaveCount(1);
@@ -126,7 +153,7 @@ try {
   await page.getByRole("button", { name: "Close intelligence panel" }).click();
   await expect(panel).toHaveCount(0);
   if (errors.length) throw new Error(errors.join("\n"));
-  console.log("Barangay browser checks passed: boundaries, pointer selection, highlight, source details, filters, missing/zero risk, hospital toggle, municipality return, healthcare need scores, provincial ranking/filter/pagination, provisional ranks, mobile layout and close.");
+  console.log("Barangay browser checks passed: boundaries, pointer selection, highlight, source details, filters, missing/zero risk, independent OSM/hospital/mobile toggles, municipality return, healthcare need scores, provincial ranking/filter/pagination, provisional ranks, mobile layout and close.");
 } finally {
   await browser?.close();
   server.kill();
