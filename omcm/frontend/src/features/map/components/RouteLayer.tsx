@@ -5,10 +5,16 @@ export function RouteLayer({
   disruptions,
   simulationActive,
   selectedClinicId,
+  publicMode,
 }: Pick<
   MapProps,
-  "proposedClinics" | "disruptions" | "simulationActive" | "selectedClinicId"
+  | "proposedClinics"
+  | "disruptions"
+  | "simulationActive"
+  | "selectedClinicId"
+  | "publicMode"
 >) {
+  if (publicMode) return null;
   return (
     <>
       {disruptions.map((d) => (

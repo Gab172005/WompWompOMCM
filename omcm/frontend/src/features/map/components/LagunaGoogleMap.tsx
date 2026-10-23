@@ -34,6 +34,7 @@ export function LagunaGoogleMap({
   disruptions,
   recenterTrigger,
   zoomDelta,
+  publicMode = false,
   onAuthFailure,
 }: LagunaGoogleMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -263,8 +264,12 @@ export function LagunaGoogleMap({
             }[activeMetric]
           : null;
       return {
-        fillColor: isSelected ? "#facc15" : getMetricColor(activeMetric, value),
-        fillOpacity: isSelected ? 0.7 : isBarangay ? 0.62 : 0,
+        fillColor: isSelected
+          ? "#facc15"
+          : publicMode
+            ? "#f8fafc"
+            : getMetricColor(activeMetric, value),
+        fillOpacity: isSelected ? 0.7 : isBarangay ? (publicMode ? 0.45 : 0.62) : 0,
         strokeColor: isSelected
           ? "#102c43"
           : isBarangay
@@ -289,7 +294,9 @@ export function LagunaGoogleMap({
         const name = `${barangay.name}, ${barangay.municipality}`;
         const metric = activeMetric;
         const value = barangayMetric(barangay, metric);
-        const valDisplay = `${barangayMetricLabel(metric)}: ${value === null ? "Needs review" : value + (metric === "density" ? "/km²" : metric === "morbidity" ? " / 1,000" : "/100")}${metric === "score" ? ` · Healthcare need rank #${barangay.needRank} of 681${barangay.needProvisional ? " · Provisional" : ""}` : ""}`;
+        const valDisplay = publicMode
+          ? `Population: ${barangay.population.toLocaleString()} · Click for nearby clinics & hospitals`
+          : `${barangayMetricLabel(metric)}: ${value === null ? "Needs review" : value + (metric === "density" ? "/km²" : metric === "morbidity" ? " / 1,000" : "/100")}${metric === "score" ? ` · Healthcare need rank #${barangay.needRank} of 681${barangay.needProvisional ? " · Provisional" : ""}` : ""}`;
 
         setHoveredInfo({
           name,
@@ -331,6 +338,7 @@ export function LagunaGoogleMap({
     selectedPsgc,
     selectedBarangayPsgc,
     onSelectBarangay,
+    publicMode,
   ]);
 
   // Zoom to selected municipality when selection changes externally

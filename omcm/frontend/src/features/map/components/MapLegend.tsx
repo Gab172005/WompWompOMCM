@@ -2,7 +2,39 @@ import { getMetricColor } from "../../../services/lagunaData";
 import { useAppStore } from "../../../store/useAppStore";
 import { metricLabels } from "../../filters/HeatmapSelector";
 export function MapLegend() {
-  const metric = useAppStore((s) => s.activeMetric);
+  const {
+    activeMetric: metric,
+    viewMode,
+    selectedScheduleDate,
+    publishedSchedules,
+  } = useAppStore();
+  if (viewMode === "public") {
+    const schedule = publishedSchedules[selectedScheduleDate];
+    return (
+      <section className="workspace-legend card" aria-label="Map legend">
+        <strong>Approved Care Locations</strong>
+        <span>
+          {schedule
+            ? `${schedule.date} · ${schedule.startTime}–${schedule.endTime} PH Time`
+            : `${selectedScheduleDate} · No schedule published`}
+        </span>
+        <div className="workspace-boundary-keys">
+          <span>
+            <i className="public-clinic-key" /> Approved clinic
+          </span>
+          <span>
+            <i className="public-hospital-key" /> Verified hospital
+          </span>
+          <span>
+            <i className="boundary-key municipality-key" /> Municipality
+          </span>
+          <span>
+            <i className="boundary-key selected-key" /> Selected community
+          </span>
+        </div>
+      </section>
+    );
+  }
   const steps =
     metric === "disasterRisk"
       ? [0, 33.33, 66.67, 100]

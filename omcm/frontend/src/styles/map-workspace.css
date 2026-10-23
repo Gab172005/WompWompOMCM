@@ -588,3 +588,274 @@
   opacity: 0.4;
   cursor: default;
 }
+
+.workspace .map-signout-button {
+  border-left: 1px solid #e8eaed;
+  border-radius: 0;
+  color: #b91c1c;
+}
+.map-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 24px;
+  background: #102c43;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 2px 5px #3c404320;
+}
+@media (max-width: 760px) {
+  .map-mode-pill {
+    display: none;
+  }
+}
+
+.admin-login-modal {
+  display: grid;
+  gap: 14px;
+}
+.admin-demo-hint {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+.admin-demo-hint p {
+  margin: 4px 0 6px;
+}
+.admin-login-form {
+  display: grid;
+  gap: 12px;
+}
+.workspace-alert.error {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: 12px;
+}
+
+.emergency-override-banner {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fef2f2;
+  border: 1px solid #f87171;
+  color: #7f1d1d;
+  font-size: 12px;
+}
+.emergency-override-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.emergency-override-banner small {
+  display: block;
+  margin-top: 6px;
+  color: #991b1b;
+  font-size: 11px;
+}
+.badge-danger {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+}
+
+.public-date-card {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+}
+.public-date-card .workspace-field > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.public-schedule-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+.public-schedule-meta small {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.public-community-card {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  border-left: 4px solid #1a73e8;
+}
+.public-community-card h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 2px;
+  font-size: 13px;
+}
+.public-nearest-clinic {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 12px;
+}
+.public-nearest-clinic span,
+.public-nearest-clinic small {
+  color: #475569;
+  font-size: 11px;
+}
+
+.public-clinic-card {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+  border: 1px solid #e2e8f0;
+  transition: border-color 0.15s ease;
+}
+.public-clinic-card.is-active {
+  border-color: #1a73e8;
+  background: #f8fbff;
+}
+.public-clinic-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.public-clinic-location {
+  margin: 0;
+  color: #475569;
+  font-size: 12px;
+}
+.public-clinic-hours {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+}
+.public-service-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.public-service-tag {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #075985;
+  font-size: 11px;
+  font-weight: 600;
+}
+.public-empty-schedule {
+  margin: 10px 0;
+  text-align: left;
+}
+.public-advisories-card {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+.public-advisories-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.public-advisory-list {
+  margin: 4px 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.approval-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+.approval-time-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.approval-services-fieldset {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 0;
+}
+.approval-services-fieldset legend {
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.approval-services-grid {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+}
+.approval-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.approval-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+}
+.emergency-toggle {
+  padding: 6px 0;
+  font-weight: 600;
+}
+.emergency-override-box {
+  display: grid;
+  gap: 10px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+}
+.emergency-override-box textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.public-clinic-key {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #208d83;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px #102c43;
+}
+.public-hospital-key {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  background: #dc2626;
+}

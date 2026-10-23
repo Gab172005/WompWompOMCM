@@ -8,6 +8,8 @@ export function ClinicMarkers({
   simulationProgress,
   selectedClinicId,
   onSelectClinic,
+  publicMode,
+  publicScheduleInfo,
 }: Pick<
   MapProps,
   | "proposedClinics"
@@ -15,13 +17,16 @@ export function ClinicMarkers({
   | "simulationProgress"
   | "selectedClinicId"
   | "onSelectClinic"
+  | "publicMode"
+  | "publicScheduleInfo"
 >) {
   return (
     <>
       {proposedClinics.map((c, i) => {
-        const pos = simulationActive
-          ? interpolateRoutePosition(c.route, simulationProgress)
-          : c;
+        const pos =
+          simulationActive && !publicMode
+            ? interpolateRoutePosition(c.route, simulationProgress)
+            : c;
         const icon = divIcon({
           className: "clinic-staging-marker",
           html: `<span class="workspace-clinic-marker ${selectedClinicId === c.clinicId ? "selected" : ""}">${i + 1}</span>`,
@@ -48,9 +53,11 @@ export function ClinicMarkers({
               </strong>
               <p>
                 {c.capacity} patients/day ·{" "}
-                {simulationActive
-                  ? "Simulated position"
-                  : "Proposed staging site"}
+                {publicMode
+                  ? publicScheduleInfo || "Approved mobile clinic"
+                  : simulationActive
+                    ? "Simulated position"
+                    : "Proposed staging site"}
               </p>
             </Popup>
           </Marker>

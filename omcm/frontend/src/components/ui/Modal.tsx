@@ -12,9 +12,30 @@ export function Modal({
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    ref.current?.showModal();
+    const dialog = ref.current;
+    if (dialog) {
+      if (typeof dialog.showModal === "function") {
+        try {
+          dialog.showModal();
+        } catch {
+          dialog.setAttribute("open", "");
+        }
+      } else {
+        dialog.setAttribute("open", "");
+      }
+    }
     return () => {
-      ref.current?.close();
+      if (dialog) {
+        if (typeof dialog.close === "function") {
+          try {
+            dialog.close();
+          } catch {
+            dialog.removeAttribute("open");
+          }
+        } else {
+          dialog.removeAttribute("open");
+        }
+      }
       previous?.focus();
     };
   }, []);

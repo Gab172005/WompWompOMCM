@@ -15,29 +15,41 @@ export function BarangayBoundaryLayer({
   activeMetric,
   selectedBarangayPsgc,
   onSelectBarangay,
+  publicMode = false,
 }: {
   data: FeatureCollection;
 } & Pick<
   MapProps,
-  "activeMetric" | "selectedBarangayPsgc" | "onSelectBarangay"
+  "activeMetric" | "selectedBarangayPsgc" | "onSelectBarangay" | "publicMode"
 >) {
   const ref = useRef<LeafletGeoJSON>(null);
   const current = useRef({
     activeMetric,
     selectedBarangayPsgc,
     onSelectBarangay,
+    publicMode,
   });
-  current.current = { activeMetric, selectedBarangayPsgc, onSelectBarangay };
+  current.current = {
+    activeMetric,
+    selectedBarangayPsgc,
+    onSelectBarangay,
+    publicMode,
+  };
   function style(feature?: Feature): PathOptions {
     const b = BARANGAYS_BY_PSGC.get(String(feature?.properties?.adm4_psgc));
-    const { activeMetric: metric, selectedBarangayPsgc: selected } =
-      current.current;
+    const {
+      activeMetric: metric,
+      selectedBarangayPsgc: selected,
+      publicMode: isPublic,
+    } = current.current;
     const isSelected = b?.psgc === selected;
     return {
       fillColor: isSelected
         ? "#facc15"
-        : getMetricColor(metric, b ? barangayMetric(b, metric) : null),
-      fillOpacity: isSelected ? 0.7 : 0.62,
+        : isPublic
+          ? "#f8fafc"
+          : getMetricColor(metric, b ? barangayMetric(b, metric) : null),
+      fillOpacity: isSelected ? 0.7 : isPublic ? 0.45 : 0.62,
       color: isSelected ? "#102c43" : "#64748b",
       weight: isSelected ? 3.5 : 0.7,
       opacity: isSelected ? 1 : 0.85,
@@ -63,7 +75,7 @@ export function BarangayBoundaryLayer({
         String(b?.psgc === selectedBarangayPsgc),
       );
     });
-  }, [activeMetric, selectedBarangayPsgc]);
+  }, [activeMetric, selectedBarangayPsgc, publicMode]);
   return (
     <GeoJSON
       ref={ref}
@@ -76,9 +88,13 @@ export function BarangayBoundaryLayer({
           current.current.onSelectBarangay(b.psgc, b.municipalityPsgc);
         layer.bindTooltip(
           () => {
+            const label = document.createElement("span");
+            if (current.current.publicMode) {
+              label.textContent = `${b.name}, ${b.municipality} · Population: ${b.population.toLocaleString()} · Click for nearby clinics & hospitals`;
+              return label;
+            }
             const metric = current.current.activeMetric;
             const value = barangayMetric(b, metric);
-            const label = document.createElement("span");
             label.textContent = `${b.name}, ${b.municipality} · ${barangayMetricLabel(metric)}: ${value === null ? "Needs review" : `${value.toLocaleString()}${metric === "density" ? "/km²" : metric === "morbidity" ? " / 1,000" : "/100"}`}`;
             if (metric === "score")
               label.textContent += ` · Healthcare need rank #${b.needRank} of 681${b.needProvisional ? " · Provisional" : ""}`;

@@ -14,32 +14,61 @@ import { SimulationPlayback } from "../../features/simulation/SimulationPlayback
 import { ClinicTracker } from "../../features/tracking/ClinicTracker";
 import { useClinicAnimation } from "../../features/tracking/useClinicAnimation";
 import { ChatbotPanel } from "../../features/chatbot/ChatbotPanel";
+import { PublicSidePanel } from "../../features/public/PublicSidePanel";
+import { AdminLoginModal } from "../../features/auth/AdminLoginModal";
 import { LAGUNA_HOSPITALS } from "../../services/lagunaData";
 import { useAppStore } from "../../store/useAppStore";
+
+const ADMIN_ROUTES = new Set([
+  "/admin",
+  "/dashboard/admin",
+  "/risk",
+  "/optimization",
+  "/simulator",
+]);
+
 export function AppLayout() {
   const state = useAppStore(),
     { municipalities, plan, disruptions } = usePlanningResults();
   const { pathname } = useLocation();
   useClinicAnimation();
+
   useEffect(() => {
-    useAppStore
-      .getState()
-      .openPanel(
+    const store = useAppStore.getState();
+    if (ADMIN_ROUTES.has(pathname)) {
+      const targetPanel =
         pathname === "/optimization"
           ? "optimization"
           : pathname === "/simulator"
             ? "simulation"
-            : null,
-      );
-  }, [pathname]);
+            : null;
+      if (store.adminUser) {
+        useAppStore.setState({ viewMode: "admin", loginModalOpen: false });
+        store.openPanel(targetPanel);
+      } else {
+        store.requestAdminView(targetPanel);
+      }
+    } else {
+      store.setViewMode("public");
+    }
+  }, [pathname, state.adminUser]);
+
+  const isPublic = state.viewMode === "public";
+  const publicSchedule =
+    state.publishedSchedules[state.selectedScheduleDate] ?? null;
+  const displayedClinics = isPublic
+    ? (publicSchedule?.plan.clinics ?? [])
+    : plan.clinics;
+
   const titles = {
     optimization: "Clinic optimization",
     simulation: "Disaster simulator",
     chatbot: "Operations assistant",
   };
+
   return (
     <div
-      className={`workspace ${state.panel ? "has-tool-panel" : state.sidePanelOpen ? "has-detail-panel" : ""} ${state.panel === "simulation" ? "is-simulating" : ""}`}
+      className={`workspace ${!isPublic && state.panel ? "has-tool-panel" : state.sidePanelOpen ? "has-detail-panel" : ""} ${!isPublic && state.panel === "simulation" ? "is-simulating" : ""} ${isPublic ? "is-public-view" : "is-admin-view"}`}
     >
       <main className="workspace-stage" aria-label="Laguna planning map">
         <LagunaMap
@@ -52,8 +81,8 @@ export function AppLayout() {
           showHospitals={state.showHospitals}
           showClinics={state.showClinics}
           hospitals={LAGUNA_HOSPITALS}
-          proposedClinics={plan.clinics}
-          simulationActive={state.panel === "simulation"}
+          proposedClinics={displayedClinics}
+          simulationActive={!isPublic && state.panel === "simulation"}
           simulationProgress={state.progress}
           selectedClinicId={state.selectedClinicId}
           onSelectClinic={(selectedClinicId) =>
@@ -62,13 +91,19 @@ export function AppLayout() {
           disruptions={disruptions}
           recenterTrigger={state.recenterTrigger}
           zoomDelta={state.zoomDelta}
+          publicMode={isPublic}
+          publicScheduleInfo={
+            publicSchedule
+              ? `${publicSchedule.date} · ${publicSchedule.startTime}–${publicSchedule.endTime} PH Time · ${publicSchedule.status}`
+              : ""
+          }
         />
         <MapControls />
-        {!state.panel && <SidePanel />}
+        {isPublic ? <PublicSidePanel /> : !state.panel && <SidePanel />}
         <FloatingControls />
         <MapLegend />
         <MapNavigation />
-        {state.panel && (
+        {!isPublic && state.panel && (
           <aside
             className="workspace-panel tool-panel card"
             aria-label={titles[state.panel]}
@@ -94,10 +129,15 @@ export function AppLayout() {
             </div>
           </aside>
         )}
-        {state.panel === "simulation" && <SimulationPlayback />}
+        {!isPublic && state.panel === "simulation" && <SimulationPlayback />}
         <ClinicTracker />
+        <AdminLoginModal />
       </main>
-      <div className="map-disclaimer">OMCM · Supplied barangay data · Planning estimates</div>
+      <div className="map-disclaimer">
+        {isPublic
+          ? "OMCM · Public View · Approved mobile clinic schedules & hospitals (Demo)"
+          : "OMCM · Admin View · Supplied barangay data · Planning estimates"}
+      </div>
     </div>
   );
 }
