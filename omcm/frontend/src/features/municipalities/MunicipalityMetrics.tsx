@@ -22,7 +22,12 @@ export function MunicipalityMetrics({
           [m.population.toLocaleString(), "Population"],
           [m.density.toLocaleString(), "Residents / km²"],
           [m.adjustedMorbidity + " / 1k", "Illustrative morbidity"],
-          [m.adjustedFlood + " / 100", "Illustrative flood exposure"],
+          [
+            m.adjustedDisasterRisk === null
+              ? "Unavailable"
+              : m.adjustedDisasterRisk + " / 100",
+            "Disaster risk index",
+          ],
         ].map(([value, label]) => (
           <div key={label}>
             <strong>{value}</strong>
@@ -33,7 +38,7 @@ export function MunicipalityMetrics({
       <h3>Score contributions</h3>
       {Object.entries(m.scoreContributions).map(([key, value]) => (
         <div className="workspace-contribution" key={key}>
-          <span>{key}</span>
+          <span>{key === "disasterRisk" ? "Disaster risk" : key}</span>
           <meter
             min={0}
             max={35}
@@ -44,8 +49,10 @@ export function MunicipalityMetrics({
         </div>
       ))}
       <p className="workspace-note">
-        Estimated hospital access: {m.nearest_hospital}, approximately{" "}
-        {m.hospital_minutes} minutes. PSGC {m.psgc}.
+        PSGC {m.psgc}. Disaster risk is a population-weighted rollup of{" "}
+        {m.riskRecords} of {m.barangayCount} barangay indices. Coverage is
+        unverified; unresolved indices are excluded from the rollup.
+        Vulnerability and scenario adjustments remain illustrative.
       </p>
     </>
   );

@@ -1,10 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState, useMemo } from "react";
-import type {
-  ComputedMunicipality,
-  HospitalFacility,
-  RoadDisruption,
-} from "../../../services/lagunaData";
 import {
   LAGUNA_BOUNDS,
   LAGUNA_CENTER,
@@ -12,37 +7,21 @@ import {
   interpolateRoutePosition,
 } from "../../../services/lagunaData";
 
-interface LagunaGoogleMapProps {
-  municipalities: ComputedMunicipality[];
-  selectedPsgc: string | null;
-  onSelectMunicipality: (psgc: string | null) => void;
-  activeMetric: "score" | "density" | "flood" | "morbidity";
-  showHospitals: boolean;
-  showClinics: boolean;
-  hospitals: HospitalFacility[];
-  proposedClinics: Array<{
-    clinicId: string;
-    siteName: string;
-    municipality: string;
-    lat: number;
-    lng: number;
-    capacity: number;
-    route?: [number, number][];
-  }>;
-  simulationActive: boolean;
-  simulationProgress: number; // 0 to 1
-  selectedClinicId: string | null;
-  onSelectClinic: (clinicId: string) => void;
-  disruptions: RoadDisruption[];
-  recenterTrigger: number;
-  zoomDelta: number;
+import type { MapProps } from "./mapTypes";
+import {
+  BARANGAYS_BY_PSGC,
+  barangayMetric,
+  barangayMetricLabel,
+} from "../../../services/providedData";
+interface LagunaGoogleMapProps extends MapProps {
   onAuthFailure?: (message: string) => void;
 }
 
 export function LagunaGoogleMap({
   municipalities,
   selectedPsgc,
-  onSelectMunicipality,
+  selectedBarangayPsgc,
+  onSelectBarangay,
   activeMetric,
   showHospitals,
   showClinics,
@@ -91,11 +70,20 @@ export function LagunaGoogleMap({
   // Load official Laguna Municipalities GeoJSON
   useEffect(() => {
     let isMounted = true;
-    fetch(`${import.meta.env.BASE_URL}assets/geo/laguna_municipalities.geojson`)
-      .then((r) => {
-        if (!r.ok) throw new Error("Laguna GeoJSON file missing or unreadable");
-        return r.json();
-      })
+    Promise.all(
+      ["laguna_municipalities", "laguna_barangays"].map(async (name) => {
+        const response = await fetch(
+          `${import.meta.env.BASE_URL}assets/geo/${name}.geojson`,
+        );
+        if (!response.ok)
+          throw new Error("Laguna boundary file missing or unreadable");
+        return response.json();
+      }),
+    )
+      .then((collections) => ({
+        type: "FeatureCollection",
+        features: collections.flatMap((c) => c.features),
+      }))
       .then((data) => {
         if (isMounted) setGeoJsonData(data);
       })
@@ -259,27 +247,42 @@ export function LagunaGoogleMap({
     // Style data layer
     map.data.setStyle((feature) => {
       const code = String(feature.getProperty("adm3_psgc") || "");
+      const barangayCode = String(feature.getProperty("adm4_psgc") || "");
+      const barangay = BARANGAYS_BY_PSGC.get(barangayCode);
       const mun = byPsgc.get(code);
-      const isSelected = selectedPsgc === code;
-
-      let value = 0;
-      if (mun) {
-        if (activeMetric === "score") value = mun.needScore;
-        else if (activeMetric === "density") value = mun.density;
-        else if (activeMetric === "flood") value = mun.adjustedFlood;
-        else if (activeMetric === "morbidity") value = mun.adjustedMorbidity;
-      }
-
-      const fillColor = getMetricColor(activeMetric, value);
-
+      const isBarangay = Boolean(barangayCode);
+      const isSelected = isBarangay && selectedBarangayPsgc === barangayCode;
+      const value = barangay
+        ? barangayMetric(barangay, activeMetric)
+        : mun
+          ? {
+              score: mun.needScore,
+              density: mun.density,
+              disasterRisk: mun.adjustedDisasterRisk,
+              morbidity: mun.adjustedMorbidity,
+            }[activeMetric]
+          : null;
       return {
-        fillColor,
-        fillOpacity: isSelected ? 0.88 : 0.68,
-        strokeColor: isSelected ? "#38bdf8" : "#ffffff",
-        strokeWeight: isSelected ? 3.5 : 1.2,
+        fillColor: isSelected ? "#facc15" : getMetricColor(activeMetric, value),
+        fillOpacity: isSelected
+          ? 0.7
+          : isBarangay
+            ? activeMetric === "score"
+              ? 0
+              : 0.62
+            : activeMetric === "score"
+              ? 0.65
+              : 0,
+        strokeColor: isSelected
+          ? "#102c43"
+          : isBarangay
+            ? "#64748b"
+            : "#334155",
+        strokeWeight: isSelected ? 3.5 : isBarangay ? 0.7 : 1.8,
         strokeOpacity: 0.95,
+        clickable: isBarangay,
         cursor: "pointer",
-        zIndex: isSelected ? 5 : 2,
+        zIndex: isSelected ? 5 : isBarangay ? 2 : 1,
       };
     });
 
@@ -287,24 +290,14 @@ export function LagunaGoogleMap({
     const mouseOverListener = map.data.addListener(
       "mouseover",
       (event: any) => {
-        const code = String(event.feature.getProperty("adm3_psgc") || "");
-        const mun = byPsgc.get(code);
-        const name =
-          event.feature.getProperty("adm3_en") ||
-          mun?.name ||
-          "Laguna Municipality";
-
-        let valDisplay = "";
-        if (mun) {
-          if (activeMetric === "score")
-            valDisplay = `Need: ${mun.needScore}/100 (#${mun.rank})`;
-          else if (activeMetric === "density")
-            valDisplay = `Density: ${mun.density.toLocaleString()}/km²`;
-          else if (activeMetric === "flood")
-            valDisplay = `Flood Risk: ${mun.adjustedFlood}/100`;
-          else if (activeMetric === "morbidity")
-            valDisplay = `Morbidity: ${mun.adjustedMorbidity}/1k`;
-        }
+        const barangay = BARANGAYS_BY_PSGC.get(
+          String(event.feature.getProperty("adm4_psgc")),
+        );
+        if (!barangay) return;
+        const name = `${barangay.name}, ${barangay.municipality}`;
+        const metric = activeMetric === "score" ? "disasterRisk" : activeMetric;
+        const value = barangayMetric(barangay, metric);
+        const valDisplay = `${barangayMetricLabel(metric)}: ${value === null ? "Needs review" : value + (metric === "density" ? "/km²" : metric === "morbidity" ? " / 1,000" : "/100")}`;
 
         setHoveredInfo({
           name,
@@ -327,15 +320,13 @@ export function LagunaGoogleMap({
     });
 
     const clickListener = map.data.addListener("click", (event: any) => {
-      const code = String(event.feature.getProperty("adm3_psgc") || "");
-      onSelectMunicipality(code === selectedPsgc ? null : code);
+      const barangay = BARANGAYS_BY_PSGC.get(
+        String(event.feature.getProperty("adm4_psgc")),
+      );
+      if (!barangay) return;
+      onSelectBarangay(barangay.psgc, barangay.municipalityPsgc);
 
-      // Fit to clicked feature bounds
-      const bounds = new google.maps.LatLngBounds();
-      event.feature.getGeometry().forEachLatLng((latLng: any) => {
-        bounds.extend(latLng);
-      });
-      map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
+
     });
 
     return () => {
@@ -343,16 +334,29 @@ export function LagunaGoogleMap({
       google.maps.event.removeListener(mouseOutListener);
       google.maps.event.removeListener(clickListener);
     };
-  }, [geoJsonData, activeMetric, byPsgc, selectedPsgc, onSelectMunicipality]);
+  }, [
+    geoJsonData,
+    activeMetric,
+    byPsgc,
+    selectedPsgc,
+    selectedBarangayPsgc,
+    onSelectBarangay,
+  ]);
 
   // Zoom to selected municipality when selection changes externally
   useEffect(() => {
     const map = mapInstanceRef.current;
-    if (!map || !selectedPsgc || !window.google?.maps) return;
+    if (!map || !(selectedBarangayPsgc || selectedPsgc) || !window.google?.maps)
+      return;
 
     let targetFeature: google.maps.Data.Feature | null = null;
     map.data.forEach((f) => {
-      if (String(f.getProperty("adm3_psgc")) === selectedPsgc) {
+      if (
+        selectedBarangayPsgc
+          ? String(f.getProperty("adm4_psgc")) === selectedBarangayPsgc
+          : !f.getProperty("adm4_psgc") &&
+            String(f.getProperty("adm3_psgc")) === selectedPsgc
+      ) {
         targetFeature = f;
       }
     });
@@ -362,9 +366,21 @@ export function LagunaGoogleMap({
       (targetFeature as any).getGeometry().forEachLatLng((latLng: any) => {
         bounds.extend(latLng);
       });
-      map.fitBounds(bounds, { top: 70, right: 70, bottom: 70, left: 70 });
+      const width = containerRef.current?.clientWidth ?? 1440;
+      const height = containerRef.current?.clientHeight ?? 1000;
+      map.fitBounds(
+        bounds,
+        width <= 760
+          ? {
+              top: 140,
+              right: 24,
+              bottom: Math.min(height * 0.46, height - 320) + 148,
+              left: 24,
+            }
+          : { top: 80, right: 50, bottom: 100, left: 420 },
+      );
     }
-  }, [selectedPsgc]);
+  }, [selectedPsgc, selectedBarangayPsgc, geoJsonData]);
 
   // Render Hospital Markers
   useEffect(() => {
@@ -393,7 +409,7 @@ export function LagunaGoogleMap({
           content: `<div style="color:#0f172a;font-family:sans-serif;padding:6px;">
             <strong style="font-size:14px;color:#b91c1c;">${h.name}</strong><br/>
             <small style="color:#64748b;">${h.municipality} · ${h.type}</small>
-            <div style="margin-top:6px;font-size:12px;">Services: ${h.services.join(", ")}</div>
+            <div style="margin-top:6px;font-size:12px;">${h.capacity === null ? "Beds unverified" : h.capacity + " beds"} · ${h.verificationStatus || ""}</div>
           </div>`,
           position: { lat: h.lat, lng: h.lng },
         });

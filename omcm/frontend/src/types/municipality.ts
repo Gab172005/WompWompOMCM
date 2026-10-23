@@ -6,15 +6,15 @@ export interface MunicipalityRecord {
   population: number;
   lat: number;
   lng: number;
-  flood: number;
+  disasterRisk: number | null;
+  riskRecords: number;
+  barangayCount: number;
   morbidity: number;
   vulnerability: number;
-  hospital_minutes: number;
-  nearest_hospital: string;
 }
 export interface ComputedMunicipality extends MunicipalityRecord {
   density: number;
-  adjustedFlood: number;
+  adjustedDisasterRisk: number | null;
   adjustedMorbidity: number;
   needScore: number;
   levelCategory: "Critical" | "High" | "Moderate" | "Low";
@@ -22,7 +22,7 @@ export interface ComputedMunicipality extends MunicipalityRecord {
   scoreContributions: {
     morbidity: number;
     vulnerability: number;
-    flood: number;
+    disasterRisk: number;
     density: number;
   };
   explanation: string;
@@ -35,7 +35,12 @@ export interface HospitalFacility {
   lng: number;
   type: string;
   services: string[];
-  capacity: number;
+  capacity: number | null;
   verified: boolean;
+  barangay?: string;
+  verificationStatus?: string;
+  capacityAsOf?: string;
+  capacityDefinition?: string;
+  notes?: string;
 }
-export type MapMetric = "score" | "density" | "flood" | "morbidity";
+export type MapMetric = "score" | "density" | "disasterRisk" | "morbidity";

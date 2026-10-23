@@ -1,13 +1,14 @@
 import { X, MapPin } from "lucide-react";
 import { useAppStore } from "../../store/useAppStore";
 import { MunicipalityPanel } from "../../features/municipalities/MunicipalityPanel";
+import { BarangayPanel } from "../../features/municipalities/BarangayPanel";
 export function SidePanel() {
-  const { sidePanelOpen } = useAppStore();
+  const { sidePanelOpen, selectedBarangayPsgc } = useAppStore();
   if (!sidePanelOpen) return null;
   return (
     <aside
       className="workspace-panel intelligence-panel card"
-      aria-label="Municipality intelligence"
+      aria-label={selectedBarangayPsgc ? "Barangay intelligence" : "Municipality intelligence"}
     >
       <div className="workspace-panel-heading">
         <h2>
@@ -22,7 +23,7 @@ export function SidePanel() {
         </button>
       </div>
       <div className="workspace-panel-body">
-        <MunicipalityPanel />
+        {selectedBarangayPsgc ? <BarangayPanel /> : <MunicipalityPanel />}
       </div>
     </aside>
   );

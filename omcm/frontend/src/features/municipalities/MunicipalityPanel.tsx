@@ -3,8 +3,13 @@ import { usePlanningResults } from "../optimization/usePlanningResults";
 import { MunicipalityMetrics } from "./MunicipalityMetrics";
 import { MunicipalityRanking } from "./MunicipalityRanking";
 import { Button } from "../../components/ui/Button";
+import {
+  LAGUNA_BARANGAYS,
+  PROVIDED_HOSPITALS,
+} from "../../services/providedData";
 export function MunicipalityPanel() {
-  const { selectedPsgc, selectMunicipality, openPanel } = useAppStore();
+  const { selectedPsgc, selectMunicipality, selectBarangay, openPanel } =
+    useAppStore();
   const { municipalities } = usePlanningResults();
   const selected = municipalities.find((m) => m.psgc === selectedPsgc);
   return (
@@ -20,6 +25,26 @@ export function MunicipalityPanel() {
             ← Province overview
           </button>
           <MunicipalityMetrics municipality={selected} />
+          <h3>Barangays ({selected.barangayCount})</h3>
+          <div className="barangay-list">
+            {LAGUNA_BARANGAYS.filter(
+              (b) => b.municipalityPsgc === selectedPsgc,
+            ).map((b) => (
+              <button
+                key={b.psgc}
+                className="workspace-text-button"
+                onClick={() => selectBarangay(b.psgc, b.municipalityPsgc)}
+              >
+                {b.name}
+                <small>
+                  {b.population.toLocaleString()} residents · Risk{" "}
+                  {b.disasterRisk === null
+                    ? "needs review"
+                    : `${b.disasterRisk}/100`}
+                </small>
+              </button>
+            ))}
+          </div>
         </>
       ) : (
         <>
@@ -39,9 +64,13 @@ export function MunicipalityPanel() {
                 ).toFixed(2)}
                 M
               </strong>
-              <span>Illustrative population total</span>
+              <span>Supplied population total</span>
             </div>
           </div>
+          <p>
+            {LAGUNA_BARANGAYS.length} barangays · {PROVIDED_HOSPITALS.length}{" "}
+            hospital records. Select a barangay on the map or search by name.
+          </p>
         </>
       )}
       <div className="workspace-button-row">
@@ -54,9 +83,9 @@ export function MunicipalityPanel() {
       </div>
       <MunicipalityRanking municipalities={municipalities} />
       <p className="workspace-note">
-        PSGC boundary geometry. Health indicators, facility information, routes
-        and deployment estimates are illustrative fixtures; no live feeds are
-        connected.
+        Supplied barangay population, disaster screening and hospital records
+        with PSGC boundary geometry. Morbidity is synthetic; vulnerability,
+        routes and deployment estimates remain illustrative.
       </p>
     </>
   );

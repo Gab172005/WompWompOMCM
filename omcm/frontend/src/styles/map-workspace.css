@@ -420,3 +420,89 @@
     font-size: 8px;
   }
 }
+
+.workspace-boundary-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  margin-top: 7px;
+  font-size: 10px;
+}
+.workspace-boundary-keys span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.boundary-key {
+  display: inline-block;
+  width: 18px;
+  border-top: 1px solid #64748b;
+}
+.municipality-key {
+  border-top: 3px solid #334155;
+}
+.selected-key {
+  height: 9px;
+  border: 2px solid #102c43;
+  background: #facc15;
+}
+.missing-risk-key {
+  display: inline-block;
+  width: 12px;
+  height: 9px;
+  background: #cbd5e1;
+}
+.barangay-boundary:focus {
+  outline: none;
+  stroke: #0f172a;
+  stroke-width: 3px;
+}
+.barangay-list {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+.barangay-list button {
+  display: grid;
+  text-align: left;
+  padding: 7px 0;
+}
+.barangay-list small,
+.barangay-hospital span,
+.barangay-hospital small {
+  display: block;
+  color: #64748b;
+  font-size: 11px;
+}
+.barangay-hospital {
+  padding: 9px 0;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 12px;
+}
+.barangay-hospital span,
+.barangay-hospital small {
+  margin-top: 4px;
+}
+.intelligence-panel details {
+  margin: 14px 0;
+  font-size: 12px;
+}
+
+@media (min-width: 761px) {
+  .workspace.has-detail-panel .workspace-legend,
+  .workspace.has-tool-panel .workspace-legend {
+    left: 392px;
+  }
+}
+@media (max-width: 760px) {
+  .workspace.has-detail-panel .workspace-boundary-keys,
+  .workspace.has-tool-panel .workspace-boundary-keys {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .workspace.has-detail-panel .intelligence-panel {
+    max-height: min(46dvh, calc(100dvh - 320px));
+  }
+}

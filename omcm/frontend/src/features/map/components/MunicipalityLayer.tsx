@@ -1,4 +1,4 @@
-import { GeoJSON } from "react-leaflet";
+import { GeoJSON, Pane } from "react-leaflet";
 import type { FeatureCollection } from "geojson";
 import type { MapProps } from "./mapTypes";
 import { heatmapStyle } from "./HeatmapLayer";
@@ -11,34 +11,48 @@ export function MunicipalityLayer({
 >) {
   const byCode = new Map(props.municipalities.map((m) => [m.psgc, m]));
   return (
-    <GeoJSON
-      key={JSON.stringify([
-        props.activeMetric,
-        props.selectedPsgc,
-        props.municipalities,
-      ])}
-      data={data}
-      style={(f) => {
-        const code = String(f?.properties?.adm3_psgc);
-        return heatmapStyle(
-          byCode.get(code),
+    <>
+      <GeoJSON
+        key={JSON.stringify([
           props.activeMetric,
-          props.selectedPsgc === code,
-        );
-      }}
-      onEachFeature={(feature, layer) => {
-        const code = String(feature.properties?.adm3_psgc),
-          m = byCode.get(code);
-        const tooltip = document.createElement("span");
-        tooltip.textContent = `${m?.name ?? "Municipality"} · Need ${m?.needScore ?? "—"}/100 · Rank #${m?.rank ?? "—"}`;
-        layer.bindTooltip(tooltip, {
-          sticky: true,
-          className: "laguna-map-tooltip",
-        });
-        layer.on("click", () =>
-          props.onSelectMunicipality(code === props.selectedPsgc ? null : code),
-        );
-      }}
-    />
+          props.selectedPsgc,
+          props.municipalities,
+        ])}
+        data={data}
+        interactive={false}
+        style={(f) => {
+          const code = String(f?.properties?.adm3_psgc);
+          return {
+            ...heatmapStyle(
+              byCode.get(code),
+              props.activeMetric,
+              props.selectedPsgc === code,
+            ),
+            fillOpacity: props.activeMetric === "score" ? 0.65 : 0,
+            weight: 0,
+          };
+        }}
+      />
+      <Pane
+        name="municipality-borders"
+        style={{ zIndex: 410, pointerEvents: "none" }}
+      >
+        <GeoJSON
+          key={props.selectedPsgc}
+          data={data}
+          interactive={false}
+          style={(f) => ({
+            fill: false,
+            color: "#334155",
+            opacity: 0.9,
+            weight:
+              String(f?.properties?.adm3_psgc) === props.selectedPsgc
+                ? 2.8
+                : 1.6,
+            className: "municipality-boundary",
+          })}
+        />
+      </Pane>
+    </>
   );
 }

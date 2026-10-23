@@ -8,6 +8,8 @@ export function useMapInteraction(
   selected: string | null,
   recenter: number,
   zoomDelta: number,
+  barangayData: FeatureCollection | null = null,
+  selectedBarangay: string | null = null,
 ) {
   const map = useMap();
   const previousZoom = useRef(zoomDelta);
@@ -41,13 +43,23 @@ export function useMapInteraction(
     );
   }, [map, recenter, data]);
   useEffect(() => {
-    const feature = data?.features.find(
-      (f) => String(f.properties?.adm3_psgc) === selected,
+    const barangay = barangayData?.features.find(
+      (f) => String(f.properties?.adm4_psgc) === selectedBarangay,
     );
+    const feature =
+      barangay ??
+      data?.features.find((f) => String(f.properties?.adm3_psgc) === selected);
     if (feature)
       map.fitBounds(geoJSON(feature).getBounds(), {
-        padding: [40, 40],
-        maxZoom: 13,
+        paddingTopLeft: map.getSize().x > 760 ? [420, 80] : [24, 140],
+        paddingBottomRight:
+          map.getSize().x > 760
+            ? [50, 100]
+            : [
+                24,
+                Math.min(map.getSize().y * 0.46, map.getSize().y - 320) + 148,
+              ],
+        maxZoom: barangay ? 16 : 13,
       });
-  }, [map, data, selected]);
+  }, [map, data, selected, barangayData, selectedBarangay]);
 }

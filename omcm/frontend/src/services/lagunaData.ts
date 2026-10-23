@@ -1,5 +1,6 @@
-// Municipality-level illustrative fixtures and testing branch's planning heuristic.
-// These inputs are separate from the server-backed barangay pilot.
+import { MAPPED_HOSPITALS, municipalityDataset } from "./providedData";
+// Supplied barangay data aggregated for the municipality planning heuristic.
+// Vulnerability, staging sites and route estimates remain illustrative.
 import type {
   MunicipalityRecord,
   ComputedMunicipality,
@@ -27,578 +28,291 @@ export const LAGUNA_CENTER = {
   lng: 121.32,
 };
 
-// 30 Authentic Laguna Municipalities with official PSA 2024 Census populations and GeoJSON area
-export const LAGUNA_BASE_DATA: MunicipalityRecord[] = [
+// Municipality locations, areas and illustrative vulnerability inputs.
+// Population, morbidity and risk are joined from the supplied barangay CSVs.
+const MUNICIPALITY_CONTEXT = [
   {
     psgc: "403401000",
     name: "Alaminos",
     level: "Mun",
     area_km2: 59,
-    population: 53589,
     lat: 14.0432,
     lng: 121.2473,
-    flood: 28,
-    morbidity: 36,
     vulnerability: 46,
-    hospital_minutes: 24,
-    nearest_hospital: "San Pablo City District Hospital",
   },
   {
     psgc: "403402000",
     name: "Bay",
     level: "Mun",
     area_km2: 38,
-    population: 69802,
     lat: 14.1447,
     lng: 121.2612,
-    flood: 72,
-    morbidity: 44,
     vulnerability: 52,
-    hospital_minutes: 15,
-    nearest_hospital: "Global Care Medical Center of Bay",
   },
   {
     psgc: "403403000",
     name: "City of Biñan",
     level: "City",
     area_km2: 37,
-    population: 584479,
     lat: 14.3071,
     lng: 121.0692,
-    flood: 64,
-    morbidity: 58,
     vulnerability: 62,
-    hospital_minutes: 10,
-    nearest_hospital: "Biñan Doctors Hospital",
   },
   {
     psgc: "403404000",
     name: "City of Cabuyao",
     level: "City",
     area_km2: 47,
-    population: 365202,
     lat: 14.239,
     lng: 121.1114,
-    flood: 55,
-    morbidity: 54,
     vulnerability: 58,
-    hospital_minutes: 12,
-    nearest_hospital: "Cabuyao City Hospital",
   },
   {
     psgc: "403405000",
     name: "City of Calamba",
     level: "City",
     area_km2: 139,
-    population: 575046,
     lat: 14.1872,
     lng: 121.1203,
-    flood: 50,
-    morbidity: 60,
     vulnerability: 65,
-    hospital_minutes: 8,
-    nearest_hospital: "Calamba Medical Center",
   },
   {
     psgc: "403406000",
     name: "Calauan",
     level: "Mun",
     area_km2: 74,
-    population: 89670,
     lat: 14.133,
     lng: 121.2968,
-    flood: 48,
-    morbidity: 40,
     vulnerability: 48,
-    hospital_minutes: 20,
-    nearest_hospital: "Global Care Medical Center of Bay",
   },
   {
     psgc: "403407000",
     name: "Cavinti",
     level: "Mun",
     area_km2: 116,
-    population: 24740,
     lat: 14.2465,
     lng: 121.5528,
-    flood: 22,
-    morbidity: 26,
     vulnerability: 38,
-    hospital_minutes: 35,
-    nearest_hospital: "Laguna Provincial Hospital",
   },
   {
     psgc: "403408000",
     name: "Famy",
     level: "Mun",
     area_km2: 33,
-    population: 17668,
     lat: 14.4813,
     lng: 121.4742,
-    flood: 45,
-    morbidity: 30,
     vulnerability: 44,
-    hospital_minutes: 28,
-    nearest_hospital: "General Cailles Memorial District Hospital",
   },
   {
     psgc: "403409000",
     name: "Kalayaan",
     level: "Mun",
     area_km2: 53,
-    population: 25243,
     lat: 14.3331,
     lng: 121.5319,
-    flood: 35,
-    morbidity: 28,
     vulnerability: 42,
-    hospital_minutes: 30,
-    nearest_hospital: "General Cailles Memorial District Hospital",
   },
   {
     psgc: "403410000",
     name: "Liliw",
     level: "Mun",
     area_km2: 42,
-    population: 39976,
     lat: 14.1417,
     lng: 121.4365,
-    flood: 18,
-    morbidity: 32,
     vulnerability: 35,
-    hospital_minutes: 25,
-    nearest_hospital: "Nagcarlan District Hospital",
   },
   {
     psgc: "403411000",
     name: "Los Baños",
     level: "Mun",
     area_km2: 55,
-    population: 117030,
     lat: 14.1532,
     lng: 121.2244,
-    flood: 68,
-    morbidity: 48,
     vulnerability: 50,
-    hospital_minutes: 10,
-    nearest_hospital: "HealthServ Los Baños Medical Center",
   },
   {
     psgc: "403412000",
     name: "Luisiana",
     level: "Mun",
     area_km2: 74,
-    population: 21824,
     lat: 14.1882,
     lng: 121.5278,
-    flood: 16,
-    morbidity: 24,
     vulnerability: 34,
-    hospital_minutes: 38,
-    nearest_hospital: "Majayjay Medicare Community Hospital",
   },
   {
     psgc: "403413000",
     name: "Lumban",
     level: "Mun",
     area_km2: 83,
-    population: 32793,
     lat: 14.2983,
     lng: 121.5157,
-    flood: 58,
-    morbidity: 38,
     vulnerability: 45,
-    hospital_minutes: 22,
-    nearest_hospital: "Laguna Provincial Hospital",
   },
   {
     psgc: "403414000",
     name: "Mabitac",
     level: "Mun",
     area_km2: 47,
-    population: 21748,
     lat: 14.4298,
     lng: 121.4022,
-    flood: 62,
-    morbidity: 34,
     vulnerability: 47,
-    hospital_minutes: 32,
-    nearest_hospital: "General Cailles Memorial District Hospital",
   },
   {
     psgc: "403415000",
     name: "Magdalena",
     level: "Mun",
     area_km2: 32,
-    population: 28131,
     lat: 14.2067,
     lng: 121.4359,
-    flood: 25,
-    morbidity: 30,
     vulnerability: 38,
-    hospital_minutes: 18,
-    nearest_hospital: "Laguna Provincial Hospital",
   },
   {
     psgc: "403416000",
     name: "Majayjay",
     level: "Mun",
     area_km2: 60,
-    population: 28504,
     lat: 14.1393,
     lng: 121.4804,
-    flood: 15,
-    morbidity: 28,
     vulnerability: 36,
-    hospital_minutes: 20,
-    nearest_hospital: "Majayjay Medicare Community Hospital",
   },
   {
     psgc: "403417000",
     name: "Nagcarlan",
     level: "Mun",
     area_km2: 75,
-    population: 66351,
     lat: 14.1342,
     lng: 121.4045,
-    flood: 20,
-    morbidity: 35,
     vulnerability: 40,
-    hospital_minutes: 15,
-    nearest_hospital: "Nagcarlan District Hospital",
   },
   {
     psgc: "403418000",
     name: "Paete",
     level: "Mun",
     area_km2: 48,
-    population: 25254,
     lat: 14.3747,
     lng: 121.5349,
-    flood: 42,
-    morbidity: 32,
     vulnerability: 41,
-    hospital_minutes: 18,
-    nearest_hospital: "General Cailles Memorial District Hospital",
   },
   {
     psgc: "403419000",
     name: "Pagsanjan",
     level: "Mun",
     area_km2: 28,
-    population: 45602,
     lat: 14.252,
     lng: 121.4487,
-    flood: 60,
-    morbidity: 42,
     vulnerability: 46,
-    hospital_minutes: 12,
-    nearest_hospital: "Laguna Provincial Hospital",
   },
   {
     psgc: "403420000",
     name: "Pakil",
     level: "Mun",
     area_km2: 47,
-    population: 23972,
     lat: 14.3881,
     lng: 121.4484,
-    flood: 52,
-    morbidity: 33,
     vulnerability: 43,
-    hospital_minutes: 10,
-    nearest_hospital: "General Cailles Memorial District Hospital",
   },
   {
     psgc: "403421000",
     name: "Pangil",
     level: "Mun",
     area_km2: 50,
-    population: 25318,
     lat: 14.4231,
     lng: 121.4883,
-    flood: 48,
-    morbidity: 31,
     vulnerability: 42,
-    hospital_minutes: 20,
-    nearest_hospital: "General Cailles Memorial District Hospital",
   },
   {
     psgc: "403422000",
     name: "Pila",
     level: "Mun",
     area_km2: 25,
-    population: 57776,
     lat: 14.231,
     lng: 121.3653,
-    flood: 65,
-    morbidity: 40,
     vulnerability: 47,
-    hospital_minutes: 16,
-    nearest_hospital: "Laguna Provincial Hospital",
   },
   {
     psgc: "403423000",
     name: "Rizal",
     level: "Mun",
     area_km2: 23,
-    population: 18864,
     lat: 14.0952,
     lng: 121.4033,
-    flood: 18,
-    morbidity: 27,
     vulnerability: 36,
-    hospital_minutes: 26,
-    nearest_hospital: "San Pablo City District Hospital",
   },
   {
     psgc: "403424000",
     name: "City of San Pablo",
     level: "City",
     area_km2: 186,
-    population: 300166,
     lat: 14.0503,
     lng: 121.3302,
-    flood: 30,
-    morbidity: 52,
     vulnerability: 56,
-    hospital_minutes: 10,
-    nearest_hospital: "San Pablo City District Hospital",
   },
   {
     psgc: "403425000",
     name: "City of San Pedro",
     level: "City",
     area_km2: 24,
-    population: 348968,
     lat: 14.3492,
     lng: 121.0404,
-    flood: 70,
-    morbidity: 62,
     vulnerability: 66,
-    hospital_minutes: 8,
-    nearest_hospital: "San Pedro Doctors Hospital",
   },
   {
     psgc: "403426000",
     name: "Santa Cruz",
     level: "Mun",
     area_km2: 37,
-    population: 126844,
     lat: 14.2606,
     lng: 121.4016,
-    flood: 75,
-    morbidity: 55,
     vulnerability: 60,
-    hospital_minutes: 5,
-    nearest_hospital: "Laguna Provincial Hospital",
   },
   {
     psgc: "403427000",
     name: "Santa Maria",
     level: "Mun",
     area_km2: 108,
-    population: 34102,
     lat: 14.5108,
     lng: 121.4261,
-    flood: 38,
-    morbidity: 29,
     vulnerability: 44,
-    hospital_minutes: 36,
-    nearest_hospital: "General Cailles Memorial District Hospital",
   },
   {
     psgc: "403428000",
     name: "City of Santa Rosa",
     level: "City",
     area_km2: 56,
-    population: 430920,
     lat: 14.272,
     lng: 121.0917,
-    flood: 58,
-    morbidity: 56,
     vulnerability: 63,
-    hospital_minutes: 9,
-    nearest_hospital: "The Medical City South Luzon",
   },
   {
     psgc: "403429000",
     name: "Siniloan",
     level: "Mun",
     area_km2: 54,
-    population: 42533,
     lat: 14.477,
     lng: 121.4948,
-    flood: 54,
-    morbidity: 36,
     vulnerability: 48,
-    hospital_minutes: 25,
-    nearest_hospital: "General Cailles Memorial District Hospital",
   },
   {
     psgc: "403430000",
     name: "Victoria",
     level: "Mun",
     area_km2: 29,
-    population: 45230,
     lat: 14.2053,
     lng: 121.3342,
-    flood: 78,
-    morbidity: 42,
     vulnerability: 50,
-    hospital_minutes: 18,
-    nearest_hospital: "Laguna Provincial Hospital",
   },
 ];
 
-// Verified Hospitals & Medical Facilities strictly within Laguna Province
-export const LAGUNA_HOSPITALS: HospitalFacility[] = [
-  {
-    id: "H-SC-01",
-    name: "Laguna Provincial Hospital",
-    municipality: "Santa Cruz",
-    lat: 14.2812,
-    lng: 121.4153,
-    type: "Provincial Government Tertiary Hospital",
-    services: [
-      "Emergency Trauma",
-      "Pediatrics",
-      "Internal Medicine",
-      "Surgery",
-      "ICU",
-    ],
-    capacity: 250,
-    verified: true,
-  },
-  {
-    id: "H-CAL-01",
-    name: "Calamba Medical Center",
-    municipality: "City of Calamba",
-    lat: 14.2081,
-    lng: 121.1554,
-    type: "Tertiary Private Hospital",
-    services: ["Emergency Care", "Cardiology", "Diagnostics", "Maternity"],
-    capacity: 200,
-    verified: true,
-  },
-  {
-    id: "H-SP-01",
-    name: "San Pablo City District Hospital",
-    municipality: "City of San Pablo",
-    lat: 14.0682,
-    lng: 121.3251,
-    type: "District Level II Hospital",
-    services: ["Emergency Room", "General Medicine", "Pediatrics"],
-    capacity: 120,
-    verified: true,
-  },
-  {
-    id: "H-BAY-01",
-    name: "Global Care Medical Center of Bay",
-    municipality: "Bay",
-    lat: 14.1802,
-    lng: 121.2851,
-    type: "Community Level II Hospital",
-    services: ["Primary Care", "Emergency Assessment", "Pediatrics"],
-    capacity: 80,
-    verified: true,
-  },
-  {
-    id: "H-LB-01",
-    name: "HealthServ Los Baños Medical Center",
-    municipality: "Los Baños",
-    lat: 14.1751,
-    lng: 121.2402,
-    type: "Tertiary Medical Center",
-    services: [
-      "Emergency Assessment",
-      "Internal Medicine",
-      "Radiology",
-      "Surgical",
-    ],
-    capacity: 150,
-    verified: true,
-  },
-  {
-    id: "H-BIN-01",
-    name: "Biñan Doctors Hospital",
-    municipality: "City of Biñan",
-    lat: 14.3382,
-    lng: 121.0821,
-    type: "Secondary Hospital",
-    services: ["Emergency Room", "Outpatient Clinic", "Diagnostics"],
-    capacity: 100,
-    verified: true,
-  },
-  {
-    id: "H-SR-01",
-    name: "The Medical City South Luzon",
-    municipality: "City of Santa Rosa",
-    lat: 14.2781,
-    lng: 121.1052,
-    type: "Tertiary Medical Center",
-    services: ["Comprehensive Emergency", "Specialty Clinics", "ICU"],
-    capacity: 180,
-    verified: true,
-  },
-  {
-    id: "H-SPD-01",
-    name: "San Pedro Doctors Hospital",
-    municipality: "City of San Pedro",
-    lat: 14.3581,
-    lng: 121.0553,
-    type: "Secondary Hospital",
-    services: ["Emergency", "General Care", "Maternity"],
-    capacity: 90,
-    verified: true,
-  },
-  {
-    id: "H-CAB-01",
-    name: "Cabuyao City Hospital",
-    municipality: "City of Cabuyao",
-    lat: 14.2752,
-    lng: 121.1251,
-    type: "City Government Hospital",
-    services: ["Emergency Room", "Primary Health", "Maternal Care"],
-    capacity: 100,
-    verified: true,
-  },
-  {
-    id: "H-PAK-01",
-    name: "General Cailles Memorial District Hospital",
-    municipality: "Pakil",
-    lat: 14.3821,
-    lng: 121.4812,
-    type: "District Hospital (Northeastern Laguna)",
-    services: ["Emergency Care", "Primary Ward", "First Aid"],
-    capacity: 60,
-    verified: true,
-  },
-  {
-    id: "H-NAG-01",
-    name: "Nagcarlan District Hospital",
-    municipality: "Nagcarlan",
-    lat: 14.1352,
-    lng: 121.4181,
-    type: "District Hospital (Upland Laguna)",
-    services: ["Primary Care", "Outpatient Consultation"],
-    capacity: 50,
-    verified: true,
-  },
-  {
-    id: "H-MAJ-01",
-    name: "Majayjay Medicare Community Hospital",
-    municipality: "Majayjay",
-    lat: 14.1423,
-    lng: 121.4552,
-    type: "Medicare Community Hospital",
-    services: ["Outpatient Consultation", "Emergency Triage"],
-    capacity: 40,
-    verified: true,
-  },
-];
+export const LAGUNA_BASE_DATA: MunicipalityRecord[] = MUNICIPALITY_CONTEXT.map(
+  (m) => ({
+    ...m,
+    level: m.level as "City" | "Mun",
+    ...municipalityDataset(m.psgc),
+  }),
+);
 
-// Candidate Mobile Clinic Staging Sites across Laguna
+export const LAGUNA_HOSPITALS: HospitalFacility[] = MAPPED_HOSPITALS;
+
 export const LAGUNA_CANDIDATE_SITES: StagingSite[] = [
   {
     id: "SITE-01",
@@ -1011,15 +725,17 @@ export function computeLagunaMunicipalities(
   const records = LAGUNA_BASE_DATA.map((base) => {
     const density = Math.round(base.population / base.area_km2);
 
-    // Flood override
-    let floodLevel = base.flood;
+    // Simulated flood stress modifies the baseline disaster risk component.
+    let disasterRisk = base.disasterRisk;
     const floodSetting = scenario.floodOverrides[base.psgc];
-    if (floodSetting === "severe")
-      floodLevel = Math.min(100, Math.round(base.flood * 1.5 + 20));
-    else if (floodSetting === "moderate")
-      floodLevel = Math.min(100, Math.round(base.flood * 1.25 + 10));
-    else if (floodSetting === "low") floodLevel = Math.round(base.flood * 0.9);
-    else if (floodSetting === "none") floodLevel = Math.round(base.flood * 0.6);
+    if (disasterRisk !== null && floodSetting === "severe")
+      disasterRisk = Math.min(100, Math.round(base.disasterRisk! * 1.5 + 20));
+    else if (disasterRisk !== null && floodSetting === "moderate")
+      disasterRisk = Math.min(100, Math.round(base.disasterRisk! * 1.25 + 10));
+    else if (disasterRisk !== null && floodSetting === "low")
+      disasterRisk = Math.round(base.disasterRisk! * 0.9);
+    else if (disasterRisk !== null && floodSetting === "none")
+      disasterRisk = Math.round(base.disasterRisk! * 0.6);
 
     // Morbidity spike
     const spike = scenario.morbiditySpikes[base.psgc] ?? 1.0;
@@ -1031,14 +747,15 @@ export function computeLagunaMunicipalities(
     // Transparent weighted formula
     const wMorbidity = 0.35;
     const wVulnerability = 0.25;
-    const wFlood = 0.2;
+    const wDisasterRisk = 0.2;
     const wDensity = 0.2;
 
     const contribMorbidity =
       Math.round(adjustedMorbidity * wMorbidity * 10) / 10;
     const contribVulnerability =
       Math.round(base.vulnerability * wVulnerability * 10) / 10;
-    const contribFlood = Math.round(floodLevel * wFlood * 10) / 10;
+    const contribDisasterRisk =
+      Math.round((disasterRisk ?? 0) * wDisasterRisk * 10) / 10;
     const contribDensity = Math.round(densityScore * wDensity * 10) / 10;
 
     const needScore = Math.min(
@@ -1048,7 +765,7 @@ export function computeLagunaMunicipalities(
         Math.round(
           contribMorbidity +
             contribVulnerability +
-            contribFlood +
+            contribDisasterRisk +
             contribDensity,
         ),
       ),
@@ -1061,19 +778,19 @@ export function computeLagunaMunicipalities(
 
     // Explanatory sentence
     const highestDriver =
-      contribMorbidity >= contribFlood &&
+      contribMorbidity >= contribDisasterRisk &&
       contribMorbidity >= contribVulnerability
-        ? `elevated disease incidence (${adjustedMorbidity} / 1,000 residents)`
-        : contribFlood >= contribDensity
-          ? `vulnerability to flood inundation (${floodLevel}/100 exposure)`
+        ? `synthetic morbidity (${adjustedMorbidity} / 1,000 residents)`
+        : contribDisasterRisk >= contribDensity
+          ? `disaster risk screening (${disasterRisk}/100)`
           : `high population density (${density.toLocaleString()} residents/km²)`;
 
-    const explanation = `Score driven primarily by ${highestDriver} and ${base.vulnerability}% vulnerable population index.`;
+    const explanation = `Score driven primarily by ${highestDriver} and an illustrative vulnerability index of ${base.vulnerability}/100.`;
 
     return {
       ...base,
       density,
-      adjustedFlood: floodLevel,
+      adjustedDisasterRisk: disasterRisk,
       adjustedMorbidity,
       needScore,
       levelCategory,
@@ -1081,7 +798,7 @@ export function computeLagunaMunicipalities(
       scoreContributions: {
         morbidity: contribMorbidity,
         vulnerability: contribVulnerability,
-        flood: contribFlood,
+        disasterRisk: contribDisasterRisk,
         density: contribDensity,
       },
       explanation,
@@ -1097,9 +814,10 @@ export function computeLagunaMunicipalities(
 
 /** Color scale generator for heatmaps */
 export function getMetricColor(
-  metric: "score" | "density" | "flood" | "morbidity",
-  value: number,
+  metric: "score" | "density" | "disasterRisk" | "morbidity",
+  value: number | null,
 ): string {
+  if (value === null || !Number.isFinite(value)) return "#cbd5e1";
   if (metric === "score") {
     // Red-orange palette for Healthcare Need
     if (value >= 70) return "#7f1d1d"; // Critical
@@ -1118,13 +836,12 @@ export function getMetricColor(
     return "#ede9fe"; // Sparse rural
   }
 
-  if (metric === "flood") {
-    // Blue-cyan palette for Flood Vulnerability (0-100)
-    if (value >= 70) return "#075985"; // Severe
-    if (value >= 50) return "#0284c7"; // High
-    if (value >= 35) return "#38bdf8"; // Moderate
-    if (value >= 20) return "#7dd3fc"; // Low
-    return "#e0f2fe"; // Very low
+  if (metric === "disasterRisk") {
+    // Blue-cyan palette for supplied disaster risk screening (0-100)
+    if (value >= 100) return "#075985";
+    if (value >= 66.67) return "#0284c7";
+    if (value >= 33.33) return "#7dd3fc";
+    return "#e0f2fe"; // No mapped hazard at the supplied query point
   }
 
   // Morbidity (cases/1,000)

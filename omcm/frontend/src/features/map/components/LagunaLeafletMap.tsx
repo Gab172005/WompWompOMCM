@@ -8,20 +8,34 @@ import { MunicipalityLayer } from "./MunicipalityLayer";
 import { HospitalMarkers } from "./HospitalMarkers";
 import { ClinicMarkers } from "./ClinicMarkers";
 import { RouteLayer } from "./RouteLayer";
+import { BarangayBoundaryLayer } from "./BarangayBoundaryLayer";
 function Interaction({
   data,
   selectedPsgc,
+  selectedBarangayPsgc,
+  barangayData,
   recenterTrigger,
   zoomDelta,
-}: { data: FeatureCollection | null } & Pick<
+}: {
+  data: FeatureCollection | null;
+  barangayData: FeatureCollection | null;
+} & Pick<
   MapProps,
-  "selectedPsgc" | "recenterTrigger" | "zoomDelta"
+  "selectedPsgc" | "selectedBarangayPsgc" | "recenterTrigger" | "zoomDelta"
 >) {
-  useMapInteraction(data, selectedPsgc, recenterTrigger, zoomDelta);
+  useMapInteraction(
+    data,
+    selectedPsgc,
+    recenterTrigger,
+    zoomDelta,
+    barangayData,
+    selectedBarangayPsgc,
+  );
   return null;
 }
 export function LagunaLeafletMap(props: MapProps) {
   const [data, setData] = useState<FeatureCollection | null>(null),
+    [barangayData, setBarangayData] = useState<FeatureCollection | null>(null),
     [mask, setMask] = useState<FeatureCollection | null>(null),
     [error, setError] = useState("");
   useEffect(() => {
@@ -39,6 +53,12 @@ export function LagunaLeafletMap(props: MapProps) {
       .then(setData)
       .catch((e) => {
         if (!controller.signal.aborted) setError(e.message);
+      });
+    void load("laguna_barangays")
+      .then(setBarangayData)
+      .catch((e) => {
+        if (!controller.signal.aborted)
+          setError(`Barangay boundaries: ${e.message}`);
       });
     void load("laguna_mask")
       .then(setMask)
@@ -66,6 +86,8 @@ export function LagunaLeafletMap(props: MapProps) {
         <Interaction
           data={data}
           selectedPsgc={props.selectedPsgc}
+          selectedBarangayPsgc={props.selectedBarangayPsgc}
+          barangayData={barangayData}
           recenterTrigger={props.recenterTrigger}
           zoomDelta={props.zoomDelta}
         />
@@ -82,6 +104,9 @@ export function LagunaLeafletMap(props: MapProps) {
           />
         )}
         {data && <MunicipalityLayer data={data} {...props} />}
+        {barangayData && (
+          <BarangayBoundaryLayer data={barangayData} {...props} />
+        )}
         {props.showHospitals && <HospitalMarkers hospitals={props.hospitals} />}
         <RouteLayer {...props} />
         {props.showClinics && <ClinicMarkers {...props} />}

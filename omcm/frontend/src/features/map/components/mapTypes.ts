@@ -8,6 +8,8 @@ import type { Clinic } from "../../../types/clinic";
 export interface MapProps {
   municipalities: ComputedMunicipality[];
   selectedPsgc: string | null;
+  selectedBarangayPsgc: string | null;
+  onSelectBarangay: (psgc: string, municipalityPsgc: string) => void;
   onSelectMunicipality: (psgc: string | null) => void;
   activeMetric: MapMetric;
   showHospitals: boolean;

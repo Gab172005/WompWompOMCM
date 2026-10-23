@@ -13,7 +13,7 @@ export function heatmapStyle(
     ? {
         score: municipality.needScore,
         density: municipality.density,
-        flood: municipality.adjustedFlood,
+        disasterRisk: municipality.adjustedDisasterRisk,
         morbidity: municipality.adjustedMorbidity,
       }[metric]
     : 0;

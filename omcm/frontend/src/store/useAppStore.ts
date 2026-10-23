@@ -12,6 +12,7 @@ export const emptyScenario = (): SimulationScenario => ({
 type Panel = "optimization" | "simulation" | "chatbot" | null;
 interface AppState {
   selectedPsgc: string | null;
+  selectedBarangayPsgc: string | null;
   activeMetric: MapMetric;
   showHospitals: boolean;
   showClinics: boolean;
@@ -28,6 +29,7 @@ interface AppState {
   selectedClinicId: string | null;
   approvedPlan: ClinicPlan | null;
   selectMunicipality: (psgc: string | null) => void;
+  selectBarangay: (psgc: string, municipalityPsgc: string) => void;
   openPanel: (panel: Panel) => void;
   setClinicCount: (count: number) => void;
   setManualSite: (clinicId: string, siteId: string) => void;
@@ -49,7 +51,8 @@ export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
       selectedPsgc: null,
-      activeMetric: "score",
+      selectedBarangayPsgc: null,
+      activeMetric: "disasterRisk",
       showHospitals: true,
       showClinics: true,
       sidePanelOpen: false,
@@ -65,7 +68,15 @@ export const useAppStore = create<AppState>()(
       selectedClinicId: null,
       approvedPlan: null,
       selectMunicipality: (selectedPsgc) =>
-        set({ selectedPsgc, sidePanelOpen: true }),
+        set({ selectedPsgc, selectedBarangayPsgc: null, sidePanelOpen: true }),
+      selectBarangay: (selectedBarangayPsgc, selectedPsgc) =>
+        set((s) => ({
+          selectedPsgc,
+          selectedBarangayPsgc,
+          sidePanelOpen: true,
+          panel: null,
+          ...(s.panel === "simulation" ? invalidate : {}),
+        })),
       openPanel: (panel) =>
         set((s) => ({
           panel,

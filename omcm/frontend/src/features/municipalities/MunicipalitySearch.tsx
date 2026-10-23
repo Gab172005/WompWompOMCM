@@ -2,9 +2,14 @@ import { useEffect, useId, useRef, useState } from "react";
 import { MapPin, Search, X } from "lucide-react";
 import { LAGUNA_BASE_DATA } from "../../services/lagunaData";
 import { useAppStore } from "../../store/useAppStore";
+import { LAGUNA_BARANGAYS } from "../../services/providedData";
 const towns = [...LAGUNA_BASE_DATA].sort((a, b) =>
   a.name.localeCompare(b.name),
 );
+const communities = LAGUNA_BARANGAYS.map((b) => ({
+  ...b,
+  name: `${b.name}, ${b.municipality}`,
+}));
 const normalize = (value: string) =>
   value
     .normalize("NFD")
@@ -12,21 +17,31 @@ const normalize = (value: string) =>
     .toLowerCase();
 
 export function MunicipalitySearch() {
-  const { selectedPsgc, selectMunicipality } = useAppStore();
+  const {
+    selectedPsgc,
+    selectedBarangayPsgc,
+    selectMunicipality,
+    selectBarangay,
+  } = useAppStore();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const input = useRef<HTMLInputElement>(null);
   const listId = useId();
-  const matches = towns.filter((town) =>
-    normalize(town.name).includes(normalize(query.trim())),
-  );
+  const choices = query.trim() ? [...towns, ...communities] : towns;
+  const matches = choices
+    .filter((town) => normalize(town.name).includes(normalize(query.trim())))
+    .slice(0, 60);
 
   useEffect(() => {
-    setQuery(towns.find((town) => town.psgc === selectedPsgc)?.name ?? "");
+    setQuery(
+      communities.find((b) => b.psgc === selectedBarangayPsgc)?.name ??
+        towns.find((town) => town.psgc === selectedPsgc)?.name ??
+        "",
+    );
     setOpen(false);
     setActive(-1);
-  }, [selectedPsgc]);
+  }, [selectedPsgc, selectedBarangayPsgc]);
 
   useEffect(() => {
     if (open && active >= 0)
@@ -36,8 +51,12 @@ export function MunicipalitySearch() {
   }, [active, open, listId]);
 
   function select(psgc: string) {
-    selectMunicipality(psgc);
-    setQuery(towns.find((town) => town.psgc === psgc)?.name ?? "");
+    const barangay = communities.find((b) => b.psgc === psgc);
+    if (barangay) selectBarangay(psgc, barangay.municipalityPsgc);
+    else selectMunicipality(psgc);
+    setQuery(
+      barangay?.name ?? towns.find((town) => town.psgc === psgc)?.name ?? "",
+    );
     setOpen(false);
     setActive(-1);
     input.current?.focus();
@@ -53,7 +72,7 @@ export function MunicipalitySearch() {
       <input
         ref={input}
         role="combobox"
-        aria-label="Find municipality"
+        aria-label="Find municipality or barangay"
         aria-autocomplete="list"
         aria-expanded={open}
         aria-controls={listId}
@@ -97,7 +116,11 @@ export function MunicipalitySearch() {
           title="Clear search"
           onClick={() => {
             setQuery("");
-            useAppStore.setState({ selectedPsgc: null, sidePanelOpen: false });
+            useAppStore.setState({
+              selectedPsgc: null,
+              selectedBarangayPsgc: null,
+              sidePanelOpen: false,
+            });
             input.current?.focus();
             setOpen(true);
           }}
@@ -112,10 +135,10 @@ export function MunicipalitySearch() {
           className="map-search-results"
           id={listId}
           role="listbox"
-          aria-label="Laguna municipalities"
+          aria-label="Laguna municipalities and barangays"
         >
           <div className="map-search-caption" role="presentation">
-            Municipalities in Laguna
+            Municipalities and barangays in Laguna
           </div>
           {matches.map((town, index) => (
             <button
@@ -130,12 +153,15 @@ export function MunicipalitySearch() {
               <MapPin size={17} aria-hidden="true" />
               <span>
                 {town.name}
-                <small>Laguna, Philippines</small>
+                <small>
+                  {"municipalityPsgc" in town ? "Barangay" : "Municipality"} ·
+                  Laguna, Philippines
+                </small>
               </span>
             </button>
           ))}
           {!matches.length && (
-            <p role="presentation">No matching municipalities</p>
+            <p role="presentation">No matching municipalities or barangays</p>
           )}
         </div>
       )}

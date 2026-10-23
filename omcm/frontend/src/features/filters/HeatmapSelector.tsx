@@ -3,7 +3,7 @@ import type { MapMetric } from "../../types/municipality";
 export const metricLabels: Record<MapMetric, string> = {
   score: "Healthcare need",
   density: "Population density",
-  flood: "Flood exposure",
+  disasterRisk: "Disaster risk index",
   morbidity: "Morbidity rate",
 };
 export function HeatmapSelector() {

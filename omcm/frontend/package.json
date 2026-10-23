@@ -9,6 +9,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run",
     "test:e2e": "node ../tests/frontend/e2e.mjs",
+    "test:barangays": "node ../tests/frontend/barangay-map.mjs",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write src",
     "test:e2e:legacy": "node ../tests/frontend/legacy-e2e.mjs",

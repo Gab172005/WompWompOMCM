@@ -21,8 +21,10 @@ export function HospitalMarkers({
             <p>
               {h.municipality} · {h.type}
             </p>
-            <p>{h.services.join(", ")}</p>
-            <small>Illustrative facility record</small>
+            <p>{h.barangay} · {h.capacity === null ? "Beds unverified" : `${h.capacity} beds`}</p>
+            <small>{h.verificationStatus}</small>
+            {h.capacityAsOf && <p>{h.capacityDefinition} · As of {h.capacityAsOf}</p>}
+            {h.notes && <p>{h.notes}</p>}
           </Popup>
         </Marker>
       ))}

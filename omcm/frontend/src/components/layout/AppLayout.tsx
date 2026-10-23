@@ -45,6 +45,8 @@ export function AppLayout() {
         <LagunaMap
           municipalities={municipalities}
           selectedPsgc={state.selectedPsgc}
+          selectedBarangayPsgc={state.selectedBarangayPsgc}
+          onSelectBarangay={state.selectBarangay}
           onSelectMunicipality={state.selectMunicipality}
           activeMetric={state.activeMetric}
           showHospitals={state.showHospitals}
@@ -95,7 +97,7 @@ export function AppLayout() {
         {state.panel === "simulation" && <SimulationPlayback />}
         <ClinicTracker />
       </main>
-      <div className="map-disclaimer">OMCM · Illustrative planning data</div>
+      <div className="map-disclaimer">OMCM · Supplied barangay data · Planning estimates</div>
     </div>
   );
 }
