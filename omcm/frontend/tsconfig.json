@@ -23,6 +23,12 @@
       ],
       "geojson": [
         "./node_modules/@types/geojson"
+      ],
+      "react": [
+        "./node_modules/@types/react"
+      ],
+      "react/*": [
+        "./node_modules/@types/react/*"
       ]
     }
   },
