@@ -27,4 +27,6 @@ export interface MapProps {
   disruptions: RoadDisruption[];
   recenterTrigger: number;
   zoomDelta: number;
+  publicMode?: boolean;
+  publicScheduleInfo?: string;
 }

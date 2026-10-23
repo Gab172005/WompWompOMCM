@@ -27,7 +27,7 @@ try {
   await page.goto("http://127.0.0.1:5176", { waitUntil: "domcontentloaded", timeout: 120000 });
   await expect(page.locator(".barangay-boundary")).toHaveCount(681, { timeout: 90000 });
   await expect(page.locator(".municipality-boundary")).toHaveCount(30);
-  await expect(page.getByLabel("Map legend")).toContainText("Healthcare need");
+  await expect(page.getByLabel("Map legend")).toContainText("Approved Care Locations");
   await expect(page.locator(".hospital-marker-custom")).toHaveCount(61);
   // Independently derive layer eligibility from the audit register, not the
   // exported map array, so incorrect production filtering cannot bless itself.
@@ -40,6 +40,18 @@ try {
   expect(clinicState.count).toBeGreaterThan(0);
   expect(clinicState.actualIds).toEqual(clinicState.expectedIds);
   await expect(page.locator(".osm-clinic-marker-custom")).toHaveCount(clinicState.count);
+  await expect(page.getByRole("navigation", { name: "Planning tools" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Toggle intelligence panel", exact: true }).click();
+  const publicPanel = page.getByRole("complementary", { name: "Community care and schedules" });
+  await expect(publicPanel).toContainText("Approved Mobile Clinics (3)");
+  await expect(publicPanel).toContainText("Public Health Advisories");
+  await mkdir(resolve(frontend, "test-results"), { recursive: true });
+  await page.screenshot({ path: resolve(frontend, "test-results/public-view-desktop.png") });
+  await page.getByRole("button", { name: "Close intelligence panel", exact: true }).click();
+  await page.getByRole("button", { name: "Admin View" }).first().click();
+  await page.getByRole("button", { name: "Fill demo credentials", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in to Admin View", exact: true }).click();
+  await expect(page.getByLabel("Map legend")).toContainText("Healthcare need");
   const ranked = await page.evaluate(async () => {
     const { RANKED_BARANGAYS } = await import("/src/services/providedData.ts");
     return RANKED_BARANGAYS.map((b) => ({ psgc: b.psgc, name: b.name, municipality: b.municipality, score: b.needScore, rank: b.needRank }));

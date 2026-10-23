@@ -1,15 +1,57 @@
-import type { Clinic } from "../../types/clinic";
+import type { Clinic, PublishedSchedule } from "../../types/clinic";
 import { interpolateRoutePosition } from "../../services/lagunaData";
 import { ClinicStatus } from "./ClinicStatus";
 export function ClinicDetails({
   clinic,
   progress,
   simulation,
+  publicSchedule = null,
 }: {
   clinic: Clinic;
   progress: number;
   simulation: boolean;
+  publicSchedule?: PublishedSchedule | null;
 }) {
+  if (publicSchedule) {
+    return (
+      <>
+        <span
+          className={`badge ${publicSchedule.status === "Emergency Override" ? "badge-danger" : ""}`}
+        >
+          {publicSchedule.status} · {publicSchedule.date}
+        </span>
+        <h3>{clinic.siteName}</h3>
+        <p>{clinic.municipality}, Laguna</p>
+        <div className="workspace-metrics">
+          <div>
+            <strong>
+              {publicSchedule.startTime}–{publicSchedule.endTime}
+            </strong>
+            <span>Operating hours (PH Time)</span>
+          </div>
+          <div>
+            <strong>{clinic.capacity}</strong>
+            <span>Appointments / day capacity</span>
+          </div>
+        </div>
+        <h4>Services offered</h4>
+        <div className="public-service-tags">
+          {publicSchedule.services.map((service) => (
+            <span className="public-service-tag" key={service}>
+              {service}
+            </span>
+          ))}
+        </div>
+        <p>
+          Assigned communities: {clinic.municipality} and neighboring barangays.
+        </p>
+        <p className="workspace-note">
+          Approved mobile clinic staging site. Location sharing is disabled;
+          only administrator-published schedules are shown.
+        </p>
+      </>
+    );
+  }
   const position = simulation
     ? interpolateRoutePosition(clinic.route, progress)
     : clinic;

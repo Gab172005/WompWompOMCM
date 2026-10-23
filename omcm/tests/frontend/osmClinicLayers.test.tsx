@@ -256,6 +256,7 @@ describe("Map legend clinic keys and attribution", () => {
       "../../frontend/src/store/useAppStore"
     );
     useAppStore.setState({
+      viewMode: "admin",
       showHospitals: true,
       showClinics: true,
       showOsmClinics: true,
@@ -286,7 +287,7 @@ describe("Map legend clinic keys and attribution", () => {
     const { useAppStore } = await import(
       "../../frontend/src/store/useAppStore"
     );
-    act(() => useAppStore.setState({ showOsmClinics: false }));
+    act(() => useAppStore.setState({ viewMode: "admin", showOsmClinics: false }));
     render(<MapLegend clinicSnapshot={snapshot} />);
     const legend = screen.getByRole("region", { name: "Map legend" });
     expect(within(legend).getByLabelText("Facility layer keys")).not.toHaveTextContent(

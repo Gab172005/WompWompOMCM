@@ -10,19 +10,86 @@ export interface ClinicSnapshotProvenance {
 }
 
 /**
- * Legend for the active metric plus facility keys and the offline OSM snapshot
- * provenance. "Clinic type" is stated explicitly so fixed facilities are never
- * confused with the numbered mobile clinics.
+ * Legend for the current view plus facility keys and offline OSM provenance.
+ * Fixed OSM facilities are never labeled as approved mobile deployments.
  */
 export function MapLegend({
   clinicSnapshot,
 }: {
   clinicSnapshot?: ClinicSnapshotProvenance | null;
 }) {
-  const metric = useAppStore((s) => s.activeMetric);
-  const showHospitals = useAppStore((s) => s.showHospitals);
-  const showClinics = useAppStore((s) => s.showClinics);
-  const showOsmClinics = useAppStore((s) => s.showOsmClinics);
+  const {
+    activeMetric: metric,
+    viewMode,
+    selectedScheduleDate,
+    publishedSchedules,
+    showHospitals,
+    showClinics,
+    showOsmClinics,
+  } = useAppStore();
+  const osmClinicAttribution = showOsmClinics && (
+    <small
+      className="workspace-attribution workspace-osm-clinic-attribution"
+      style={{
+        display: "block",
+        marginTop: 4,
+        fontSize: 9,
+        lineHeight: 1.4,
+        color: "#62788a",
+      }}
+    >
+      Clinic type: {clinicSnapshot?.valid === false ? "unavailable" : "OSM clinic · amenity=clinic or healthcare=clinic"} ·{" "}
+      {clinicSnapshot?.attribution || "© OpenStreetMap contributors"} ·{" "}
+      {clinicSnapshot?.license || "ODbL 1.0"} ·{" "}
+      {clinicSnapshot?.retrievedAt
+        ? `offline snapshot retrieved ${clinicSnapshot.retrievedAt}`
+        : "offline snapshot"}
+    </small>
+  );
+  if (viewMode === "public") {
+    const schedule = publishedSchedules[selectedScheduleDate];
+    return (
+      <section className="workspace-legend card" aria-label="Map legend">
+        <strong>Approved Care Locations</strong>
+        <span>
+          {schedule
+            ? `${schedule.date} · ${schedule.startTime}–${schedule.endTime} PH Time`
+            : `${selectedScheduleDate} · No schedule published`}
+        </span>
+        <div className="workspace-boundary-keys">
+          {showClinics && (
+            <span>
+              <i className="public-clinic-key" /> Approved clinic
+            </span>
+          )}
+          {showHospitals && (
+            <span>
+              <i className="public-hospital-key" /> Verified hospital
+            </span>
+          )}
+          <span>
+            <i className="boundary-key municipality-key" /> Municipality
+          </span>
+          <span>
+            <i className="boundary-key selected-key" /> Selected community
+          </span>
+        </div>
+        {showOsmClinics && (
+          <div className="workspace-facility-keys" aria-label="Facility layer keys">
+            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <i
+                className="facility-key osm-clinic-facility-key"
+                aria-hidden="true"
+                style={{ width: 8, height: 8, borderRadius: "50%", background: "#7c3aed" }}
+              />{" "}
+              OSM clinic · fixed facility, not an approved mobile clinic
+            </span>
+          </div>
+        )}
+        {osmClinicAttribution}
+      </section>
+    );
+  }
   const steps =
     metric === "disasterRisk"
       ? [0, 33.33, 66.67, 100]
@@ -131,25 +198,7 @@ export function MapLegend({
           </span>
         )}
       </div>
-      {showOsmClinics && (
-        <small
-          className="workspace-attribution workspace-osm-clinic-attribution"
-          style={{
-            display: "block",
-            marginTop: 4,
-            fontSize: 9,
-            lineHeight: 1.4,
-            color: "#62788a",
-          }}
-        >
-          Clinic type: {clinicSnapshot?.valid === false ? "unavailable" : "OSM clinic · amenity=clinic or healthcare=clinic"} ·{" "}
-          {clinicSnapshot?.attribution || "© OpenStreetMap contributors"} ·{" "}
-          {clinicSnapshot?.license || "ODbL 1.0"} ·{" "}
-          {clinicSnapshot?.retrievedAt
-            ? `offline snapshot retrieved ${clinicSnapshot.retrievedAt}`
-            : "offline snapshot"}
-        </small>
-      )}
+      {osmClinicAttribution}
     </section>
   );
 }

@@ -12,7 +12,16 @@ import { UpstreamWorkspace } from "../components/UpstreamWorkspace";
 export function AppRoutes() {
   return (
     <Routes>
-      {["/", "/risk", "/optimization", "/simulator"].map((path) => (
+      {[
+        "/",
+        "/public",
+        "/clinics",
+        "/admin",
+        "/dashboard/admin",
+        "/risk",
+        "/optimization",
+        "/simulator",
+      ].map((path) => (
         <Route key={path} path={path} element={<AppLayout />} />
       ))}
       <Route
@@ -23,11 +32,9 @@ export function AppRoutes() {
         }
       >
         <Route path="/workspace/*" element={<UpstreamWorkspace />} />
-        <Route path="/public" element={<PublicDashboard />} />
-        <Route path="/clinics" element={<PublicDashboard />} />
+        <Route path="/public/legacy" element={<PublicDashboard />} />
         <Route element={<LegacyLayout />}>
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/dashboard/admin" element={<AdminDashboard />} />
+          <Route path="/admin/legacy" element={<AdminDashboard />} />
           <Route path="/driver" element={<DriverTracking />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/settings" element={<Settings />} />
