@@ -90,13 +90,17 @@ export function validateAllocation(
     new Set(allocation.map((a) => a.clinicId)).size !== k
   )
     throw new Error(
-      `Exactly ${k} distinct barangays and clinics are required.`,
+      `Choose a different available barangay for each of your ${k} clinics.`,
     );
   for (let i = 1; i <= k; i++)
     if (!allocation.some((a) => a.clinicId === `MC-${i}`))
-      throw new Error(`Missing available clinic MC-${i}.`);
+      throw new Error(
+        `Choose a location for clinic MC-${i} before applying this plan.`,
+      );
   if (allocation.some((a) => !coverage.has(a.psgc)))
-    throw new Error("Deployment barangay is not geographically eligible.");
+    throw new Error(
+      "A selected barangay is not available for clinic placement. Choose another location.",
+    );
 }
 export function simulateDay(
   day: number,

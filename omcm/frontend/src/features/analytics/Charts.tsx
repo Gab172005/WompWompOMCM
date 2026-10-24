@@ -115,48 +115,57 @@ export function ComparisonChart({ plan }: { plan: Plan }) {
       Baseline: plan.baseline.metrics.residents_served,
     },
     {
-      name: "Priority-weighted",
+      name: "Appointments weighted by need",
       OMCM: plan.optimized.metrics.weighted_demand,
       Baseline: plan.baseline.metrics.weighted_demand,
     },
   ];
   return (
-    <div
-      className="chart"
-      role="img"
-      aria-label="OMCM and population baseline comparison"
-    >
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 25, right: 15 }}>
-          <CartesianGrid
-            strokeDasharray="3 3"
-            vertical={false}
-            stroke="#edf1f4"
-          />
-          <XAxis
-            dataKey="name"
-            tick={{ fontSize: 11 }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-          <Tooltip contentStyle={chartStyle} />
-          <Legend iconType="circle" iconSize={8} />
-          <Bar
-            dataKey="OMCM"
-            fill="#208d83"
-            radius={[5, 5, 0, 0]}
-            maxBarSize={45}
-          />
-          <Bar
-            dataKey="Baseline"
-            fill="#b7c9d6"
-            radius={[5, 5, 0, 0]}
-            maxBarSize={45}
-          />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
+    <>
+      <div
+        className="chart"
+        role="img"
+        aria-label="Suggested plan and population-first plan comparison"
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 25, right: 15 }}>
+            <CartesianGrid
+              strokeDasharray="3 3"
+              vertical={false}
+              stroke="#edf1f4"
+            />
+            <XAxis
+              dataKey="name"
+              tick={{ fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+            <Tooltip contentStyle={chartStyle} />
+            <Legend iconType="circle" iconSize={8} />
+            <Bar
+              dataKey="OMCM"
+              name="Suggested plan"
+              fill="#208d83"
+              radius={[5, 5, 0, 0]}
+              maxBarSize={45}
+            />
+            <Bar
+              dataKey="Baseline"
+              name="Population-first plan"
+              fill="#b7c9d6"
+              radius={[5, 5, 0, 0]}
+              maxBarSize={45}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <p className="tiny">
+        The population-first plan chooses locations by population. Need-weighted
+        appointments give more credit to appointments in higher-need areas; that
+        total is a comparison measure, not a patient count.
+      </p>
+    </>
   );
 }
 export function VulnerabilityChart({ barangays }: { barangays: Barangay[] }) {
@@ -180,8 +189,18 @@ export function VulnerabilityChart({ barangays }: { barangays: Barangay[] }) {
           <YAxis tick={{ fontSize: 11 }} />
           <Tooltip contentStyle={chartStyle} />
           <Legend />
-          <Bar stackId="a" dataKey="Vulnerable" fill="#208d83" />
-          <Bar stackId="a" dataKey="Other" fill="#dce6ed" />
+          <Bar
+            stackId="a"
+            dataKey="Vulnerable"
+            name="Children and older residents"
+            fill="#208d83"
+          />
+          <Bar
+            stackId="a"
+            dataKey="Other"
+            name="Other residents"
+            fill="#dce6ed"
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -230,9 +249,12 @@ export function DiseaseDistribution({ barangays }: { barangays: Barangay[] }) {
 
 export function TravelChart({ plan }: { plan: Plan }) {
   const data = [
-    { name: "OMCM", Minutes: plan.optimized.metrics.average_travel_minutes },
     {
-      name: "Population baseline",
+      name: "Suggested plan",
+      Minutes: plan.optimized.metrics.average_travel_minutes,
+    },
+    {
+      name: "Population-first plan",
       Minutes: plan.baseline.metrics.average_travel_minutes,
     },
   ];

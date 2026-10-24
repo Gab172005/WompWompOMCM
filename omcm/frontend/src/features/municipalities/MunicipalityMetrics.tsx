@@ -31,16 +31,21 @@ export function MunicipalityMetrics({
           provisional={Boolean(summary?.provisionalBarangays)}
         >
           <p>
-            Population-weighted view of {summary?.barangayCount ?? 0} barangays.
+            Average across {summary?.barangayCount ?? 0} barangays, giving more
+            weight to places with more residents.
           </p>
           {summary && summary.provisionalBarangays > 0 && (
             <p>
-              Provisional score and rank: {summary.provisionalBarangays}{" "}
-              barangay scores have missing inputs. Available weights are
-              rescaled before aggregation.
+              Some data is missing in {summary.provisionalBarangays} barangays.
+              Their scores use available information only, so this average and
+              rank may change.
             </p>
           )}
         </NeedScoreCard>
+        <p className="place-evidence-note">
+          Illness rates are sample data, not reported cases. Disaster risk
+          coverage has not been verified.
+        </p>
         <PlaceStats
           items={[
             {
@@ -49,12 +54,12 @@ export function MunicipalityMetrics({
               icon: Users,
             },
             {
-              label: "Residents / km²",
+              label: "People per square kilometre",
               value: summary?.density.toLocaleString() ?? "Unavailable",
               icon: Layers,
             },
             {
-              label: "Mock morbidity / 1,000",
+              label: "Sample illness cases per 1,000 people",
               value: m.morbidity.toFixed(1),
               icon: Activity,
             },
@@ -72,12 +77,13 @@ export function MunicipalityMetrics({
         <NearbyCare point={m} municipality={m.name} origin="municipality" />
         <details className="place-disclosure">
           <summary>
-            All seven HNI contributions<span>Population-weighted</span>
+            How each factor affects the score
+            <span>Average based on population</span>
           </summary>
           <p>
-            Each row shows the population-weighted points contributed by that
-            factor. Missing inputs are excluded within each barangay before its
-            score is aggregated.
+            Each row shows points added by a factor, averaged across barangays
+            based on population. Missing factors are left out of each barangay’s
+            score.
           </p>
           {summary &&
             (Object.keys(HEALTHCARE_NEED_FACTORS) as NeedFactor[]).map(
@@ -93,15 +99,16 @@ export function MunicipalityMetrics({
               ),
             )}
           <p className="place-evidence-note">
-            Morbidity is synthetic. Hazard coverage is unverified; this index
-            supports planning and is not a clinical assessment.
+            Illness rates are sample data. Disaster risk coverage has not been
+            verified. This score estimates planning priority, not confirmed
+            illness.
           </p>
         </details>
       </section>
       <details className="place-disclosure">
-        <summary>Municipal allocation estimate · separate heuristic</summary>
+        <summary>Separate score used to recommend clinic locations</summary>
         <div className="workspace-score">
-          <span>Municipal allocation estimate</span>
+          <span>Municipal clinic planning score</span>
           <strong>
             {m.needScore}
             <small> / 100</small>
@@ -114,7 +121,14 @@ export function MunicipalityMetrics({
         <h3>Score contributions</h3>
         {Object.entries(m.scoreContributions).map(([key, value]) => (
           <div className="workspace-contribution" key={key}>
-            <span>{key === "disasterRisk" ? "Disaster risk" : key}</span>
+            <span>
+              {{
+                morbidity: "Sample illness rate",
+                vulnerability: "Residents who may need extra support",
+                disasterRisk: "Disaster risk",
+                density: "People per square kilometre",
+              }[key] ?? "Other factor"}
+            </span>
             <meter
               min={0}
               max={35}
@@ -125,10 +139,11 @@ export function MunicipalityMetrics({
           </div>
         ))}
         <p className="workspace-note">
-          PSGC {m.psgc}. Disaster risk is a population-weighted rollup of{" "}
-          {m.riskRecords} of {m.barangayCount} barangay indices. Coverage is
-          unverified; unresolved indices are excluded from the rollup.
-          Vulnerability and scenario adjustments remain illustrative.
+          The disaster risk average uses available scores from {m.riskRecords}{" "}
+          of {m.barangayCount} barangays, with more weight given to larger
+          populations. Coverage has not been verified. Missing scores are left
+          out. Estimates of residents needing extra support and changes in
+          practice conditions use sample assumptions.
         </p>
       </details>
     </>

@@ -42,18 +42,15 @@ export function osmClinicReference(
   return `${clinic.osmType}/${clinic.osmId}`;
 }
 
-const ASSIGNMENT_NOTES: Record<OsmClinic["assignmentStatus"], string | null> =
-  {
-    assigned: null,
-    ambiguous:
-      "Barangay assignment is ambiguous; this record is not counted in any barangay total.",
-    outside: null,
-    unlocated: "No supplied location; this record is not drawn on the map.",
-  };
+const ASSIGNMENT_NOTES: Record<OsmClinic["assignmentStatus"], string | null> = {
+  assigned: null,
+  ambiguous:
+    "The mapped point overlaps barangay boundaries, so this clinic is not counted in any barangay total.",
+  outside: null,
+  unlocated: "No supplied location; this record is not drawn on the map.",
+};
 
-export function osmClinicAssignmentNote(
-  status: OsmClinic["assignmentStatus"],
-) {
+export function osmClinicAssignmentNote(status: OsmClinic["assignmentStatus"]) {
   return ASSIGNMENT_NOTES[status];
 }
 
@@ -66,21 +63,24 @@ export function osmClinicPopupText(
   snapshot?: { retrievedAt?: string | null } | null,
 ): OsmClinicPopupText {
   const rows = [
-    `OpenStreetMap ${osmClinicReference(clinic)} · ${clinic.active ? "active clinic record" : "inactive lifecycle record (not counted)"}`,
+    `Fixed clinic listed on OpenStreetMap · ${clinic.active ? "recorded as active; opening status unverified" : "recorded as inactive; not counted"}`,
     clinic.inProvince
       ? "Inside the Laguna study boundary"
       : "Outside the Laguna study boundary",
     clinic.locationMethod === "node"
-      ? "Placed at the mapped node"
-      : "Placed at the Overpass bounding-box center of the element, not its entrance",
+      ? "Shown at the recorded map point"
+      : "Shown at the approximate center of the mapped site, not its entrance",
   ];
   // Supplied OSM tags, shown as text only. No name matching or inferred values.
   const operator = clinic.tags.operator ?? clinic.tags["operator:short"];
-  if (operator) rows.push(`Operator (OSM tag): ${operator}`);
+  if (operator) rows.push(`Operator listed on OpenStreetMap: ${operator}`);
   const speciality = clinic.tags["healthcare:speciality"];
-  if (speciality) rows.push(`Healthcare speciality (OSM tag): ${speciality}`);
+  if (speciality)
+    rows.push(`Speciality listed on OpenStreetMap: ${speciality}`);
   if (clinic.tags.healthcare)
-    rows.push(`Healthcare type (OSM tag): ${clinic.tags.healthcare}`);
+    rows.push(
+      `Facility type listed on OpenStreetMap: ${clinic.tags.healthcare}`,
+    );
   const lifecycle = Object.entries(clinic.tags)
     .filter(
       ([key, value]) =>
@@ -92,14 +92,14 @@ export function osmClinicPopupText(
   if (lifecycle.length)
     rows.push(`Inactive OSM lifecycle tags: ${lifecycle.join(", ")}`);
   rows.push(
-    "Reference only; no deployment, route, approved schedule, or publication is implied.",
+    "Services, capacity and current opening status are unverified. This is a fixed facility, not an approved mobile clinic visit.",
   );
   const assignment = osmClinicAssignmentNote(clinic.assignmentStatus);
   if (assignment) rows.push(assignment);
   rows.push(
     snapshot?.retrievedAt
-      ? `Offline snapshot retrieved ${snapshot.retrievedAt}; not a live query.`
-      : "Offline snapshot; not a live query.",
+      ? `Map records downloaded ${snapshot.retrievedAt}; this is not live information.`
+      : "Saved map records; this is not live information.",
   );
   const warnings = [...clinic.warnings];
   if (clinic.assignmentStatus === "ambiguous")

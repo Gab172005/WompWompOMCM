@@ -789,12 +789,12 @@ export function computeLagunaMunicipalities(
     const highestDriver =
       contribMorbidity >= contribDisasterRisk &&
       contribMorbidity >= contribVulnerability
-        ? `synthetic morbidity (${adjustedMorbidity} / 1,000 residents)`
+        ? `sample illness rate (${adjustedMorbidity} cases per 1,000 residents; not reported cases)`
         : contribDisasterRisk >= contribDensity
-          ? `disaster risk screening (${disasterRisk}/100)`
-          : `high population density (${density.toLocaleString()} residents/km²)`;
+          ? `mapped disaster risk (${disasterRisk}/100; coverage unverified)`
+          : `people living close together (${density.toLocaleString()} per square kilometre)`;
 
-    const explanation = `Score driven primarily by ${highestDriver} and an illustrative vulnerability index of ${base.vulnerability}/100.`;
+    const explanation = `This municipal planning score reflects ${highestDriver} and a sample estimate of residents needing extra support (${base.vulnerability}/100). It is not a confirmed illness count.`;
 
     return {
       ...base,
@@ -964,7 +964,7 @@ export function runClinicOptimizer(
       servedEstimate: Math.round(site.capacity * 0.88),
       utilizationPct: 88,
       route,
-      reason: `Prioritized to address ${mun?.needScore ?? 60}/100 need score in ${site.municipality} (${mun?.population.toLocaleString()} pop).`,
+      reason: `Suggested to help ${site.municipality}, with a municipal planning score of ${mun?.needScore ?? 60}/100 and ${mun?.population.toLocaleString()} residents. This demonstration estimate uses a separate score from the barangay map. Local access and clinic readiness need review.`,
     };
   });
 

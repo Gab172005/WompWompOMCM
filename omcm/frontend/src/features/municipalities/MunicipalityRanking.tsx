@@ -19,10 +19,10 @@ export function MunicipalityRanking({
     );
   return (
     <section>
-      <h3>Municipality HNI priority</h3>
+      <h3>Municipality healthcare need ranking</h3>
       <p className="workspace-note">
-        Population-weighted barangay HNI; tied scores share a rank. *
-        Provisional.
+        Average barangay scores based on population. Rank 1 has the highest
+        estimated need. Equal scores share a rank. * Some data missing.
       </p>
       <ol className="workspace-ranking">
         {ranked.map(({ municipality: m, summary }) => (

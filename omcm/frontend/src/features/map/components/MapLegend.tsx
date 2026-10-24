@@ -1,5 +1,11 @@
-import { useId, useState, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import {
+  ChevronDown,
+  GripHorizontal,
+  Maximize2,
+  Minus,
+  RotateCcw,
+} from "lucide-react";
 import { useForecastStore } from "../../../store/useForecastStore";
 import { getMetricColor } from "../../../services/lagunaData";
 import { useAppStore } from "../../../store/useAppStore";
@@ -73,6 +79,21 @@ export function MapLegend({
   } = useAppStore();
   const forecast = useForecastStore();
   const [expanded, setExpanded] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  const [isDragging, setIsDragging] = useState(false);
+
+  const legendRef = useRef<HTMLElement>(null);
+  const dragStartRef = useRef<{
+    startX: number;
+    startY: number;
+    initialLeft: number;
+    initialTop: number;
+    hasMoved: boolean;
+  } | null>(null);
+
   const keysId = useId();
   const isPublic = viewMode === "public";
   const simulation = !isPublic && panel === "simulation";
@@ -80,21 +101,21 @@ export function MapLegend({
   const title = isPublic
     ? "Approved Care Locations"
     : simulation
-      ? `Day ${forecast.runs[forecast.strategy].day} · ${forecast.metric === "hni" ? "Projected healthcare need (HNI)" : "Unmet healthcare need (UHNI)"}`
+      ? `Day ${forecast.runs[forecast.strategy].day} · ${forecast.metric === "hni" ? "Expected need" : "Uncovered need"}`
       : metricLabels[metric];
   const subtitle = isPublic
     ? schedule
       ? `${schedule.date} · ${schedule.startTime}–${schedule.endTime} PH Time`
       : `${selectedScheduleDate} · No schedule published`
     : simulation
-      ? "Index 0–100 · synthetic forecast"
+      ? "Score / 100 · sample estimate"
       : metric === "density"
-        ? "Residents / km²"
+        ? "People per square kilometre"
         : metric === "morbidity"
-          ? "Cases / 1,000 · illustrative"
+          ? "Sample cases per 1,000 people"
           : metric === "disasterRisk"
-            ? "Index / 100 · barangay point screening"
-            : "Barangay index / 100 · baseline estimate";
+            ? "Score / 100 · one reference point"
+            : "Score / 100 · planning estimate";
   const scaleMetric = simulation ? "score" : metric;
   const steps =
     scaleMetric === "disasterRisk"
@@ -107,11 +128,230 @@ export function MapLegend({
   const hasFacilities =
     simulation || showHospitals || showClinics || showOsmClinics;
 
+  // Keep legend within viewport when resized
+  useEffect(() => {
+    if (!position) return;
+    const handleResize = () => {
+      const el = legendRef.current;
+      if (!el) return;
+      const width = el.offsetWidth;
+      const height = el.offsetHeight;
+      const maxX = Math.max(8, window.innerWidth - width - 8);
+      const maxY = Math.max(8, window.innerHeight - height - 8);
+      setPosition((prev) => {
+        if (!prev) return null;
+        const clampedX = Math.max(8, Math.min(maxX, prev.x));
+        const clampedY = Math.max(8, Math.min(maxY, prev.y));
+        if (clampedX === prev.x && clampedY === prev.y) return prev;
+        return { x: clampedX, y: clampedY };
+      });
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [position]);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (
+      target.closest("button") ||
+      target.closest("a") ||
+      target.closest("input") ||
+      target.closest("summary") ||
+      target.closest(".workspace-legend-source")
+    ) {
+      return;
+    }
+
+    const el = legendRef.current;
+    if (!el) return;
+
+    const rect = el.getBoundingClientRect();
+    dragStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initialLeft: rect.left,
+      initialTop: rect.top,
+      hasMoved: false,
+    };
+
+    const handlePointerMove = (ev: PointerEvent) => {
+      if (!dragStartRef.current) return;
+      const dx = ev.clientX - dragStartRef.current.startX;
+      const dy = ev.clientY - dragStartRef.current.startY;
+
+      if (!dragStartRef.current.hasMoved && Math.hypot(dx, dy) > 3) {
+        dragStartRef.current.hasMoved = true;
+        setIsDragging(true);
+      }
+
+      if (dragStartRef.current.hasMoved) {
+        const currentEl = legendRef.current;
+        const width = currentEl?.offsetWidth ?? 290;
+        const height = currentEl?.offsetHeight ?? 300;
+
+        const rawX = dragStartRef.current.initialLeft + dx;
+        const rawY = dragStartRef.current.initialTop + dy;
+
+        const minX = 8;
+        const maxX = Math.max(minX, window.innerWidth - width - 8);
+        const minY = 8;
+        const maxY = Math.max(minY, window.innerHeight - height - 8);
+
+        const clampedX = Math.round(Math.max(minX, Math.min(maxX, rawX)));
+        const clampedY = Math.round(Math.max(minY, Math.min(maxY, rawY)));
+
+        setPosition({ x: clampedX, y: clampedY });
+      }
+    };
+
+    const handlePointerUp = () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      setIsDragging(false);
+      dragStartRef.current = null;
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+  };
+
+  const handleExpand = () => {
+    if (position) {
+      const estimatedHeight = 360;
+      const maxY = Math.max(8, window.innerHeight - estimatedHeight - 16);
+      if (position.y > maxY) {
+        setPosition((prev) => (prev ? { ...prev, y: maxY } : null));
+      }
+    }
+    setIsMinimized(false);
+  };
+
+  if (isMinimized) {
+    return (
+      <section
+        ref={legendRef}
+        className={`workspace-legend card workspace-legend-minimized ${isDragging ? "is-dragging" : ""} ${position ? "is-positioned" : ""}`}
+        aria-label="Map legend"
+        style={
+          position
+            ? {
+                left: `${position.x}px`,
+                top: `${position.y}px`,
+                bottom: "auto",
+                right: "auto",
+              }
+            : undefined
+        }
+        onPointerDown={handlePointerDown}
+      >
+        <div
+          className="workspace-legend-drag-indicator"
+          aria-hidden="true"
+          title="Drag to reposition"
+        >
+          <GripHorizontal size={14} />
+        </div>
+        <div className="workspace-legend-minimized-info">
+          <span className="workspace-legend-minimized-badge">Legend</span>
+          <strong className="workspace-legend-minimized-title" title={title}>
+            {title}
+          </strong>
+        </div>
+        <div className="workspace-legend-actions">
+          {position && (
+            <button
+              type="button"
+              className="workspace-legend-action-btn"
+              title="Reset position"
+              aria-label="Reset legend position"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPosition(null);
+              }}
+            >
+              <RotateCcw size={12} />
+            </button>
+          )}
+          <button
+            type="button"
+            className="workspace-legend-action-btn workspace-legend-expand-btn"
+            title="Expand legend"
+            aria-label="Expand map legend"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleExpand();
+            }}
+          >
+            <Maximize2 size={13} />
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section className="workspace-legend card" aria-label="Map legend">
-      <header className="workspace-legend-heading">
-        <strong>{title}</strong>
-        <span>{subtitle}</span>
+    <section
+      ref={legendRef}
+      className={`workspace-legend card ${isDragging ? "is-dragging" : ""} ${position ? "is-positioned" : ""}`}
+      aria-label="Map legend"
+      style={
+        position
+          ? {
+              left: `${position.x}px`,
+              top: `${position.y}px`,
+              bottom: "auto",
+              right: "auto",
+            }
+          : undefined
+      }
+    >
+      <header
+        className="workspace-legend-header"
+        onPointerDown={handlePointerDown}
+        title="Drag to reposition legend"
+      >
+        <div className="workspace-legend-header-main">
+          <div
+            className="workspace-legend-drag-indicator"
+            aria-hidden="true"
+            title="Drag to reposition"
+          >
+            <GripHorizontal size={14} />
+          </div>
+          <div className="workspace-legend-heading">
+            <strong>{title}</strong>
+            <span>{subtitle}</span>
+          </div>
+        </div>
+        <div className="workspace-legend-actions">
+          {position && (
+            <button
+              type="button"
+              className="workspace-legend-action-btn"
+              title="Reset to default position"
+              aria-label="Reset legend to default position"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPosition(null);
+              }}
+            >
+              <RotateCcw size={12} />
+            </button>
+          )}
+          <button
+            type="button"
+            className="workspace-legend-action-btn"
+            title="Minimize legend"
+            aria-label="Minimize map legend"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsMinimized(true);
+            }}
+          >
+            <Minus size={13} />
+          </button>
+        </div>
       </header>
       {!isPublic && (
         <div className="workspace-colorbar" aria-label="Map color scale">
@@ -130,6 +370,19 @@ export function MapLegend({
           })}
         </div>
       )}
+      {!isPublic && (
+        <small className="legend-color-note">
+          Darker ={" "}
+          {scaleMetric === "density"
+            ? "more people/km²"
+            : scaleMetric === "morbidity"
+              ? "more sample illness"
+              : scaleMetric === "disasterRisk"
+                ? "higher risk"
+                : "more need"}{" "}
+          · Gray = unavailable
+        </small>
+      )}
       <button
         type="button"
         className="workspace-legend-toggle"
@@ -145,6 +398,17 @@ export function MapLegend({
         className="workspace-legend-keys"
         data-expanded={expanded}
       >
+        {!isPublic && (
+          <p className="workspace-note">
+            Colors compare estimated planning information, not confirmed illness
+          counts. Gray areas have no displayed value; Paete forest land is restricted for clinic placement.{" "}
+            {metric === "disasterRisk" &&
+              !simulation &&
+              "Risk applies to one reference point; a low score does not establish safety."}{" "}
+            {simulation &&
+              "Clinic circles show estimated reach within 3 km in a straight line, not confirmed road access."}
+          </p>
+        )}
         {!simulation && (
           <section
             className="workspace-legend-group"
@@ -229,10 +493,10 @@ export function MapLegend({
                   }
                   description={
                     simulation
-                      ? "3 km service catchment"
+                      ? "Estimated reach within 3 km (straight line)"
                       : isPublic
                         ? "Scheduled community route"
-                        : "Optimized staging site"
+                        : "Suggested clinic location"
                   }
                 />
               )}
@@ -262,11 +526,11 @@ export function MapLegend({
                       alt=""
                     />
                   }
-                  label="OSM clinic"
+                  label="Fixed clinic (OpenStreetMap)"
                   description={
                     isPublic
                       ? "Fixed facility · not an approved mobile clinic"
-                      : "Fixed facility · reference layer"
+                      : "Mapped facility · services and opening status unverified"
                   }
                 />
               )}

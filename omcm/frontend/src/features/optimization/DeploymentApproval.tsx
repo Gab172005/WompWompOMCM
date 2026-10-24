@@ -83,7 +83,7 @@ export function DeploymentApproval({ plan }: { plan: ClinicPlan }) {
         <span className="badge">ADMIN PUBLICATION</span>
       </div>
       <p className="workspace-note">
-        Publishing a schedule makes these staging sites, operating hours, and
+        Publishing a schedule makes these clinic locations, operating hours, and
         services visible to residents in Public View. Unapproved drafts and
         simulations remain private.
       </p>
@@ -161,7 +161,7 @@ export function DeploymentApproval({ plan }: { plan: ClinicPlan }) {
             setPublishedMessage("");
           }}
         />
-        <span>Emergency schedule override (same-day / public alert)</span>
+        <span>Replace a published schedule for an emergency</span>
       </label>
 
       {emergency && (
@@ -210,7 +210,7 @@ export function DeploymentApproval({ plan }: { plan: ClinicPlan }) {
           {matches
             ? "Schedule published"
             : emergency
-              ? "Confirm emergency override"
+              ? "Confirm emergency schedule change"
               : "Approve & publish schedule"}
         </Button>
         <Button

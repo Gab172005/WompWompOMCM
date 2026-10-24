@@ -68,12 +68,12 @@ export function DeploymentReview() {
       <div className="two-grid">
         <Card>
           <div className="card-title">
-            <h3>Manual staging override</h3>
+            <h3>Choose different clinic locations</h3>
             <span className="badge">OPTIONAL</span>
           </div>
           <p>
             Keep the recommendation or override its sites. Start with the
-            recommended hubs, change any selection, then generate again.
+            suggested locations, change any selection, then generate again.
             Capacity, eligibility, flood, and travel restrictions still apply.
           </p>
           <label className="checkbox">
@@ -117,8 +117,8 @@ export function DeploymentReview() {
           {plan ? (
             <>
               <p className="tiny">
-                DRAFT · Plan {plan.plan_id?.slice(0, 8)} ·{" "}
-                {plan.optimized.solver_status}
+                Draft plan · Review the estimated appointments and locations
+                below.
               </p>
               {config.manual_sites === null && (
                 <button
@@ -130,7 +130,7 @@ export function DeploymentReview() {
                     })
                   }
                 >
-                  Override recommended sites
+                  Change the suggested locations
                 </button>
               )}
               {plan.optimized.clinics.map((c) => (

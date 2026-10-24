@@ -1,3 +1,4 @@
+import { ordinal } from "../../services/planningLanguage";
 import { Activity, Home, Layers, Users } from "lucide-react";
 import {
   NearbyCare,
@@ -75,20 +76,28 @@ export function BarangayPanel() {
       <section className="place-overview" aria-label="Barangay healthcare need">
         <NeedScoreCard
           score={b.needScore}
-          rankLabel={`Healthcare need rank #${b.needRank} of ${LAGUNA_BARANGAYS.length}`}
+          rankLabel={`${ordinal(b.needRank)} highest estimated healthcare need among ${LAGUNA_BARANGAYS.length} barangays in Laguna`}
           coverage={b.needCoverage}
           provisional={b.needProvisional}
         >
           {b.needProvisional ? (
             <p>
-              Provisional score and rank · {b.needCoverage}% of input weight
-              available. Unresolved inputs are excluded and the remaining
-              weights rescaled. Missing factors are not treated as zero.
+              Estimated score — some data missing. Missing information:{" "}
+              {(Object.keys(HEALTHCARE_NEED_FACTORS) as NeedFactor[])
+                .filter((key) => b.needFactors[key] === null)
+                .map((key) => HEALTHCARE_NEED_FACTORS[key].label)
+                .join(", ")}
+              . Only available factors are used, so the score and rank may
+              change when more data is available.
             </p>
           ) : (
             <p>All seven planning factors are available for this barangay.</p>
           )}
         </NeedScoreCard>
+        <p className="place-evidence-note">
+          Illness rates are sample data, not reported cases. Disaster risk
+          coverage has not been verified.
+        </p>
         <PlaceStats
           items={[
             {
@@ -102,12 +111,12 @@ export function BarangayPanel() {
               icon: Home,
             },
             {
-              label: "Residents / km²",
+              label: "People per square kilometre",
               value: b.density.toLocaleString(),
               icon: Layers,
             },
             {
-              label: "Mock morbidity / 1,000",
+              label: "Sample illness cases per 1,000 people",
               value: b.morbidity.toFixed(2),
               icon: Activity,
             },
@@ -117,7 +126,7 @@ export function BarangayPanel() {
         <NearbyCare point={b} municipality={b.municipality} />
         <details className="place-disclosure">
           <summary>
-            All seven factor inputs<span>Weights & evidence</span>
+            How each factor affects the score<span>Details and sources</span>
           </summary>
           <h3>Healthcare need contributions</h3>
           {(Object.keys(HEALTHCARE_NEED_FACTORS) as NeedFactor[]).map((key) => {
@@ -167,7 +176,7 @@ export function BarangayPanel() {
         </details>
         <details className="place-disclosure">
           <summary>
-            OSM clinic records and provenance<span>Fixed facilities</span>
+            Fixed clinic records and sources<span>OpenStreetMap</span>
           </summary>
           <h3>OSM clinic evidence</h3>
           <details>
@@ -286,7 +295,7 @@ export function BarangayPanel() {
         </details>
         <HealthcareNeedMethod />
         <details className="place-disclosure">
-          <summary>Scope, bias and evidence limits</summary>
+          <summary>What this information can and cannot tell you</summary>
           <ul>
             <li>
               Laguna only: facilities in neighbouring provinces are excluded, so
@@ -328,10 +337,10 @@ export function BarangayPanel() {
       </section>
       <details className="place-disclosure">
         <summary>
-          Hazard screening details<span>Point-based evidence</span>
+          Disaster risk details<span>One reference point</span>
         </summary>
         <div className="workspace-score">
-          <span>Disaster risk index</span>
+          <span>Disaster Risk Score</span>
           <strong>
             {b.disasterRisk ?? "Needs review"}
             {b.disasterRisk !== null && <small> / 100</small>}
@@ -390,7 +399,7 @@ export function BarangayPanel() {
         )}
       </details>
       <details className="place-disclosure">
-        <summary>Adjacent barangays ({b.adjacentBarangays.length})</summary>
+        <summary>Neighboring barangays ({b.adjacentBarangays.length})</summary>
         <ul>
           {b.adjacentBarangays.map((name) => (
             <li key={name}>{name}</li>

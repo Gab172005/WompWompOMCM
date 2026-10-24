@@ -411,18 +411,18 @@ describe("Google Maps fixed OSM clinic layer (mocked, no live key)", () => {
     expect(content.textContent).toContain("<script>");
     expect(content.textContent).toContain("<b>general</b>");
     // Provenance and known link are present as safe text/attributes.
-    expect(content.textContent).toContain("Offline snapshot retrieved");
-    expect(content.textContent).toContain("not a live query");
+    expect(content.textContent).toContain("Map records downloaded");
+    expect(content.textContent).toContain("not live information");
     expect(content.textContent).toContain(
-      "retrieved 2026-10-23T17:32:47.575509+00:00",
+      "downloaded 2026-10-23T17:32:47.575509+00:00",
     );
     expect(content.textContent).toContain(
-      "Healthcare speciality (OSM tag): <b>general</b>",
+      "Speciality listed on OpenStreetMap: <b>general</b>",
     );
     expect(content.textContent).toContain(
-      "Operator (OSM tag): <script>window.__osmClinicXss=1</script>",
+      "Operator listed on OpenStreetMap: <script>window.__osmClinicXss=1</script>",
     );
-    expect(content.textContent).toContain("Placed at the mapped node");
+    expect(content.textContent).toContain("Shown at the recorded map point");
     const link = content.querySelector("a")!;
     expect(link.getAttribute("href")).toBe(
       "https://www.openstreetmap.org/node/9001",

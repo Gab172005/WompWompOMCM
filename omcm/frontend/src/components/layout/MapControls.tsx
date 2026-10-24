@@ -38,12 +38,12 @@ export function MapControls() {
       <div className="map-search-card">
         <button
           className="map-icon-button"
-          aria-label="Toggle intelligence panel"
+          aria-label="Show or hide community details"
           aria-expanded={sidePanelOpen && !panel}
           title={
             isPublic
               ? "Community care & schedules"
-              : "Community intelligence"
+              : "Community details and healthcare needs"
           }
           onClick={() => {
             if (panel) openPanel(null);
@@ -144,15 +144,22 @@ export function MapControls() {
         <nav className="map-tool-buttons" aria-label="Planning tools">
           {(
             [
-              { id: "optimization", label: "Optimize", icon: Crosshair },
-              { id: "simulation", label: "Simulate", icon: CloudRain },
-              { id: "chatbot", label: "Assistant", icon: Bot },
+              { id: "optimization", label: "Plan clinics", icon: Crosshair },
+              { id: "simulation", label: "30-day simulation", icon: CloudRain },
+              { id: "chatbot", label: "Planning help", icon: Bot },
             ] as const
           ).map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               type="button"
               aria-pressed={panel === id}
+              title={
+                id === "optimization"
+                  ? "Choose and review mobile clinic locations"
+                  : id === "simulation"
+                    ? "Compare clinic plans using estimated daily outcomes"
+                    : "Get help understanding scores and clinic plans"
+              }
               onClick={() => openPanel(panel === id ? null : id)}
             >
               <Icon size={18} aria-hidden="true" />

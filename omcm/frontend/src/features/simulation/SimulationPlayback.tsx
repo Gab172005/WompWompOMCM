@@ -20,6 +20,11 @@ export function SimulationPlayback() {
       <button
         className="primary"
         aria-label={s.playing ? "Pause simulation" : "Play simulation"}
+        title={
+          s.playing
+            ? "Pause on this day"
+            : "Advance through days; pauses for weekly clinic decisions"
+        }
         disabled={run.day === 30}
         onClick={() => useForecastStore.setState({ playing: !s.playing })}
       >
@@ -27,7 +32,8 @@ export function SimulationPlayback() {
       </button>
       <button
         className="icon-button"
-        aria-label="Reset playback"
+        aria-label="Return to Day 1"
+        title="Review Day 1 without clearing your clinic plan"
         onClick={() => s.seek(1)}
       >
         <RotateCcw size={17} />

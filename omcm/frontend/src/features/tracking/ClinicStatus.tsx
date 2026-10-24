@@ -10,10 +10,10 @@ export function ClinicStatus({
       {!simulation
         ? "Proposed placement"
         : progress >= 1
-          ? "Arrived at staging site"
+          ? "Arrived at clinic location (simulated)"
           : progress === 0
-            ? "Staged at depot"
-            : "En route · simulated"}
+            ? "At starting point (simulated)"
+            : "On the way (simulated)"}
     </span>
   );
 }

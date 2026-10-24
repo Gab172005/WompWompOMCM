@@ -3,8 +3,8 @@ import math
 import numpy as np
 from models.municipality import Weights
 
-FACTORS = {"population": "population percentile", "disease": "elevated disease burden", "vulnerability": "a large vulnerable population",
-           "accessibility": "limited hospital access", "poverty": "economic vulnerability", "flood": "flood exposure"}
+FACTORS = {"population": "number of residents compared with other areas", "disease": "higher sample illness rates", "vulnerability": "more children and older residents",
+           "accessibility": "limited hospital access", "poverty": "estimated poverty", "flood": "flood exposure"}
 
 
 def calculate_scores(frame, network, times, weights: Weights, outbreaks=(), multiplier=1, municipality_multipliers=None):
@@ -17,14 +17,15 @@ def calculate_scores(frame, network, times, weights: Weights, outbreaks=(), mult
     population_percentiles = frame["population"].rank(method="average", pct=True)
     population_by_id = dict(zip(frame["id"], population_percentiles))
     for row in frame.to_dict("records"):
-        warnings = ["Synthetic demonstration estimates; not validated clinical indicators."]
+        warnings = ["Sample estimates for planning practice, not confirmed illness measurements."]
         if row.get("geography_level") == "municipality":
             warnings.append("Estimated municipal indicators; not barangay observations.")
 
         def indicator(key, default):
             value = row.get(key)
             if value is None or (isinstance(value, (float, int)) and not math.isfinite(value)):
-                warnings.append(f"Missing {key}; estimated conservative demo value used.")
+                data_label = {"disease_cases": "Illness information", "children": "Number of children", "elderly": "Number of older residents", "poverty_pct": "Poverty information", "flood_exposure": "Flood information", "demand_rate": "Daily appointment needs"}.get(key, "Planning information")
+                warnings.append(f"{data_label} is missing; a cautious sample estimate is used. Results may change when verified information is available.")
                 return default
             return value
 
@@ -36,7 +37,7 @@ def calculate_scores(frame, network, times, weights: Weights, outbreaks=(), mult
         nearest_minutes, nearest_name = min(reachable)
         if "healthcare_access_time_minutes" in row:
             nearest_minutes = row["healthcare_access_time_minutes"]
-            nearest_name = "Synthetic hospital-access indicator (no verified facility)"
+            nearest_name = "Sample hospital travel estimate (no verified facility)"
         if row.get("scenario_flood"):
             row["flood_exposure"] = 100
         if "scenario_flood_exposure" in row:
@@ -59,7 +60,7 @@ def calculate_scores(frame, network, times, weights: Weights, outbreaks=(), mult
                            disease_per_1000=round(disease_per_1000, 2), factors=factors,
                            contributions={k: round(v, 2) for k, v in contributions.items()}, score=score,
                            level="Critical" if score >= 70 else "High" if score >= 50 else "Moderate" if score >= 30 else "Low",
-                           demand=demand, high_priority=score >= 50, nearest_hospital=nearest_name if math.isfinite(nearest_minutes) else "Unreachable in scenario",
+                           demand=demand, high_priority=score >= 50, nearest_hospital=nearest_name if math.isfinite(nearest_minutes) else "No available route in this practice scenario",
                            hospital_minutes=nearest_minutes if math.isfinite(nearest_minutes) else None,
                            explanation=f"{row['name']} has {score:.0f}/100 illustrative need, driven by " + ", ".join(FACTORS[k] for k in top) + ".",
                            recommended_services=services, warnings=warnings, synthetic=True))

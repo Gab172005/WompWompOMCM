@@ -11,16 +11,16 @@ export function Risk() {
   return (
     <>
       <PageHeader
-        eyebrow="COMMUNITY INTELLIGENCE"
-        title="Healthcare risk map"
-        description="Select a city or municipality for population-weighted healthcare need, contributing factors, and available services."
+        eyebrow="COMMUNITY HEALTHCARE PLANNING"
+        title="Healthcare needs map"
+        description="Select a city or municipality for average healthcare need based on population, contributing factors, and available services."
       />
       <Card className="full-map">
         <MapView showRoads />
       </Card>
       <Card>
         <div className="card-title">
-          <h3>City / municipality intelligence register</h3>
+          <h3>Compare cities and municipalities</h3>
           <span className="badge">DEMO DATA</span>
         </div>
         <div className="table-scroll">
@@ -28,9 +28,9 @@ export function Risk() {
             <thead>
               <tr>
                 <th>Rank / City or municipality</th>
-                <th>Represented population</th>
-                <th>Disease / 1,000</th>
-                <th>Vulnerability</th>
+                <th>Residents in this dataset</th>
+                <th>Sample illness cases per 1,000</th>
+                <th>Need for extra support / 100 (sample)</th>
                 <th>Hospital travel</th>
                 <th>Need</th>
                 <th>Priority</th>
@@ -48,7 +48,7 @@ export function Risk() {
                   <td>{b.factors.vulnerability.toFixed(0)}/100</td>
                   <td>
                     {b.hospital_minutes === null
-                      ? "Unreachable"
+                      ? "No route available in this model"
                       : `${b.hospital_minutes} min`}
                   </td>
                   <td>

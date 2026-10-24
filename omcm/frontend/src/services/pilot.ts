@@ -145,9 +145,9 @@ export function feasibleSites(pilot: Pilot, config: Config) {
 }
 const round = (n: number, digits = 2) => Number(n.toFixed(digits));
 const factorNames: Record<keyof Weights, string> = {
-  population: "population percentile",
-  disease: "disease burden",
-  vulnerability: "vulnerable residents",
+  population: "number of residents compared with other areas",
+  disease: "sample illness rate",
+  vulnerability: "children and older residents",
   accessibility: "limited hospital access",
   poverty: "poverty",
   flood: "flood exposure",

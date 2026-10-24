@@ -47,7 +47,9 @@ export function parseLagunaGeometry(
     !Array.isArray(data.features) ||
     !data.features.length
   )
-    throw new Error("Expected a nonempty Laguna GeoJSON FeatureCollection.");
+    throw new Error(
+      "This file has no usable Laguna boundaries. Choose a GeoJSON boundary file that contains at least one area.",
+    );
   const seen = new Set<string>();
   const features: LagunaArea[] = data.features.map((feature) => {
     const p = feature.properties ?? {};
@@ -70,7 +72,7 @@ export function parseLagunaGeometry(
       p.demonstration === true
     )
       throw new Error(
-        "Every area needs a unique Laguna PSGC and a name; demonstration geometry is rejected.",
+        "Each area needs its own official Laguna geographic code (PSGC) and name. Use verified boundaries rather than demonstration shapes.",
       );
     seen.add(code);
     const geometry = feature.geometry;
@@ -79,21 +81,29 @@ export function parseLagunaGeometry(
       (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon")
     )
       throw new Error(
-        "Only Polygon and MultiPolygon boundaries are supported.",
+        "The file must contain area boundaries, not points or lines. Ask your data officer for a GeoJSON file with Polygon or MultiPolygon areas.",
       );
     const polygons =
       geometry.type === "Polygon"
         ? [geometry.coordinates]
         : geometry.coordinates;
-    if (!polygons.length) throw new Error("Empty geometry.");
+    if (!polygons.length)
+      throw new Error(
+        "An area has no boundary coordinates. Ask your data officer to correct the file.",
+      );
     for (const polygon of polygons) {
-      if (!polygon.length) throw new Error("Empty polygon.");
+      if (!polygon.length)
+        throw new Error(
+          "An area has an empty boundary. Ask your data officer to correct the file.",
+        );
       for (const ring of polygon) {
         if (
           ring.length < 4 ||
           JSON.stringify(ring[0]) !== JSON.stringify(ring[ring.length - 1])
         )
-          throw new Error("Boundary rings must be closed.");
+          throw new Error(
+            "A boundary shape is incomplete. Ask your data officer to close the shape and check the file.",
+          );
         for (const position of ring) {
           // Reject projected coordinates and files outside the Laguna vicinity.
           if (
@@ -105,7 +115,7 @@ export function parseLagunaGeometry(
             position[1] > 14.7
           )
             throw new Error(
-              "Expected WGS84 longitude/latitude coordinates in Laguna.",
+              "The map locations are outside Laguna or use the wrong coordinate format. Ask your data officer for Laguna boundaries in WGS84 longitude and latitude.",
             );
         }
       }

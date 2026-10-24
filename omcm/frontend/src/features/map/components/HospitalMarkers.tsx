@@ -34,6 +34,10 @@ export function HospitalMarkers({
               {h.capacity === null ? "Beds unverified" : `${h.capacity} beds`}
             </p>
             <small>{h.verificationStatus}</small>
+            <p>
+              Bed counts come from dated records and do not show beds available
+              today.
+            </p>
             {h.capacityAsOf && (
               <p>
                 {h.capacityDefinition} · As of {h.capacityAsOf}

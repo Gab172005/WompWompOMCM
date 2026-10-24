@@ -84,12 +84,12 @@ export function AdminLoginModal() {
 
       clearCredentials();
       setError(
-        "Invalid administrator credentials. Check the username and password and try again.",
+        "We could not sign you in. Check the username and password and try again.",
       );
     } catch {
       clearCredentials();
       setError(
-        "Invalid administrator credentials. Check the username and password and try again.",
+        "We could not sign you in. Check the username and password and try again.",
       );
     } finally {
       setBusy(false);
@@ -103,12 +103,11 @@ export function AdminLoginModal() {
           <ShieldCheck size={15} aria-hidden="true" /> LGU OPERATIONS ACCESS
         </div>
         <p>
-          Sign in to access the Laguna healthcare-need workspace, run clinic
-          optimization and disaster simulations, and publish approved schedules
-          to Public View.
+          Sign in to review healthcare needs, plan mobile clinic locations, try
+          practice scenarios, and publish approved schedules for residents.
         </p>
         <div className="workspace-subcard admin-demo-hint">
-          <strong>Demo Administrator Credentials</strong>
+          <strong>Demo sign-in details</strong>
           <p>
             Username: <code>{DEMO_ADMIN_USERNAME}</code> · Password:{" "}
             <code>{DEMO_ADMIN_PASSWORD}</code>
@@ -122,7 +121,7 @@ export function AdminLoginModal() {
               setError("");
             }}
           >
-            Fill demo credentials
+            Use demo sign-in details
           </button>
         </div>
         <form onSubmit={handleSubmit} className="admin-login-form">

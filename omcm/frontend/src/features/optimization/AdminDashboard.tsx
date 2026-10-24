@@ -23,9 +23,9 @@ export function AdminDashboard() {
   return (
     <>
       <PageHeader
-        eyebrow="CAPACITY-AWARE ALLOCATION · ROAD PILOT"
+        eyebrow="MOBILE CLINIC PLANNING · ROAD DEMONSTRATION"
         title="Place care where it matters"
-        description="Maximize priority-weighted daily demand within safe site, travel, and clinic-capacity constraints."
+        description="Find locations that could offer more appointments to communities with high estimated need, within the available clinic capacity and sample road restrictions."
       />
       <PlanningControls detailed />
 
@@ -41,7 +41,7 @@ export function AdminDashboard() {
       {plan && (
         <>
           <div className="section-heading">
-            <h2>Recommended staging locations</h2>
+            <h2>Suggested clinic locations</h2>
             <a className="primary" href="#deployment-review">
               Accept recommendation & review
               <ArrowRight size={16} />
@@ -90,13 +90,13 @@ export function AdminDashboard() {
           <div className="two-grid">
             <Card>
               <div className="card-title">
-                <h3>OMCM vs. population baseline</h3>
+                <h3>Suggested plan vs. population-first plan</h3>
                 <span className="badge">CALCULATED</span>
               </div>
               <ComparisonChart plan={plan} />
             </Card>
             <Card>
-              <h3>Allocation performance</h3>
+              <h3>Compare the clinic plans</h3>
               <p>
                 The baseline chooses the most populated eligible hubs and fills
                 appointments in population order under the same restrictions.
@@ -112,8 +112,8 @@ export function AdminDashboard() {
                 <thead>
                   <tr>
                     <th>Metric</th>
-                    <th>OMCM</th>
-                    <th>Baseline</th>
+                    <th>Suggested plan</th>
+                    <th>Population-first plan</th>
                     <th>Improvement</th>
                   </tr>
                 </thead>
@@ -121,8 +121,14 @@ export function AdminDashboard() {
                   {(
                     [
                       ["Appointments served", "residents_served"],
-                      ["High-risk residents reached", "high_priority_reached"],
-                      ["Priority-weighted demand", "weighted_demand"],
+                      [
+                        "Appointments in high-priority areas",
+                        "high_priority_reached",
+                      ],
+                      [
+                        "Appointments weighted by healthcare need",
+                        "weighted_demand",
+                      ],
                       ["Average travel (min)", "average_travel_minutes"],
                       [
                         "Unserved population (daily estimate)",
@@ -130,7 +136,7 @@ export function AdminDashboard() {
                       ],
                       ["Unserved daily appointment demand", "unserved_demand"],
                       [
-                        "Flood-safe accessibility (%)",
+                        "Demand served on sample routes without mapped flooding (%)",
                         "flood_safe_accessibility_pct",
                       ],
                     ] as const
@@ -168,10 +174,9 @@ export function AdminDashboard() {
                     : `${plan.improvement_pct >= 0 ? "+" : ""}${plan.improvement_pct}% priority-weighted demand`}
                 </strong>
                 <span>
-                  Derived from these allocations. Solver:{" "}
-                  {plan.optimized.solver_status}.
+                  Based on the calculated appointment assignments.
                   {!plan.optimized.optimal &&
-                    " Feasible placement; optimality not proven."}
+                    " An available plan was found; a better plan may still be possible."}
                 </span>
               </div>
             </Card>

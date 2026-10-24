@@ -41,13 +41,13 @@ export function isLocatedClinic<
 
 export const HEALTHCARE_NEED_VERSION = "barangay-healthcare-need-v3";
 export const HEALTHCARE_NEED_FACTORS = {
-  morbidity: { label: "Synthetic morbidity", weight: 0.25 },
-  hospitalAccess: { label: "Hospital distance", weight: 0.3 },
-  disasterRisk: { label: "Disaster risk", weight: 0.15 },
-  density: { label: "Population density", weight: 0.1 },
-  incomeClass: { label: "Municipality income class", weight: 0.1 },
-  clinicDistance: { label: "Clinic distance", weight: 0.05 },
-  clinicProvision: { label: "Clinic provision deficit", weight: 0.05 },
+  morbidity: { label: "Illness rate (sample data)", weight: 0.25 },
+  hospitalAccess: { label: "Distance to a hospital", weight: 0.3 },
+  disasterRisk: { label: "Disaster risk level", weight: 0.15 },
+  density: { label: "People per square kilometre", weight: 0.1 },
+  incomeClass: { label: "Municipal resources (income class)", weight: 0.1 },
+  clinicDistance: { label: "Distance to a mapped clinic", weight: 0.05 },
+  clinicProvision: { label: "Fewer mapped clinics per resident", weight: 0.05 },
 } as const;
 export type NeedFactor = keyof typeof HEALTHCARE_NEED_FACTORS;
 type NeedInput = {

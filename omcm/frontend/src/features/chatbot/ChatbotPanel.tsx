@@ -13,15 +13,15 @@ export function ChatbotPanel() {
     if (!text.trim()) return;
     const lower = text.toLowerCase();
     let answer =
-      "Select a municipality to inspect its need score, or open Optimize and Simulate to explore clinic recommendations and scenario effects.";
+      "Select a municipality to view its healthcare needs. Open Plan clinics to review suggested locations, or 30-day simulation to compare estimated results.";
     if (/score|rank|why|need/.test(lower))
       answer = selected
-        ? `${selected.name}: municipal allocation estimate ${selected.needScore}/100, allocation rank #${selected.rank}. ${selected.explanation} This separate heuristic is not the barangay HNI shown on the heatmap; the municipality panel shows its HNI rollup.`
-        : "The municipal allocation estimate combines supplied synthetic morbidity (35%), illustrative vulnerability (25%), supplied disaster risk index (20%) and population density (20%). It is separate from the seven-factor barangay HNI heatmap. Select a municipality to compare its HNI rollup and allocation estimate.";
+        ? `${selected.name}: clinic planning score ${selected.needScore}/100, rank ${selected.rank}. ${selected.explanation} This separate score helps recommend locations. The community details panel shows the average barangay Healthcare Need Score used by the main map colors.`
+        : "The Healthcare Need Score compares estimated planning priorities, not numbers of sick residents. Higher scores suggest greater need. Sample illness rates, hospital and clinic access, disaster risk, population concentration and municipal resources contribute. Missing factors are left out. Clinic location recommendations use a separate municipal score; select a municipality to compare the two.";
     else if (/clinic|recommend|placement/.test(lower))
-      answer = `The priority heuristic proposes ${plan.clinics.length} clinics: ${plan.clinics.map((c) => c.clinicId + " at " + c.siteName).join("; ")}. Total capacity: ${plan.metrics.totalCapacity} appointments/day. This is an illustrative local proposal.`;
+      answer = `The current plan suggests ${plan.clinics.length} clinics: ${plan.clinics.map((c) => c.clinicId + " at " + c.siteName).join("; ")}. Total capacity: ${plan.metrics.totalCapacity} appointments/day. These are demonstration locations and appointment estimates, not confirmed service delivery.`;
     else if (/scenario|flood|disaster|simulation/.test(lower))
-      answer = `Configured scenario: ${Object.keys(scenario.floodOverrides).length} flood overrides, ${Object.keys(scenario.morbiditySpikes).length} morbidity overrides, ${scenario.closedRoadIds.length} closed corridors. Open Simulate to apply and compare these conditions.`;
+      answer = `Practice conditions: ${Object.keys(scenario.floodOverrides).length} flood changes, ${Object.keys(scenario.morbiditySpikes).length} sample illness increases, ${scenario.closedRoadIds.length} roads marked closed. Open 30-day simulation to compare estimated results. Road marks are for reference and do not change the 30-day clinic reach estimates.`;
     setMessages((prev) => [
       ...prev,
       { id: prev.length, sender: "user", text },
@@ -32,7 +32,8 @@ export function ChatbotPanel() {
   return (
     <>
       <p>
-        Local, rule-based planning assistant. Answers use the current demo data.
+        Get help understanding scores, clinic suggestions and practice
+        scenarios. Answers use the current demonstration data.
       </p>
       <div
         className="workspace-chat-log"

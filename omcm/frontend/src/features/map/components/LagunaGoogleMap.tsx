@@ -1,3 +1,4 @@
+import { simulationMetricLabels } from "../../../services/planningLanguage";
 import { COVERAGE_RADIUS_KM } from "../../../services/forecasting/interventions";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState, useMemo } from "react";
@@ -438,11 +439,19 @@ export function LagunaGoogleMap({
           ? 3.5
           : isSelectedMunicipality
             ? 5
-            : isBarangay ? 0.7 : 1.8,
+            : isBarangay
+              ? 0.7
+              : 1.8,
         strokeOpacity: 0.95,
         clickable: isBarangay,
         cursor: "pointer",
-        zIndex: isSelected ? 5 : isSelectedMunicipality ? 4 : isBarangay ? 2 : 1,
+        zIndex: isSelected
+          ? 5
+          : isSelectedMunicipality
+            ? 4
+            : isBarangay
+              ? 2
+              : 1,
       };
     });
 
@@ -471,10 +480,10 @@ export function LagunaGoogleMap({
         const value = barangayMetric(barangay, metric);
         const projected = forecastOverlay?.records.get(barangay.psgc);
         const valDisplay = projected
-          ? `Day ${forecastOverlay!.day} · ${forecastOverlay!.metric.toUpperCase()}: ${projected[forecastOverlay!.metric].toFixed(2)}${projected.provisional ? " · Provisional" : ""}`
+          ? `Day ${forecastOverlay!.day} · ${simulationMetricLabels[forecastOverlay!.metric]}: ${projected[forecastOverlay!.metric].toFixed(1)}/100 · Estimate${projected.provisional ? " · Some data missing" : ""}`
           : publicMode
             ? `Population: ${barangay.population.toLocaleString()} · Click for nearby clinics & hospitals`
-            : `${barangayMetricLabel(metric)}: ${value === null ? "Needs review" : value + (metric === "density" ? "/km²" : metric === "morbidity" ? " / 1,000" : "/100")}${metric === "score" ? ` · Healthcare need rank #${barangay.needRank} of 681${barangay.needProvisional ? " · Provisional" : ""}` : ""}`;
+            : `${barangayMetricLabel(metric)}: ${value === null ? "Information unavailable" : value + (metric === "density" ? "/km²" : metric === "morbidity" ? " / 1,000" : "/100")}${metric === "score" ? ` · Healthcare need rank #${barangay.needRank} of 681${barangay.needProvisional ? " · Some data missing" : ""}` : ""}`;
 
         setHoveredInfo({
           name,
@@ -563,12 +572,7 @@ export function LagunaGoogleMap({
           : { top: 80, right: 50, bottom: 100, left: 420 },
       );
     }
-  }, [
-    selectedPsgc,
-    selectedBarangayPsgc,
-    selectionRevision,
-    geoJsonData,
-  ]);
+  }, [selectedPsgc, selectedBarangayPsgc, selectionRevision, geoJsonData]);
 
   // Render Hospital Markers
   useEffect(() => {

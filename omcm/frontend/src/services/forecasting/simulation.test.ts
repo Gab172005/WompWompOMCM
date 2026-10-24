@@ -118,7 +118,7 @@ describe("weekly greedy maximum coverage", () => {
     ).toThrow(InfeasibleAllocationError);
     expect(() =>
       optimizeWeek(682, 1, forecasts, undefined, [], coverage),
-    ).toThrow(/only 681 eligible/);
+    ).toThrow(/only 681 available locations/);
   });
   it("uses future demand and covers neighbours instead of picking the current top score", () => {
     const a = { ...forecasts[0][0], psgc: "A", population: 1, hni: 100 };
@@ -166,7 +166,7 @@ describe("weekly greedy maximum coverage", () => {
         2,
         coverage,
       ),
-    ).toThrow(/distinct/);
+    ).toThrow(/different available barangay/);
   });
 });
 
@@ -227,7 +227,7 @@ describe("interventions and independent scenario history", () => {
     ).toEqual(firstWeek);
     s.seek(1);
     s.apply();
-    expect(useForecastStore.getState().error).toMatch(/latest weekly/);
+    expect(useForecastStore.getState().error).toMatch(/latest decision day/);
     s.seek(30);
     expect(useForecastStore.getState().runs.optimizer.day).toBe(8);
     expect(

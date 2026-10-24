@@ -19,7 +19,7 @@ const icon = divIcon({
 
 /** Centres, not entrances: ways and relations use the Overpass bounding-box center. */
 export const OSM_CLINIC_CENTER_NOTE =
-  "Overpass center for ways and relations, not the building entrance.";
+  "Approximate center of the mapped site, not the building entrance.";
 
 export function OsmClinicMarkers({
   osmClinics,

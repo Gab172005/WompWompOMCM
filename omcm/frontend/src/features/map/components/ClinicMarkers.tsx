@@ -57,12 +57,12 @@ export function ClinicMarkers({
                 {c.clinicId} · {c.siteName}
               </strong>
               <p>
-                {c.capacity} patients/day ·{" "}
+                Up to {c.capacity} estimated appointments/day ·{" "}
                 {publicMode
                   ? publicScheduleInfo || "Approved mobile clinic"
                   : simulationActive
                     ? "Simulated position"
-                    : "Proposed staging site"}
+                    : "Suggested clinic location"}
               </p>
             </Popup>
           </Marker>

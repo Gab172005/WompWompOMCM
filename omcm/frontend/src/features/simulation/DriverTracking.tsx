@@ -1,3 +1,4 @@
+import { planningFactorLabels } from "../../services/planningLanguage";
 import { createPortal } from "react-dom";
 import { ExplanationAssistant } from "../../components/ExplanationAssistant";
 import { useEffect, useMemo, useState } from "react";
@@ -37,13 +38,13 @@ import { Card, number } from "../../components/ui/LegacyUI";
 import type { Config, Factor, Plan, Simulation } from "../../types";
 
 const layerLabels: Record<keyof MapLayers, string> = {
-  need: "Need polygons",
+  need: "Healthcare need colors",
   hazards: "Demo hazards",
   routes: "Routes",
   trails: "Vehicle trails",
-  candidates: "Staging sites",
+  candidates: "Possible clinic locations",
   coverage: "Assigned areas",
-  eta: "ETA labels",
+  eta: "Estimated arrival times",
 };
 export function DriverTracking({
   mapTarget,
@@ -153,7 +154,7 @@ export function DriverTracking({
     setBranchNotice(
       simulationMode
         ? "Scenario changed. Playback paused; recompute to update the heatmap and routes from the Timugan depot."
-        : "Scenario changed. Playback paused; reoptimize to simulate the next day from today's final clinic locations.",
+        : "Scenario changed. Playback paused; recalculate clinic locations to simulate the next day from today's final clinic locations.",
     );
   }
   async function optimize(tour = false) {
@@ -321,8 +322,8 @@ export function DriverTracking({
       </label>
       {simulationMode && (
         <p role="status">
-          Python scenario preview · Routes start at the Timugan depot. Published
-          schedules are unchanged.
+          Practice scenario preview · Routes start at the Timugan depot.
+          Published schedules are unchanged.
           {dirty &&
             " Settings changed; recompute to update heatmap and routes."}
         </p>
@@ -350,19 +351,19 @@ export function DriverTracking({
             "synthetic residents",
           ],
           [
-            "High-priority served",
+            "Appointments in high-priority areas",
             number(metrics?.high_priority_reached ?? 0),
             "daily appointments",
           ],
           [
             "Priority coverage",
             `${weightedTotal ? (((metrics?.weighted_demand ?? 0) / weightedTotal) * 100).toFixed(1) : "0"}%`,
-            "priority-weighted daily demand",
+            "appointment needs weighted by healthcare need",
           ],
           [
-            "Mean road travel",
+            "Average sample road travel",
             `${metrics?.average_travel_minutes ?? 0} min`,
-            "modeled resident access",
+            "estimated journey for assigned appointments",
           ],
           [
             "Available clinics",
@@ -386,7 +387,7 @@ export function DriverTracking({
                   <div>
                     <strong>Los Baños & Bay, Laguna</strong>
                     <small>
-                      20 PSGC-joined barangays ·{" "}
+                      20 barangays matched to official boundaries ·{" "}
                       {showBaseline
                         ? "Population baseline"
                         : "Proposed deployment"}
@@ -488,7 +489,7 @@ export function DriverTracking({
                 <div>
                   <strong>Los Baños & Bay, Laguna</strong>
                   <small>
-                    20 PSGC-joined barangays ·{" "}
+                    20 barangays matched to official boundaries ·{" "}
                     {showBaseline
                       ? "Population baseline"
                       : "Proposed deployment"}
@@ -764,7 +765,7 @@ export function DriverTracking({
                       })
                     }
                   >
-                    100-year flood preset
+                    Severe sample flooding
                   </button>
                   <p className="tiny">
                     Synthetic stress test: severe flooding in both pilot
@@ -882,12 +883,12 @@ export function DriverTracking({
                 <summary>Need weights & site exclusions</summary>
                 {(Object.keys(scenario.weights) as Factor[]).map((f) => (
                   <label className="compact-weight" key={f}>
-                    {f} ·{" "}
+                    {planningFactorLabels[f]} ·{" "}
                     {((scenario.weights[f] / weightTotal) * 100).toFixed(1)}
                     %
                     <input
                       type="range"
-                      aria-label={`${f} need weight`}
+                      aria-label={`${planningFactorLabels[f]} planning weight`}
                       min="0"
                       max="100"
                       value={scenario.weights[f]}
@@ -939,8 +940,8 @@ export function DriverTracking({
                   : simulationMode
                     ? "Recompute simulation"
                     : plan
-                      ? "Reoptimize tomorrow"
-                      : "Optimize tomorrow"}
+                      ? "Recalculate clinic locations tomorrow"
+                      : "Suggest tomorrow’s clinic locations"}
               </button>
               <button
                 className="secondary"
@@ -949,7 +950,7 @@ export function DriverTracking({
                   clock.pause();
                   setScenario(structuredClone(defaultConfig));
                   setBranchNotice(
-                    "Scenario reset to the prepared baseline. Reoptimize to refresh the proposed plan.",
+                    "Scenario reset to the prepared baseline. Recalculate clinic locations to refresh the proposed plan.",
                   );
                 }}
               >
@@ -967,7 +968,8 @@ export function DriverTracking({
             </h2>
             {!runs.length && (
               <p className="empty-state">
-                Optimize or start the demo tour to load clinic routes.
+                Find clinic locations or start the demo tour to load clinic
+                routes.
               </p>
             )}
             {runs.map((run) => {
@@ -1064,10 +1066,10 @@ export function DriverTracking({
               <h2>Why these locations?</h2>
               <p>
                 {plan.optimized.optimal
-                  ? "Optimal (solver)"
+                  ? "Best plan found for these sample conditions"
                   : plan.optimized.solver_status === "HEURISTIC_DEMO"
-                    ? "Heuristic (demo) · optimality not proven"
-                    : "Feasible solver solution · optimality not proven"}{" "}
+                    ? "Demonstration plan · a better plan may be possible"
+                    : "Available plan · a better plan may be possible"}{" "}
                 · {plan.optimized.metrics.unserved_demand.toLocaleString()}{" "}
                 unserved daily appointments
               </p>
@@ -1077,7 +1079,9 @@ export function DriverTracking({
                 Resolve blocked clinic routes before approval
               </span>
             ) : dirty ? (
-              <span className="badge">Reoptimize before approval</span>
+              <span className="badge">
+                Recalculate clinic locations before approval
+              </span>
             ) : simulationMode ? (
               <button
                 className="primary"
@@ -1093,7 +1097,7 @@ export function DriverTracking({
                         simulation: plan.simulation,
                       });
                       setBranchNotice(
-                        "Simulation applied to planner draft. Published schedules are unchanged; review and approve separately in Clinic Optimization.",
+                        "Simulation applied to planner draft. Published schedules are unchanged; review and approve separately in Plan clinic locations.",
                       );
                     } catch (e) {
                       setError((e as Error).message);
@@ -1154,7 +1158,7 @@ export function DriverTracking({
                 </button>
                 <p>{c.reason}</p>
                 <small>
-                  Priority-weighted allocations:{" "}
+                  Appointments weighted by need score:{" "}
                   {c.assignments
                     .reduce(
                       (s, a) =>
@@ -1172,7 +1176,7 @@ export function DriverTracking({
             ))}
           </div>
           <Card>
-            <h2>Optimized vs population baseline</h2>
+            <h2>Suggested plan vs population-first plan</h2>
             <p>
               Same road evidence, hazard exclusions, fleet size and capacities.
               Counts represent estimated daily appointments; split demand is
@@ -1183,7 +1187,7 @@ export function DriverTracking({
                 <thead>
                   <tr>
                     <th>Metric</th>
-                    <th>Optimized</th>
+                    <th>Suggested plan</th>
                     <th>Population baseline</th>
                     {before && <th>Before scenario</th>}
                   </tr>
@@ -1191,7 +1195,10 @@ export function DriverTracking({
                 <tbody>
                   {(
                     [
-                      ["High-priority served", "high_priority_reached"],
+                      [
+                        "Appointments in high-priority areas",
+                        "high_priority_reached",
+                      ],
                       ["Priority-weighted demand served", "weighted_demand"],
                       [
                         "Mean modeled road travel (min)",
@@ -1224,7 +1231,8 @@ export function DriverTracking({
           <Card>
             <details>
               <summary>
-                Unserved communities & constraints ({unserved.length})
+                Communities still needing appointments and why (
+                {unserved.length})
               </summary>
               <div className="table-scroll">
                 <table>
@@ -1256,8 +1264,8 @@ export function DriverTracking({
                           </td>
                           <td>
                             {eligible
-                              ? "Limited fleet/capacity; higher-priority demand allocated first"
-                              : "No feasible road route within threshold under scenario"}
+                              ? "Not enough clinic appointments; higher-priority needs are covered first"
+                              : "No available sample route meets the travel limit in this scenario"}
                           </td>
                         </tr>
                       );

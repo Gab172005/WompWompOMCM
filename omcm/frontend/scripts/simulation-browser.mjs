@@ -55,21 +55,23 @@ try {
     .first()
     .click();
   await page
-    .getByRole("button", { name: "Fill demo credentials", exact: true })
+    .getByRole("button", { name: "Use demo sign-in details", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Sign in to Admin View", exact: true })
     .click();
-  await page.getByRole("button", { name: "Simulate", exact: true }).click();
+  await page
+    .getByRole("button", { name: "30-day simulation", exact: true })
+    .click();
   const panel = page.getByRole("complementary", {
-    name: "Healthcare simulation",
+    name: "Try a 30-day clinic plan",
     exact: true,
   });
   await expect(panel).toBeVisible();
   await panel.getByLabel("Simulation scenario").selectOption("optimizer");
   await panel
     .getByRole("button", {
-      name: "Get Optimal Locations for Next Week",
+      name: "Suggest clinic locations for this period",
       exact: true,
     })
     .click();
@@ -79,6 +81,16 @@ try {
       exact: true,
     }),
   ).toBeVisible();
+  const recommendations = panel.locator("ol > li.workspace-subcard");
+  await expect(recommendations).toHaveCount(3);
+  await expect(recommendations.first()).toContainText("estimated need");
+  await expect(recommendations.first()).toContainText("Place clinic here");
+  await expect(recommendations.first()).toContainText("percentage points");
+  const communities = recommendations.first().locator("details");
+  await communities.locator("summary").click();
+  await expect(communities).toContainText("Within 3 km in a straight line");
+  await expect(communities.locator("li").first()).toBeVisible();
+  await page.screenshot({ path: "/tmp/omcm-planning-recommendations.png" });
   expect(
     await page.evaluate(async () => {
       const { useForecastStore } =
@@ -87,7 +99,7 @@ try {
         .length;
     }),
   ).toBe(0);
-  await panel.getByLabel("Available mobile clinics (k)").fill("5");
+  await panel.getByLabel("Available mobile clinics").fill("5");
   await expect(
     panel.getByRole("heading", {
       name: "5 recommended locations",
@@ -96,7 +108,7 @@ try {
   ).toBeVisible();
   await expect(panel.getByLabel("MC-5 barangay")).toBeVisible();
   await panel
-    .getByRole("button", { name: "Reject recommendations", exact: true })
+    .getByRole("button", { name: "Discard these suggestions", exact: true })
     .click();
   await expect(
     panel.getByRole("heading", {
@@ -106,12 +118,12 @@ try {
   ).toHaveCount(0);
   await panel
     .getByRole("button", {
-      name: "Get Optimal Locations for Next Week",
+      name: "Suggest clinic locations for this period",
       exact: true,
     })
     .click();
   await panel
-    .getByRole("button", { name: "Apply Recommended Allocation", exact: true })
+    .getByRole("button", { name: "Apply these clinic locations", exact: true })
     .click();
   const confirmed = await page.evaluate(async () => {
     const { useForecastStore } = await import("/src/store/useForecastStore.ts");
@@ -124,9 +136,9 @@ try {
   expect(confirmed.optimized).toHaveLength(5);
   expect(new Set(confirmed.optimized.map((a) => a.psgc)).size).toBe(5);
   expect(confirmed.manual).toHaveLength(0);
-  await panel.getByLabel("Simulation heatmap").selectOption("uhni");
-  await expect(page.getByLabel("Map legend")).toContainText(
-    "Unmet healthcare need (UHNI)",
+  await panel.getByLabel("Map colors show").selectOption("uhni");
+  await expect(page.getByRole("region", { name: "Map legend", exact: true })).toContainText(
+    "Uncovered need",
   );
   for (let day = 2; day <= 8; day++)
     await page.getByRole("button", { name: "Next day", exact: true }).click();
@@ -138,19 +150,19 @@ try {
   ).toBeVisible();
   await panel
     .getByRole("button", {
-      name: "Get Optimal Locations for Next Week",
+      name: "Suggest clinic locations for this period",
       exact: true,
     })
     .click();
   await panel
-    .getByRole("button", { name: "Apply Recommended Allocation", exact: true })
+    .getByRole("button", { name: "Apply these clinic locations", exact: true })
     .click();
   await page
     .getByRole("slider", { name: "30-day simulation timeline", exact: true })
     .fill("1");
   await expect(
     panel.getByRole("button", {
-      name: "Get Optimal Locations for Next Week",
+      name: "Suggest clinic locations for this period",
       exact: true,
     }),
   ).toBeDisabled();
@@ -160,7 +172,7 @@ try {
       .getByLabel(`MC-${i + 1} barangay`, { exact: true })
       .selectOption(confirmed.optimized[i].psgc);
   await panel
-    .getByRole("button", { name: "Apply Manual Allocation", exact: true })
+    .getByRole("button", { name: "Apply my clinic locations", exact: true })
     .click();
   await panel.getByLabel("Simulation scenario").selectOption("none");
   await page
@@ -205,10 +217,11 @@ try {
     ),
   ).toBe(true);
   const panelBox = await panel.boundingBox();
-  const legendBox = await page.getByLabel("Map legend").boundingBox();
+  const legendBox = await page.getByRole("region", { name: "Map legend", exact: true }).boundingBox();
   const playbackBox = await playback.boundingBox();
   expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(playbackBox.y);
   expect(playbackBox.y + playbackBox.height).toBeLessThanOrEqual(legendBox.y);
+  await expect(page.getByRole("button", { name: "Show map symbols", exact: true })).toBeInViewport({ ratio: 1 });
   await expect(playback).toBeVisible();
   await page.screenshot({ path: "/tmp/omcm-simulation-mobile.png" });
   expect(errors).toEqual([]);

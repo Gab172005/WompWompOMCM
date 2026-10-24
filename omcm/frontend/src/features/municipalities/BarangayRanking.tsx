@@ -36,12 +36,13 @@ export function BarangayRanking({
     >
       <h3>Explore barangay priorities</h3>
       <p className="workspace-note">
-        Province-wide ranks · {RANKED_BARANGAYS.length} barangays. Compare
-        relative need, then select a community to see its context. * Provisional
-        inputs.
+        Rank 1 has the highest estimated healthcare need among{" "}
+        {RANKED_BARANGAYS.length} barangays in Laguna. Scores compare planning
+        priorities, not numbers of sick residents. Select a barangay to learn
+        why. * Some data missing.
       </p>
       <label className="workspace-field">
-        Filter barangay ranking
+        Find a barangay in this list
         <input
           value={query}
           placeholder="Barangay or municipality"
@@ -52,7 +53,7 @@ export function BarangayRanking({
         />
       </label>
       <div className="barangay-ranking-heading" aria-hidden="true">
-        <span>Province rank / Community</span>
+        <span>Laguna rank / Barangay</span>
         <span>Need / 100</span>
       </div>
       <ol className="barangay-ranking-list" start={start + 1}>
@@ -61,7 +62,7 @@ export function BarangayRanking({
             <button
               className="barangay-ranking-row"
               onClick={() => selectBarangay(b.psgc, b.municipalityPsgc)}
-              aria-label={`Rank ${b.needRank}: ${b.name}, ${b.municipality}, healthcare need ${b.needScore.toFixed(1)} out of 100${b.needProvisional ? ", provisional" : ""}`}
+              aria-label={`Rank ${b.needRank}: ${b.name}, ${b.municipality}, healthcare need ${b.needScore.toFixed(1)} out of 100${b.needProvisional ? ", some data missing" : ""}`}
             >
               <span className="place-list-rank">{b.needRank}</span>
               <span className="barangay-ranking-name">
@@ -73,7 +74,7 @@ export function BarangayRanking({
               <strong className="place-list-score">
                 {b.needScore.toFixed(1)}
                 {b.needProvisional ? "*" : ""}
-                <small>HNI / 100</small>
+                <small>Score / 100</small>
               </strong>
             </button>
           </li>

@@ -218,7 +218,7 @@ try {
     .getByRole("button", { name: "Admin View", exact: true })
     .first()
     .click();
-  await page.getByRole("button", { name: "Fill demo credentials" }).click();
+  await page.getByRole("button", { name: "Use demo sign-in details" }).click();
   await page.getByRole("button", { name: "Sign in to Admin View" }).click();
   await expect(page.locator(".workspace")).toHaveClass(/is-admin-view/);
   const search = page.getByRole("combobox", {
@@ -262,9 +262,7 @@ try {
     exact: true,
   });
   await expect(summary).toBeVisible();
-  await expect(summary).toContainText(
-    "Provisional score and rank: 2 barangay scores",
-  );
+  await expect(summary).toContainText("Some data is missing in 2 barangays");
   const expected = await page.evaluate(async () => {
     const data = await import("/src/services/providedData.ts");
     const barangay = data.LAGUNA_BARANGAYS.find(
@@ -310,7 +308,7 @@ try {
       scoreColor(scores.get(polygon.psgc)),
     );
 
-  await page.getByLabel("Filter barangay ranking").fill("Dambo");
+  await page.getByLabel("Find a barangay in this list").fill("Dambo");
   await page.getByRole("button", { name: /^Rank \d+: Dambo, Pangil/ }).click();
   const detail = page.getByRole("region", {
     name: "Barangay healthcare need",
@@ -322,7 +320,7 @@ try {
       exact: true,
     }),
   ).toHaveAttribute("value", String(expected.barangay.needScore));
-  await expect(detail).toContainText("85% of input weight available");
+  await expect(detail).toContainText("Share of score factors available85%");
   await expect(detail).toContainText(expected.barangay.nearestHospital.name);
   await expect(detail).toContainText(
     `${expected.barangay.nearestHospital.distanceKm.toFixed(2)} km straight-line distance`,
@@ -333,15 +331,17 @@ try {
       .getByRole("meter"),
   ).toHaveCount(3);
   const factorDisclosure = detail.locator("details").filter({
-    has: page.locator("summary", { hasText: /^All seven factor inputs/ }),
+    has: page.locator("summary", {
+      hasText: /^How each factor affects the score/,
+    }),
   });
   await expect(factorDisclosure).not.toHaveAttribute("open");
   await factorDisclosure.locator("summary").click();
   await expect(factorDisclosure).toHaveAttribute("open");
-  await expect(factorDisclosure).toContainText("Hospital distance");
+  await expect(factorDisclosure).toContainText("Distance to a hospital");
   await factorDisclosure.locator("summary").click();
   await page
-    .getByRole("complementary", { name: "Barangay intelligence" })
+    .getByRole("complementary", { name: "Barangay details" })
     .locator(".workspace-panel-body")
     .evaluate((element) => {
       element.scrollTop = 0;
@@ -351,7 +351,7 @@ try {
   });
   await expect(selection).toContainText("Dambo, Pangil");
   await expect(selection).toContainText("Nearest: 4.56 km straight line");
-  await page.getByRole("button", { name: "Close intelligence panel" }).click();
+  await page.getByRole("button", { name: "Close community details" }).click();
   await expect(selection).toBeVisible();
   await expect(selectedOutline).toHaveAttribute("stroke", "#1a73e8");
   await selection
@@ -394,7 +394,7 @@ try {
   expect(mobileSearch.y).toBe(12);
   const mobileSelection = await selection.boundingBox();
   const mobilePanel = await page
-    .getByRole("complementary", { name: "Municipality intelligence" })
+    .getByRole("complementary", { name: "Municipality details" })
     .boundingBox();
   expect(mobileSelection.y + mobileSelection.height).toBeLessThanOrEqual(
     mobilePanel.y,
@@ -419,7 +419,7 @@ try {
   });
   await page.getByRole("button", { name: "Expand place details" }).click();
   const expandedPanel = await page
-    .getByRole("complementary", { name: "Municipality intelligence" })
+    .getByRole("complementary", { name: "Municipality details" })
     .boundingBox();
   expect(expandedPanel.height).toBeGreaterThan(mobilePanel.height);
   await expect(selection).not.toBeVisible();
@@ -428,9 +428,18 @@ try {
   });
   await page.getByRole("button", { name: "Collapse place details" }).click();
   await expect(selection).toBeVisible();
-  await page.getByRole("button", { name: "Simulate", exact: true }).click();
+  await page.getByRole("button", { name: "Plan clinics", exact: true }).click();
+  const planner = page.getByRole("complementary", { name: "Plan clinic locations", exact: true });
+  await expect(planner).toBeVisible();
+  await planner.getByRole("button", { name: "Generate recommendations", exact: true }).click();
+  await expect(planner.getByRole("status").first()).toContainText("Suggested locations refreshed");
+  await expect(planner).toContainText("Municipality’s estimated healthcare need");
+  await expect(planner).toContainText("Up to");
+  await page
+    .getByRole("button", { name: "30-day simulation", exact: true })
+    .click();
   await expect(
-    page.getByRole("complementary", { name: "Healthcare simulation" }),
+    page.getByRole("complementary", { name: "Try a 30-day clinic plan" }),
   ).toBeVisible();
   await expect(selection).not.toBeVisible();
   expect(errors).toEqual([]);

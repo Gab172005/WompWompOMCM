@@ -4,9 +4,9 @@ export function MorbidityControls({ psgc }: { psgc: string }) {
   const value = scenario.morbiditySpikes[psgc] ?? 1;
   return (
     <label className="workspace-field">
-      Disease outbreak surge: +{Math.round((value - 1) * 100)}%
+      Sample illness increase: +{Math.round((value - 1) * 100)}%
       <input
-        aria-label="Disease outbreak surge"
+        aria-label="Sample illness increase"
         type="range"
         min={1}
         max={3}

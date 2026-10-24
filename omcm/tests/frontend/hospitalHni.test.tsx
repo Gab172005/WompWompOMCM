@@ -152,14 +152,12 @@ describe("Municipality summaries of the barangay HNI heatmap", () => {
     expect(detail).toHaveTextContent(
       `Municipality rank #${summary.needRank} of 30`,
     );
-    expect(detail).toHaveTextContent(
-      "Provisional score and rank: 2 barangay scores",
-    );
+    expect(detail).toHaveTextContent("Some data is missing in 2 barangays");
     for (const factor of Object.values(HEALTHCARE_NEED_FACTORS))
       expect(detail).toHaveTextContent(factor.label);
     expect(
       screen
-        .getByText("Municipal allocation estimate · separate heuristic")
+        .getByText("Separate score used to recommend clinic locations")
         .closest("details"),
     ).not.toHaveAttribute("open");
   });

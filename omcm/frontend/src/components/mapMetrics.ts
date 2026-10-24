@@ -2,10 +2,10 @@ import type { Polygon, MultiPolygon, Position } from "geojson";
 
 export type MapMetric = "score" | "disease" | "flood" | "density";
 export const metricNames: Record<MapMetric, string> = {
-  score: "Overall need",
-  disease: "Morbidity",
+  score: "Healthcare Need Score",
+  disease: "Illness rate (sample data)",
   flood: "Flood risk",
-  density: "Estimated represented population density (people/km²)",
+  density: "People per square kilometre (sample estimate)",
 };
 
 /** Spherical polygon area, subtracting holes; no extra GIS dependency. */

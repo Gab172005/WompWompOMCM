@@ -31,7 +31,7 @@ function read(): Storage {
     return state;
   } catch {
     throw new Error(
-      "Browser demo storage is invalid. Clear only the omcm-browser-demo-v1 localStorage entry to reset it.",
+      "We could not read the saved demonstration plans. Ask your system administrator to help recover or reset this browser’s demo data.",
     );
   }
 }
@@ -40,7 +40,7 @@ function write(state: Storage) {
     localStorage.setItem(KEY, JSON.stringify(state));
   } catch {
     throw new Error(
-      "Browser demo could not be saved. Allow local storage or connect the backend.",
+      "We could not save the demonstration plan. Allow this browser to save site data, or connect the planning service.",
     );
   }
 }
@@ -166,7 +166,9 @@ export async function demoApi(path: string, body?: unknown): Promise<unknown> {
       plan = state.plans[request.plan_id];
     const emergency = path.endsWith("emergency-override");
     if (!plan?.optimized.clinics.length)
-      throw new Error("Generate a nonempty browser demo draft first.");
+      throw new Error(
+        "Create a draft with at least one clinic before publishing a demonstration schedule.",
+      );
     if (
       !/^\d{4}-\d{2}-\d{2}$/.test(request.deployment_date) ||
       request.deployment_date < manilaDay() ||
@@ -229,6 +231,6 @@ export async function demoApi(path: string, body?: unknown): Promise<unknown> {
     return schedule;
   }
   throw new Error(
-    "This action requires the authenticated Python backend. Browser demo supports local planning and schedule rehearsal only.",
+    "This action needs a connection to the planning service and administrator sign-in. In browser demo mode, you can practice planning and schedule approval only.",
   );
 }

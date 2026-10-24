@@ -1,3 +1,4 @@
+import { ordinal } from "../../frontend/src/services/planningLanguage";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   cleanup,
@@ -42,9 +43,12 @@ describe("Barangay healthcare need ranking interface", () => {
       within(region).getByRole("button", { name: "Next ranks" }),
     ).toBeDisabled();
     const top = RANKED_BARANGAYS[0];
-    fireEvent.change(within(region).getByLabelText("Filter barangay ranking"), {
-      target: { value: `${top.name} ${top.municipality}` },
-    });
+    fireEvent.change(
+      within(region).getByLabelText("Find a barangay in this list"),
+      {
+        target: { value: `${top.name} ${top.municipality}` },
+      },
+    );
     fireEvent.click(
       within(region).getByRole("button", {
         name: new RegExp(`^Rank ${top.needRank}:`),
@@ -60,10 +64,17 @@ describe("Barangay healthcare need ranking interface", () => {
     const region = screen.getByRole("region", {
       name: "Barangay healthcare need ranking",
     });
-    expect(within(region).getByText(/Province-wide ranks/)).toBeInTheDocument();
-    fireEvent.change(within(region).getByLabelText("Filter barangay ranking"), {
-      target: { value: b.name },
-    });
+    expect(
+      within(region).getByText(
+        /Rank 1 has the highest estimated healthcare need/,
+      ),
+    ).toBeInTheDocument();
+    fireEvent.change(
+      within(region).getByLabelText("Find a barangay in this list"),
+      {
+        target: { value: b.name },
+      },
+    );
     fireEvent.click(
       within(region).getByRole("button", {
         name: new RegExp(`^Rank ${b.needRank}:`),
@@ -75,21 +86,23 @@ describe("Barangay healthcare need ranking interface", () => {
       name: "Barangay healthcare need",
     });
     expect(detail).toHaveTextContent(
-      `Healthcare need rank #${b.needRank} of 681`,
+      `${ordinal(b.needRank)} highest estimated healthcare need among 681 barangays in Laguna`,
     );
     // Coverage is dynamic: missing factors exclude their weight, never zero them.
     expect(detail).toHaveTextContent(
-      `Provisional score and rank · ${b.needCoverage}% of input weight available`,
+      `Share of score factors available${b.needCoverage}%`,
     );
     expect(detail).toHaveTextContent(b.needScore.toFixed(1));
     expect(detail).toHaveTextContent(
-      "Municipality income class · 10% base weight",
+      "Municipal resources (income class) · 10% base weight",
     );
     expect(detail).toHaveTextContent(`${b.incomeClass} municipality class`);
     expect(detail).toHaveTextContent("resource proxy");
-    expect(detail).toHaveTextContent("Clinic distance · 5% base weight");
     expect(detail).toHaveTextContent(
-      "Clinic provision deficit · 5% base weight",
+      "Distance to a mapped clinic · 5% base weight",
+    );
+    expect(detail).toHaveTextContent(
+      "Fewer mapped clinics per resident · 5% base weight",
     );
     expect(detail).toHaveTextContent(
       `Mapped OSM clinics in this barangay: ${b.clinicCount}`,
@@ -109,7 +122,7 @@ describe("Barangay healthcare need ranking interface", () => {
     );
     expect(detail).not.toHaveTextContent("Urban / rural classification · 10%");
     expect(detail).not.toHaveTextContent("classification proxy");
-    expect(detail).toHaveTextContent("Missing factors are not treated as zero");
+    expect(detail).toHaveTextContent("Missing data never means zero need");
     expect(detail).toHaveTextContent(
       "Clinic distance is the percentile of the straight-line distance",
     );
@@ -139,7 +152,7 @@ describe("Barangay healthcare need ranking interface", () => {
     });
     const clinics = OSM_CLINICS_BY_BARANGAY.get(withClinic.psgc)!;
     fireEvent.click(
-      within(detail).getByText("OSM clinic records and provenance"),
+      within(detail).getByText("Fixed clinic records and sources"),
     );
     expect(detail).toHaveTextContent(
       `Assigned active OSM clinic records (${clinics.length})`,
@@ -163,7 +176,7 @@ describe("Barangay healthcare need ranking interface", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("region", { name: "Nearby verified hospitals" }),
-    ).toHaveTextContent("not travel times");
+    ).toHaveTextContent("Actual travel distance and time may be longer");
   });
   it("states that zero OSM records are unverified rather than absent", () => {
     const empty = LAGUNA_BARANGAYS.find(
