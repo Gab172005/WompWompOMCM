@@ -6,7 +6,7 @@ from main import today
 
 def test_public_data_and_auth(client, auth):
     assert client.get("/api/health").json()["status"] == "ok"
-    assert len(client.get("/api/barangays").json()["barangays"]) == 20
+    assert len(client.get("/api/barangays", auth=auth).json()["barangays"]) == 20
     assert client.post("/api/optimize", json={}).status_code == 401
     assert client.post("/api/optimize", json={}, auth=("wrong", "wrong")).status_code == 401
     assert client.get("/api/auth/me", auth=auth).status_code == 200
@@ -37,6 +37,9 @@ def test_schedule_approval_simulation_and_emergency(client, auth):
     assert client.post("/api/schedules/emergency-override", json=dict(override, confirmed=True), auth=auth).status_code == 200
     public = client.get("/api/schedules").json()
     assert len(public["notices"]) == 1
+    assert public["notices"][0]["actor"] == "LGU administrator"
+    assert "test-admin" not in str(public)
+    assert client.get("/api/schedules").headers["cache-control"] == "no-store"
     assert any(s["date"] == today().isoformat() for s in public["schedules"])
     assert [e["action"] for e in client.get("/api/audit", auth=auth).json()["events"]] == ["emergency_override", "approve"]
 
@@ -88,6 +91,13 @@ def test_need_sensitivity(client, auth):
     assert len(result["baseline_ids"]) == 3
     assert len(result["trials"]) == 12
     assert client.post("/api/risk/sensitivity?top_k=0", json={}, auth=auth).status_code == 422
+
+
+@pytest.mark.parametrize("path", ["/api/barangays", "/api/analytics", "/api/clinics", "/api/planning/clinics", "/api/audit"])
+def test_private_planning_reads_require_server_authentication(client, auth, path):
+    assert client.get(path).status_code == 401
+    assert client.get(path, auth=("wrong", "wrong")).status_code == 401
+    assert client.get(path, auth=auth).status_code == 200
 
 
 def test_draft_override_keeps_today_fixed_until_emergency_publication(client, auth):

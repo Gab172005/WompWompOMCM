@@ -192,7 +192,9 @@ try {
   ).json();
   expect(draftSchedules.schedules).toEqual([]);
   const catalog = await (
-    await fetch("http://127.0.0.1:8007/api/planning/clinics")
+    await fetch("http://127.0.0.1:8007/api/planning/clinics", {
+      headers: { Authorization: "Basic " + Buffer.from(username + ":" + password).toString("base64") },
+    })
   ).json();
   expect(catalog.sites).toHaveLength(681);
   const unused = catalog.sites.find(
