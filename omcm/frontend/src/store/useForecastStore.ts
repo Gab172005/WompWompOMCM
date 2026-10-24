@@ -34,6 +34,14 @@ export interface RunState {
   snapshots: DailySnapshot[];
   history: Record<number, Assignment[]>;
 }
+export function canEditAllocation(strategy: Strategy, run: RunState) {
+  if (strategy === "none" || run.day !== run.reached) return false;
+  const week = operationalPeriod(run.day).week;
+  const alreadyPlacedThisWeek = Object.keys(run.history).some(
+    (day) => operationalPeriod(Number(day)).week === week,
+  );
+  return !alreadyPlacedThisWeek;
+}
 const defaultConditions = (): SimulationScenario => ({
   floodOverrides: {},
   morbiditySpikes: {},
@@ -167,14 +175,10 @@ export const useForecastStore = create<ForecastState>((set, get) => ({
   recommend: async () => {
     const s = get(),
       run = s.runs[s.strategy];
-    if (
-      s.strategy !== "optimizer" ||
-      run.day !== run.reached ||
-      operationalPeriod(run.day).start !== run.day
-    ) {
+    if (s.strategy !== "optimizer" || !canEditAllocation(s.strategy, run)) {
       set({
         error:
-          "Request optimized locations on the latest decision day: Day 1, 8, 15 or 22.",
+          "Request optimized locations on the latest day of a week without an applied clinic plan.",
       });
       return;
     }
@@ -266,11 +270,10 @@ export const useForecastStore = create<ForecastState>((set, get) => ({
     try {
       if (
         s.strategy === "none" ||
-        run.day !== run.reached ||
-        operationalPeriod(run.day).start !== run.day
+        !canEditAllocation(s.strategy, run)
       )
         throw new Error(
-          "Choose clinic locations on the latest decision day: Day 1, 8, 15 or 22.",
+          "Choose clinic locations on the latest day of a week without an applied clinic plan.",
         );
       const allocation = s.draft.map((psgc, i) => ({
         psgc,
@@ -304,8 +307,12 @@ export const useForecastStore = create<ForecastState>((set, get) => ({
     const s = get(),
       run = s.runs[s.strategy];
     const target = Math.max(1, Math.min(run.reached, Math.round(day)));
+    const runs = {} as Record<Strategy, RunState>;
+    for (const strategy of Object.keys(STRATEGIES) as Strategy[]) {
+      runs[strategy] = { ...s.runs[strategy], day: target };
+    }
     set({
-      runs: { ...s.runs, [s.strategy]: { ...run, day: target } },
+      runs,
       playing: false,
       proposal: null,
       recommendBusy: false,
@@ -323,14 +330,20 @@ export const useForecastStore = create<ForecastState>((set, get) => ({
     const day = run.day + 1;
     const decision = day === operationalPeriod(day).start;
     const allocation = run.snapshots[day - 1].allocation;
+    const runs = {} as Record<Strategy, RunState>;
+    for (const strategy of Object.keys(STRATEGIES) as Strategy[]) {
+      const scenarioRun = s.runs[strategy];
+      runs[strategy] = {
+        ...scenarioRun,
+        day,
+        reached: Math.max(scenarioRun.reached, day),
+      };
+    }
     set({
-      runs: {
-        ...s.runs,
-        [s.strategy]: { ...run, day, reached: Math.max(run.reached, day) },
-      },
+      runs,
       proposal: null,
       recommendBusy: false,
-      playing: s.playing && day < 30 && !(decision && s.strategy !== "none"),
+      playing: s.playing && day < 30 && !decision,
       ...(decision
         ? {
             draft: Array.from(

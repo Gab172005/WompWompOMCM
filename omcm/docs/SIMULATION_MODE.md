@@ -1,6 +1,6 @@
 # 30-day Laguna simulation implementation
 
-Simulation Mode forecasts all 681 barangays over 30 daily steps with three independent runs: No Intervention, Manual Clinic Allocation and Optimized Clinic Allocation. The baseline need rises deterministically each day. A deployed clinic lowers the displayed scenario HNI for its host barangay and nearby barangays, while unaffected areas continue along the baseline. Decisions occur on Days 1, 8, 15 and 22; the final placement period covers Days 22–30. Simulation changes remain local to the admin practice view and never publish public schedules.
+Simulation Mode forecasts all 681 barangays over one shared 30-day timeline with three side-by-side runs: No Intervention, Manual Clinic Allocation and Optimized Clinic Allocation. The baseline need rises deterministically each day. A deployed clinic lowers the displayed scenario HNI for its host barangay and nearby barangays, while unaffected areas continue along the baseline. Each run can receive one placement during a weekly window; locations take effect on the selected day and remain through that window. Simulation changes remain local to the admin practice view and never publish public schedules.
 
 ## Forecast and intervention algorithms
 
@@ -28,10 +28,10 @@ The Optimized Clinic Allocation scenario requests `/api/planning/optimize` from 
 ## State and interface
 
 - Clinic count defaults to 3. Changing k or environmental conditions restarts all runs and clears any stale backend draft. The user explicitly requests a fresh optimized plan.
-- Each strategy has its own day, reached day, weekly deployment history, and snapshots. Clinics remain at confirmed locations until a later confirmed allocation.
-- Playback advances one day at a time, pauses at intervention decision points, and stops on Day 30. The user may continue a period without relocating clinics.
-- The timeline inspects recorded days. Past decision points cannot be edited after advancing beyond them. Applying at the current decision point recalculates that day and later projections while preserving every earlier snapshot.
-- Future snapshots are deterministic internal projections. Charts and comparisons expose only reached days, so undeployed future projections are not presented as recorded results. Each strategy must be advanced through Day 30 for a full comparison.
+- The scenarios retain separate placement histories and snapshots but share the same viewing day and reached day. Clinic locations remain active until a later weekly placement is applied.
+- Playback advances all three outcomes together, pauses when a new weekly placement window opens on Days 8, 15 and 22, and stops on Day 30. A clinic plan can be applied once per scenario during each window, on the current day.
+- The timeline scrubs all scenarios together. Applying a placement recalculates that scenario from the current day onward and preserves earlier snapshots. Past days can be reviewed but not edited.
+- Future snapshots are deterministic internal projections. The chart always compares all three runs for the same reached day, so the user no longer needs to advance each scenario separately.
 - Google Maps and the Leaflet fallback both render post-service HNI or uncovered-need shading. The simulation HNI palette is continuous so a reduction remains visible even within one legend band. Numbered deployed markers, distinct suggested markers and 3 km catchment circles show clinic status. Polygon selection can stage a clinic location at a decision point.
 - Daily metrics include baseline HNI, scenario HNI after service, UHNI, total unmet priority, served barangays, covered priority percentage, relocations and cumulative unmet priority. The chart compares scenario HNI across the three runs; the table shows baseline and scenario HNI separately.
 
@@ -42,11 +42,11 @@ The Optimized Clinic Allocation scenario requests `/api/planning/optimize` from 
 | `frontend/src/services/forecasting/forecast.ts` | Deterministic six-factor forecasts and operational periods |
 | `frontend/src/services/forecasting/interventions.ts` | Geographic coverage, post-service HNI, unmet demand and metrics |
 | `frontend/src/services/forecasting/optimizer.ts` | FastAPI request mapping and backend-plan validation; no local optimizer fallback |
-| `frontend/src/services/forecasting/simulation.test.ts` | Rising baseline, localized service impact and backend adapter tests |
-| `frontend/src/store/useForecastStore.ts` | Independent scenario state, histories, snapshots and connected draft requests |
-| `frontend/src/features/simulation/SimulationPanel.tsx` | Three scenarios, explicit backend request and confirmation workflow |
-| `frontend/src/features/simulation/SimulationPlayback.tsx` | Daily timeline, play/pause, replay and stepping |
-| `frontend/src/features/simulation/SimulationResults.tsx` | Baseline/scenario HNI, uncovered need and comparison chart/table |
+| `frontend/src/services/forecasting/simulation.test.ts` | Rising baseline, localized service impact, synchronized days and backend adapter tests |
+| `frontend/src/store/useForecastStore.ts` | Shared day progression with separate scenario histories and connected draft requests |
+| `frontend/src/features/simulation/SimulationPanel.tsx` | Selectable scenario cards, weekly placement windows and backend confirmation workflow |
+| `frontend/src/features/simulation/SimulationPlayback.tsx` | Shared daily timeline, play/pause, replay and stepping |
+| `frontend/src/features/simulation/SimulationResults.tsx` | Same-day HNI comparison, chart marker and per-scenario activity log |
 | `frontend/src/features/simulation/useSimulationMap.ts` | Adapter between simulation state and map rendering |
 | `frontend/src/features/map/components/SimulationLayers.tsx` | Leaflet active/recommended markers and catchments |
 | `frontend/src/features/map/components/BarangayBoundaryLayer.tsx` | Continuous post-service HNI colors, tooltip and selection support |
@@ -71,10 +71,10 @@ The Optimized Clinic Allocation scenario requests `/api/planning/optimize` from 
 ## Validation
 
 - `npm run lint`: passed.
-- `npm test`: passed, 129 tests across 15 files.
+- `npm test`: passed, 130 tests across 15 files.
 - `npm run build`: passed; Vite still reports the existing large JavaScript chunk advisory.
 - `python -m pytest -q` (backend virtual environment): passed, 75 tests. One Starlette/httpx deprecation warning remains.
-- `npm run test:simulation`: passed in Chrome against a temporary FastAPI service. Verified rising baseline HNI, manual host/neighbor-only deductions, a real `/api/planning/optimize` response with XGBoost/CP-SAT notes, explicit draft confirmation, multiple optimized impact areas, visible numbered clinic markers and mobile layout.
+- `npm run test:simulation`: passed in Chrome against a temporary FastAPI service. Verified synchronized scenario days, rising baseline HNI, manual host/neighbor-only deductions, a real `/api/planning/optimize` response with XGBoost/CP-SAT notes, explicit draft confirmation, multiple optimized impact areas, visible numbered clinic markers and mobile layout.
 - `npm run test:assistant`: passed. Its demo setup logs an expected unavailable optional planning-catalog proxy; it verifies that the assistant opens the optimizer flow without fabricating a draft.
 - `git diff --check`: clean. No datasets, HNI weight percentages or public schedules were changed.
 

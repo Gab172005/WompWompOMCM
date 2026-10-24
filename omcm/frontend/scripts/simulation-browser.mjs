@@ -186,9 +186,14 @@ try {
   expect(baselineDay3.hni).toBeGreaterThan(baselineDay1.hni);
   expect(baselineDay3.averageDay3).toBeGreaterThan(baselineDay3.averageDay1);
   expect(baselineDay3.color).not.toBe(baselineDay1.color);
+  const sharedDay = await page.evaluate(async () => {
+    const { useForecastStore } = await import("/src/store/useForecastStore.ts");
+    return Object.values(useForecastStore.getState().runs).map((run) => run.day);
+  });
+  expect(sharedDay).toEqual([3, 3, 3]);
 
   await panel
-    .getByRole("button", { name: /^Manual clinic allocation, day 1, HNI/ })
+    .getByRole("button", { name: /^Manual clinic allocation, day 3, HNI/ })
     .click();
   await panel.getByLabel("Available mobile clinics").fill("1");
   const manualSites = await page.evaluate(async () => {
@@ -322,6 +327,12 @@ try {
   expect(optimizedImpact.allHostsLower).toBe(true);
   expect(optimizedImpact.affectedAreas).toBeGreaterThan(3);
   await expect(page.locator(".clinic-staging-marker")).toHaveCount(3);
+  await page.getByRole("button", { name: "Next day", exact: true }).click();
+  const synchronizedDay = await page.evaluate(async () => {
+    const { useForecastStore } = await import("/src/store/useForecastStore.ts");
+    return Object.values(useForecastStore.getState().runs).map((run) => run.day);
+  });
+  expect(synchronizedDay).toEqual([2, 2, 2]);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(panel).toBeVisible();

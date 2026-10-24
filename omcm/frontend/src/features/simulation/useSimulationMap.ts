@@ -1,6 +1,8 @@
 import { useEffect, useMemo } from "react";
-import { useForecastStore } from "../../store/useForecastStore";
-import { operationalPeriod } from "../../services/forecasting/forecast";
+import {
+  canEditAllocation,
+  useForecastStore,
+} from "../../store/useForecastStore";
 import { useAppStore } from "../../store/useAppStore";
 import type { SimulationOverlay } from "../map/components/mapTypes";
 export function useSimulationMap(): SimulationOverlay | undefined {
@@ -16,10 +18,7 @@ export function useSimulationMap(): SimulationOverlay | undefined {
     const run = s.runs[s.strategy],
       snapshot = run.snapshots[run.day - 1];
     const byId = new Map(snapshot.records.map((b) => [b.psgc, b]));
-    const canPreviewDraft =
-      s.strategy !== "none" &&
-      run.day === run.reached &&
-      operationalPeriod(run.day).start === run.day;
+    const canPreviewDraft = canEditAllocation(s.strategy, run);
     const currentSites = new Map(
       snapshot.allocation.map((assignment) => [
         assignment.clinicId,
@@ -48,11 +47,7 @@ export function useSimulationMap(): SimulationOverlay | undefined {
           })
         : [],
       select: (psgc: string) => {
-        if (
-          s.strategy !== "none" &&
-          run.day === run.reached &&
-          operationalPeriod(run.day).start === run.day
-        )
+        if (canEditAllocation(s.strategy, run))
           s.setDraft(s.editingClinic, psgc);
       },
     };

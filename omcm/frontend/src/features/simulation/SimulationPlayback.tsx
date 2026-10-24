@@ -23,7 +23,7 @@ export function SimulationPlayback() {
         title={
           s.playing
             ? "Pause on this day"
-            : "Advance through days; pauses for weekly clinic decisions"
+            : "Advance all scenarios; pauses at weekly placement windows"
         }
         disabled={run.day === 30}
         onClick={() => useForecastStore.setState({ playing: !s.playing })}
@@ -39,10 +39,10 @@ export function SimulationPlayback() {
         <RotateCcw size={17} />
       </button>
       <label className="workspace-timeline">
-        30-day simulation timeline
+        Shared 30-day timeline
         <input
           type="range"
-          aria-label="30-day simulation timeline"
+          aria-label="Shared 30-day simulation timeline"
           min={1}
           max={30}
           step={1}

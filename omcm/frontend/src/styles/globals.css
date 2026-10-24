@@ -3116,10 +3116,8 @@ dd {
 .simulation-scenario-change { min-height: 24px; margin-top: 5px; color: #4e6878; font-size: 9px; font-weight: 700; line-height: 1.25; }
 .simulation-scenario-none .simulation-scenario-change { color: #a33a3a; }
 .simulation-scenario-manual .simulation-scenario-change, .simulation-scenario-optimizer .simulation-scenario-change { color: #14776e; }
-.simulation-scenario-progress { width: 100%; margin-top: 3px; color: #718594; font-size: 9px; }
-.simulation-scenario-progress i { display: block; height: 3px; margin-top: 4px; overflow: hidden; border-radius: 4px; background: #e9eff2; }
-.simulation-scenario-progress b { display: block; height: 100%; border-radius: inherit; background: #7794a4; }
-.simulation-scenario-reach { margin-top: 4px; color: #237568; font-size: 9px; font-weight: 700; }
+.simulation-scenario-status { display: block; width: 100%; min-height: 22px; margin-top: 3px; color: #718594; font-size: 9px; line-height: 1.25; }
+.simulation-scenario-manual .simulation-scenario-status, .simulation-scenario-optimizer .simulation-scenario-status { color: #397669; }
 .simulation-current-scenario { padding: 12px; border: 1px solid #dfe8ec; border-radius: 12px; background: white; }
 .simulation-current-heading { align-items: flex-start; }
 .simulation-current-heading h3 { margin: 3px 0 0; color: #1a374b; font-size: 15px; }

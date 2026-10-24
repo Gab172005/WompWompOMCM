@@ -6,6 +6,7 @@ import { useAppStore } from "../../store/useAppStore";
 import {
   STRATEGIES,
   useForecastStore,
+  canEditAllocation,
   type Strategy,
 } from "../../store/useForecastStore";
 import { operationalPeriod } from "../../services/forecasting/forecast";
@@ -58,10 +59,7 @@ export function SimulationPanel() {
   const run = s.runs[s.strategy];
   const snapshot = run.snapshots[run.day - 1];
   const period = operationalPeriod(run.day);
-  const canAllocate =
-    s.strategy !== "none" &&
-    run.day === run.reached &&
-    run.day === period.start;
+  const canAllocate = canEditAllocation(s.strategy, run);
 
   return (
     <div className="simulation-panel">
@@ -70,8 +68,8 @@ export function SimulationPanel() {
           <Activity size={14} aria-hidden="true" /> 30-day planning view
         </span>
         <p>
-          Compare how mobile clinic placement changes estimated need across
-          Laguna.
+          One shared timeline keeps all three HNI scenarios in step. Select a
+          card to show its heatmap on the map.
         </p>
       </div>
 
@@ -81,7 +79,7 @@ export function SimulationPanel() {
       >
         <div className="simulation-section-heading">
           <h3>Scenarios</h3>
-          <span>Choose one to view or continue</span>
+          <span>Same day · different clinic plans</span>
         </div>
         <div className="simulation-scenario-grid">
           {(Object.keys(STRATEGIES) as Strategy[]).map((strategy) => {
@@ -114,20 +112,13 @@ export function SimulationPanel() {
                   HNI / 100
                 </span>
                 <span className="simulation-scenario-change">{difference}</span>
-                <span className="simulation-scenario-progress">
-                  Day {scenarioRun.day}
-                  <span aria-hidden="true">/</span>30
-                  <i aria-hidden="true">
-                    <b
-                      style={{ width: `${(scenarioRun.reached / 30) * 100}%` }}
-                    />
-                  </i>
+                <span className="simulation-scenario-status">
+                  {strategy === "none"
+                    ? "No clinic service"
+                    : clinicAreas > 0
+                      ? `${clinicAreas} areas in reach`
+                      : "No clinics deployed"}
                 </span>
-                {strategy !== "none" && clinicAreas > 0 && (
-                  <span className="simulation-scenario-reach">
-                    {clinicAreas} areas reached
-                  </span>
-                )}
               </button>
             );
           })}
@@ -201,9 +192,10 @@ export function SimulationPanel() {
 
       {s.strategy === "none" ? (
         <div className="simulation-guidance simulation-guidance-neutral">
-          <span>No clinics are deployed in this scenario.</span>
+          <span>Baseline scenario · no clinics deployed</span>
           <span>
-            Use the timeline below the map to see baseline HNI rise over time.
+            Select Manual or Optimized to apply a clinic plan. The timeline
+            below the map advances all scenarios together.
           </span>
         </div>
       ) : (
@@ -215,7 +207,7 @@ export function SimulationPanel() {
             <div>
               <span className="simulation-eyebrow">Placement window</span>
               <strong>
-                Days {period.start}–{period.end}
+                Days {run.day}–{period.end}
               </strong>
             </div>
             <span
@@ -232,14 +224,14 @@ export function SimulationPanel() {
           {canAllocate ? (
             <p className="simulation-guidance">
               {s.strategy === "manual"
-                ? "Choose distinct barangays, then apply the locations to show their local impact."
-                : "Generate a connected plan for Laguna, review its locations, then apply it to this scenario."}
+                ? `Choose distinct barangays, then apply them from Day ${run.day} through Day ${period.end}.`
+                : `Generate a connected Laguna plan, review it, then apply it from Day ${run.day} through Day ${period.end}.`}
             </p>
           ) : (
             <p className="simulation-guidance">
               {run.day < run.reached
                 ? "Return to the latest day to make the next placement decision."
-                : `Current locations remain active through Day ${period.end}.`}
+                : `Locations remain active through Day ${period.end}. A new plan can be applied next week.`}
             </p>
           )}
 
@@ -410,7 +402,7 @@ export function SimulationPanel() {
               <div className="simulation-active-plan" role="status">
                 {snapshot.allocation.length} clinic
                 {snapshot.allocation.length === 1 ? "" : "s"} currently active
-                for Days {period.start}–{period.end}.
+                through Day {period.end}.
               </div>
             )}
         </section>
@@ -442,8 +434,8 @@ export function SimulationPanel() {
         <p>
           Clinic service lowers the completed Balanced score by up to 35% at the
           host barangay and tapers to 17.5% at the 3 km edge. Overlapping
-          clinics use the strongest single service estimate. Locations are
-          checked on Days 1, 8, 15 and 22.
+          clinics use the strongest single service estimate. Locations can be
+          applied once per weekly window and take effect from the selected day.
         </p>
         <p>
           The connected XGBoost and capacity-aware CP-SAT planner estimates

@@ -7,6 +7,7 @@ import {
   Tooltip,
   Legend,
   CartesianGrid,
+  ReferenceLine,
 } from "recharts";
 import { ArrowDownRight, ArrowUpRight, MapPin } from "lucide-react";
 import {
@@ -313,6 +314,16 @@ export function SimulationResults() {
               ]}
             />
             <Legend iconType="circle" />
+            <ReferenceLine
+              x={run.day}
+              stroke="#526b7a"
+              strokeDasharray="3 3"
+              label={{
+                value: "Today",
+                position: "insideTopRight",
+                fontSize: 9,
+              }}
+            />
             {strategies.map((strategy) => (
               <Line
                 key={strategy}
@@ -330,8 +341,8 @@ export function SimulationResults() {
         </ResponsiveContainer>
       </div>
       <p className="simulation-chart-footnote">
-        Each scenario has its own timeline. Blank portions have not been run
-        yet.
+        All three lines share this day. The selected scenario is shown on the
+        map.
       </p>
 
       <ScenarioActivity run={run} strategy={s.strategy} />
