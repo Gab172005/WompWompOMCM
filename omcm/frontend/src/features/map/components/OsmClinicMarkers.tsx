@@ -13,8 +13,8 @@ import {
 const icon = divIcon({
   className: "osm-clinic-marker-custom",
   html: clinicMarkerSvg,
-  iconSize: [30, 30],
-  iconAnchor: [15, 15],
+  iconSize: [15, 15],
+  iconAnchor: [7.5, 7.5],
 });
 
 /** Centres, not entrances: ways and relations use the Overpass bounding-box center. */

@@ -2792,38 +2792,6 @@ dd {
 .workspace-layer-toggles input {
   accent-color: #208d83;
 }
-.workspace-legend {
-  position: absolute;
-  z-index: 500;
-  bottom: 22px;
-  left: 18px;
-  width: 270px;
-  padding: 13px;
-  margin: 0;
-}
-.workspace-legend > strong {
-  font-size: 12px;
-  display: block;
-}
-.workspace-legend > span {
-  font-size: 10px;
-  color: #62788a;
-}
-.workspace-colorbar {
-  display: flex;
-  margin-top: 9px;
-}
-.workspace-colorbar div {
-  flex: 1;
-}
-.workspace-colorbar i {
-  height: 7px;
-  display: block;
-}
-.workspace-colorbar small {
-  font-size: 9px;
-  color: #62788a;
-}
 .workspace-engine {
   position: absolute;
   z-index: 500;
@@ -2869,9 +2837,6 @@ dd {
 }
 .workspace-playback select {
   padding: 5px;
-}
-.is-simulating .workspace-legend {
-  bottom: 106px;
 }
 .is-simulating .intelligence-panel {
   bottom: 222px;

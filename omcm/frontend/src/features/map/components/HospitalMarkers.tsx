@@ -6,8 +6,8 @@ import { hospitalMarkerSvg } from "./facilityIcons";
 const icon = divIcon({
   className: "hospital-marker-custom",
   html: hospitalMarkerSvg,
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
+  iconSize: [16, 16],
+  iconAnchor: [8, 8],
 });
 export function HospitalMarkers({
   hospitals,

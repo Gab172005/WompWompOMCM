@@ -592,8 +592,8 @@ export function LagunaGoogleMap({
         title: `${h.name} (${h.municipality})`,
         icon: {
           url: svgDataUrl(hospitalMarkerSvg),
-          scaledSize: new google.maps.Size(32, 32),
-          anchor: new google.maps.Point(16, 16),
+          scaledSize: new google.maps.Size(16, 16),
+          anchor: new google.maps.Point(8, 8),
         },
         zIndex: 15,
       });
@@ -662,8 +662,8 @@ export function LagunaGoogleMap({
         title: clinic.name || "Clinic",
         icon: {
           url: svgDataUrl(clinicMarkerSvg),
-          scaledSize: new google.maps.Size(30, 30),
-          anchor: new google.maps.Point(15, 15),
+          scaledSize: new google.maps.Size(15, 15),
+          anchor: new google.maps.Point(7.5, 7.5),
         },
         zIndex: 12,
       });
@@ -706,8 +706,8 @@ export function LagunaGoogleMap({
         title: `${c.clinicId}: ${c.siteName}`,
         icon: {
           url: svgDataUrl(mobileClinicSvg(i + 1)),
-          scaledSize: new google.maps.Size(40, 36),
-          anchor: new google.maps.Point(17, 19),
+          scaledSize: new google.maps.Size(20, 18),
+          anchor: new google.maps.Point(8.5, 9.5),
         },
         zIndex: 20,
       });
@@ -743,9 +743,9 @@ export function LagunaGoogleMap({
             },
             icon: {
               url: svgDataUrl(mobileClinicSvg(undefined, kind)),
-              scaledSize: new google.maps.Size(40, 36),
-              anchor: new google.maps.Point(17, 19),
-              labelOrigin: new google.maps.Point(17, 43),
+              scaledSize: new google.maps.Size(20, 18),
+              anchor: new google.maps.Point(8.5, 9.5),
+              labelOrigin: new google.maps.Point(8.5, 22),
             },
             zIndex: kind === "active" ? 40 : 39,
           }),
@@ -844,8 +844,8 @@ export function LagunaGoogleMap({
           url: svgDataUrl(
             mobileClinicSvg(idx + 1, isSelected ? "selected" : "active"),
           ),
-          scaledSize: new google.maps.Size(40, 36),
-          anchor: new google.maps.Point(17, 19),
+          scaledSize: new google.maps.Size(20, 18),
+          anchor: new google.maps.Point(8.5, 9.5),
         },
         zIndex: 35,
       });

@@ -34,8 +34,8 @@ export function ClinicMarkers({
             i + 1,
             selectedClinicId === c.clinicId ? "selected" : "active",
           ),
-          iconSize: [40, 36],
-          iconAnchor: [17, 19],
+          iconSize: [20, 18],
+          iconAnchor: [8.5, 9.5],
         });
         return (
           <Marker

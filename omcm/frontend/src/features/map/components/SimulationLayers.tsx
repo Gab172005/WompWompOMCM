@@ -24,8 +24,8 @@ export function SimulationLayers({ overlay }: { overlay: SimulationOverlay }) {
             icon={divIcon({
               className: "clinic-staging-marker",
               html: mobileClinicSvg(undefined, kind),
-              iconSize: [40, 36],
-              iconAnchor: [17, 19],
+              iconSize: [20, 18],
+              iconAnchor: [8.5, 9.5],
             })}
           >
             <Popup>
