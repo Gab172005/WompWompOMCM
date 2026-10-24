@@ -48,6 +48,14 @@ Keep existing demo administrator settings if using authenticated pilot actions.
 Do not copy the `/admin` path into the CORS value: CORS uses the frontend origin.
 Local `.env` files are ignored by Git and do not configure the hosted project.
 
+The backend also allows branch and deployment preview origins for the
+`omcm-two` Vercel project in the `gab-s-projects2` team. This is restricted to
+that project's Vercel hostnames; unrelated Vercel projects and origins remain
+blocked. If the project or team changes, set `OMCM_CORS_ORIGIN_REGEX` to an
+anchored regex for the new project and team. Deploy the backend code change
+before testing previews. Local development should use the local backend proxy,
+or explicitly include the local frontend origin in `OMCM_CORS_ORIGINS`.
+
 Redeploy the backend, then open:
 
 - https://womp-womp-omcm.vercel.app/api/health — HTTP 200, `status: "ok"`.

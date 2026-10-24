@@ -18,8 +18,21 @@ async def lifespan(app):
 app = FastAPI(title="OMCM", version="1.0.0", lifespan=lifespan,
               description="Laguna mobile clinic planning and simulation demo.")
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+cors_origins = [
+    origin.strip().rstrip("/")
+    for origin in os.getenv(
+        "OMCM_CORS_ORIGINS",
+        "http://127.0.0.1:5173,http://localhost:5173",
+    ).split(",")
+    if origin.strip()
+]
+cors_origin_regex = os.getenv(
+    "OMCM_CORS_ORIGIN_REGEX",
+    r"^https://omcm-two-(?:git-[a-z0-9-]+|[a-z0-9]{9})-gab-s-projects2\.vercel\.app$",
+)
 app.add_middleware(CORSMiddleware,
-    allow_origins=[origin.strip().rstrip("/") for origin in os.getenv("OMCM_CORS_ORIGINS", "http://127.0.0.1:5173,http://localhost:5173").split(",") if origin.strip()],
+    allow_origins=cors_origins,
+    allow_origin_regex=cors_origin_regex,
     allow_methods=["GET", "POST"], allow_headers=["Authorization", "Content-Type"])
 for router in (municipalities.router, optimization.router, simulation.router, clinics.router, integrations.router, assistant.router):
     app.include_router(router)
