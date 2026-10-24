@@ -4,7 +4,15 @@ Review branch: `feat/xgboost-clinic-allocation`.
 Verified main base: `537dde3`.
 Date: 2026-10-24.
 
-## Readiness and limits
+## Historical pilot review
+
+This document records the original connected pilot-allocation review. The
+province-wide extension and its current assumptions are documented in
+[`OPTIMIZATION_ALLOCATION.md`](OPTIMIZATION_ALLOCATION.md) and the project
+README. The legacy pilot endpoints remain available; the map's Plan clinics
+panel uses the all-Laguna endpoints.
+
+## Original readiness and limits
 
 Ready for a Step B **pilot allocation** PR. XGBoost estimates synthetic daily
 appointment demand and OR-Tools CP-SAT allocates the fleet. It is not a

@@ -51,7 +51,7 @@ export const useOptimizationStore = create<OptimizationState>((set, get) => ({
   loadCatalog: async () => {
     try {
       const data = await backendApi<{ sites: Site[]; roads: Road[] }>(
-        "/clinics",
+        "/planning/clinics",
         undefined,
         AbortSignal.timeout(10000),
       );
@@ -85,7 +85,7 @@ export const useOptimizationStore = create<OptimizationState>((set, get) => ({
     controller = new AbortController();
     const signal = AbortSignal.any([
       controller.signal,
-      AbortSignal.timeout(45000),
+      AbortSignal.timeout(90000),
     ]);
     const request = structuredClone({
       ...get().config,
@@ -94,7 +94,7 @@ export const useOptimizationStore = create<OptimizationState>((set, get) => ({
     });
     set({ result: null, busy: true, error: "" });
     try {
-      const result = await backendApi<Plan>("/optimize", request, signal);
+      const result = await backendApi<Plan>("/planning/optimize", request, signal);
       if (current !== revision) return;
       if (
         !result.plan_id ||

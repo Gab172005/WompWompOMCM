@@ -44,18 +44,23 @@ Copy-Item ../.env.example .env
 
 API docs: **http://127.0.0.1:8000/docs**. On macOS/Linux use `.venv/bin/python`.
 The existing `setup.ps1` and `start.ps1` are also available from `omcm/`.
-Keep `OMCM_DATASET=pilot` for the server-backed Los Baños–Bay fleet pilot.
+Keep `OMCM_DATASET=pilot` for the retained Los Baños–Bay road-pilot endpoints.
+The map's connected **Plan clinics** workflow uses separate province-wide
+planning endpoints for all 681 barangays in 30 LGUs.
 API mutations require the configured demo administrator; public schedules are
 read-only. SQLite stores connected drafts, approved schedules and audit events.
 
-The map's Optimize panel now calls FastAPI using the configured backend sign-in.
-Choose fleet size, appointment capacity, road-time limit and optional exclusions,
-then select **Generate recommendations**. XGBoost estimates synthetic appointment
-demand and CP-SAT chooses capacity-constrained placements. No recommendation is
-generated automatically or substituted locally if the backend fails. Approval
-publishes the stored server draft; fresh public sessions read its approved schedule.
-This allocation remains scoped to the Los Baños–Bay road pilot, while the map's
-province-wide HNI retains its existing formula. See the
+The map's Plan clinics panel calls FastAPI using the configured backend sign-in.
+Choose fleet size, appointment capacity, modeled-travel limit and optional
+exclusions, then select **Generate recommendations**. A dated synthetic XGBoost
+illness forecast feeds the agreed Balanced HNI; the XGBoost demand model and
+capacity-aware CP-SAT solver select placements across all Laguna. Travel uses
+estimated barangay adjacency links, not a verified provincial road matrix.
+Candidate locations are illustrative barangay planning points, not confirmed
+mobile-clinic facilities. No recommendation is substituted locally if the
+backend fails. Approval publishes the stored server draft; Public View reads
+approved schedules only. The legacy `/api/optimize` and `/api/clinics` endpoints
+retain the Los Baños–Bay road pilot. See the
 [optimization implementation and exact change inventory](docs/OPTIMIZATION_ALLOCATION.md).
 
 The separate [dated illness forecast](docs/TEMPORAL_FORECAST.md) now uses fictional

@@ -25,7 +25,7 @@ export function SimulationResults() {
     ...Object.fromEntries(
       strategies.map((id) => [
         id,
-        i < s.runs[id].reached ? s.runs[id].snapshots[i].metrics.uhni : null,
+        i < s.runs[id].reached ? s.runs[id].snapshots[i].metrics.hni : null,
       ]),
     ),
   }));
@@ -45,7 +45,9 @@ export function SimulationResults() {
         data missing
       </p>
       <dl className="simulation-statistics">
-        <dt>Expected healthcare need</dt>
+        <dt>Baseline HNI before clinic service</dt>
+        <dd>{m.baselineHni.toFixed(1)}/100</dd>
+        <dt>Scenario HNI after clinic service</dt>
         <dd>{m.hni.toFixed(1)}/100</dd>
         <dt>Healthcare needs not yet covered</dt>
         <dd>{m.uhni.toFixed(1)}/100</dd>
@@ -64,12 +66,13 @@ export function SimulationResults() {
         treated. A barangay within reach may still have needs the clinics cannot
         cover.
       </p>
-      <h3>Compare needs not yet covered</h3>
+      <h3>Compare scenario HNI after clinic service</h3>
       <p className="workspace-note">
-        Lower lines mean less estimated need left uncovered. Each scenario
-        records its own progress. Run all three through Day 30 for a complete
-        comparison. Blank results mean that scenario has not reached that day
-        yet.
+        The no-intervention line rises with the shared baseline. Manual and
+        optimized allocations lower the line where clinics provide modeled
+        service. Each scenario records its own progress. Run all three through
+        Day 30 for a complete comparison. Blank results mean that scenario has
+        not reached that day yet.
       </p>
       <div style={{ width: "100%", height: 220 }}>
         <ResponsiveContainer width="100%" height="100%">
@@ -106,7 +109,8 @@ export function SimulationResults() {
           <thead>
             <tr>
               <th>Scenario</th>
-              <th>Expected need</th>
+              <th>Baseline HNI</th>
+              <th>Scenario HNI</th>
               <th>Need not yet covered</th>
               <th>Barangays within reach</th>
               <th>Need covered (%)</th>
@@ -124,6 +128,7 @@ export function SimulationResults() {
                   <th>{STRATEGIES[id]}</th>
                   {metrics ? (
                     <>
+                      <td>{metrics.baselineHni.toFixed(2)}</td>
                       <td>{metrics.hni.toFixed(2)}</td>
                       <td>{metrics.uhni.toFixed(2)}</td>
                       <td>{metrics.servedBarangays}</td>
@@ -131,7 +136,7 @@ export function SimulationResults() {
                       <td>{metrics.relocations}</td>
                     </>
                   ) : (
-                    <td colSpan={5}>
+                    <td colSpan={6}>
                       Run this scenario through Day {run.day} to compare
                     </td>
                   )}

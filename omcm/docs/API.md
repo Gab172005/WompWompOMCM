@@ -9,9 +9,11 @@ Pydantic schemas. The existing route names are retained.
 | GET `/api/auth/me` | Verify configured demo administrator | Basic auth |
 | GET `/api/barangays` | Scored default pilot, metadata/source labels | Public |
 | GET `/api/clinics` | Candidate sites and documented closure segments | Public |
+| GET `/api/planning/clinics` | Province-wide planning points and estimated adjacency links | Public |
 | GET `/api/hospitals` | Explicitly illustrative care reference | Public |
 | POST `/api/risk/calculate` | Recalculate weighted scores | Basic auth |
 | POST `/api/optimize` | Compute and persist a draft, return comparison | Basic auth |
+| POST `/api/planning/optimize` | Compute and persist a province-wide draft | Basic auth |
 | POST `/api/simulate` | Before/after allocation, no schedule mutation | Basic auth |
 | GET `/api/schedules` | Published schedules, notices, current Manila day | Public |
 | POST `/api/schedules/approve` | Approve and publish stored next-day draft | Basic auth |
@@ -65,6 +67,18 @@ synthetic evaluation and scope are returned through the existing `notes` and
 unchanged. Missing or mismatched model artifacts return 503, without a draft or
 fallback allocation. See [dated model provenance and limitations](TEMPORAL_FORECAST.md)
 and [the original allocation review](OPTIMIZATION_ALLOCATION.md).
+
+`/api/clinics` and `/api/optimize` retain the Los Baños–Bay pilot and its prepared
+road evidence. The map's **Plan clinics** panel uses `/api/planning/clinics` and
+`/api/planning/optimize`, which consider all 681 Laguna barangays. This planner
+uses the agreed Balanced HNI (morbidity 35%, hospital distance 30%, density 15%,
+municipal income class 10%, clinic distance 5%, clinic provision 5%), a dated
+synthetic XGBoost illness forecast, the existing XGBoost appointment-demand
+model, and capacity-aware CP-SAT. Legacy request `weights` do not change these
+fixed HNI percentages. Province-wide candidate points are barangay centroids
+that require LGU verification; travel links are estimated from barangay
+adjacency and straight-line distance, not a verified road network. These
+estimates must not be described as actual travel routes or confirmed facilities.
 
 Forest-land exclusions apply to candidate eligibility on the server as well as
 the map. `flood_safe_accessibility_pct` measures estimated demand with a safe

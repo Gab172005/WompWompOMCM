@@ -1,6 +1,4 @@
-import { readFileSync } from "node:fs";
-import { containsLagunaPoint, parseLagunaGeometry } from "../maps";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LAGUNA_BARANGAYS } from "../providedData";
 import { defaultNeedWeights, HEALTHCARE_NEED_VERSION, type NeedFactor } from "../healthcareNeed";
 import {
@@ -14,24 +12,22 @@ import {
   buildCoverage,
   simulateDay,
   serviceFractions,
+  serviceAdjustedHni,
   validateAllocation,
 } from "./interventions";
-import { InfeasibleAllocationError, optimizeWeek } from "./optimizer";
+import {
+  buildSimulationPlacementRequest,
+} from "./optimizer";
 import { useForecastStore } from "../../store/useForecastStore";
+import { useAppStore } from "../../store/useAppStore";
+import { clearCredentials, setCredentials } from "../api";
+import { defaultConfig } from "../defaults";
+import type { Plan } from "../../types";
 const conditions = {
   floodOverrides: {},
   morbiditySpikes: {},
   closedRoadIds: [],
 };
-const geography = parseLagunaGeometry(
-  JSON.parse(
-    readFileSync(
-      `${process.cwd()}/public/assets/geo/laguna_barangays.geojson`,
-      "utf8",
-    ),
-  ),
-  "barangay",
-);
 const forecasts = forecastMonth(conditions),
   coverage = buildCoverage(forecasts[0]);
 
@@ -90,89 +86,77 @@ describe("deterministic 30-day forecast", () => {
     });
     expect(changed[0].hni).toBeGreaterThan(target.hni);
   });
+  it("raises baseline HNI over time without changing the agreed weights", () => {
+    for (let day = 1; day < forecasts.length; day++) {
+      const prior = new Map(forecasts[day - 1].map((record) => [record.psgc, record.hni]));
+      for (const record of forecasts[day])
+        expect(record.hni).toBeGreaterThanOrEqual(prior.get(record.psgc)!);
+    }
+    const average = (records: (typeof forecasts)[number]) =>
+      records.reduce((sum, record) => sum + record.hni * record.population, 0) /
+      records.reduce((sum, record) => sum + record.population, 0);
+    expect(average(forecasts[29])).toBeGreaterThan(average(forecasts[0]));
+  });
 });
 
-describe("weekly greedy maximum coverage", () => {
-  it.each([1, 2, 3, 5])(
-    "returns exactly %i unique geographic sites and available clinic IDs",
-    (k) => {
-      const result = optimizeWeek(k, 1, forecasts, undefined, [], coverage);
-      expect(result.recommendations).toHaveLength(k);
-      expect(new Set(result.recommendations.map((r) => r.psgc)).size).toBe(k);
-      expect(result.recommendations.map((r) => r.clinicId).sort()).toEqual(
-        Array.from({ length: k }, (_, i) => `MC-${i + 1}`),
-      );
-      for (const r of result.recommendations) {
-        const original = LAGUNA_BARANGAYS.find((b) => b.psgc === r.psgc)!;
-        expect([r.lat, r.lng, r.name, r.municipality]).toEqual([
-          original.lat,
-          original.lng,
-          original.name,
-          original.municipality,
-        ]);
-        expect(
-          geography.features.some((f) => f.properties.area_id === r.psgc),
-        ).toBe(true);
-        expect(containsLagunaPoint(geography, r.lng, r.lat)).toBe(true);
-        expect(r.expectedCoverage).toBeGreaterThanOrEqual(0);
-      }
-      expect(optimizeWeek(k, 1, forecasts, undefined, [], coverage)).toEqual(
-        result,
-      );
-    },
-  );
-  it("throws explicit infeasibility rather than returning a smaller allocation", () => {
-    expect(() =>
-      optimizeWeek(
-        2,
-        1,
-        forecasts,
-        undefined,
-        [],
-        new Map([...coverage].slice(0, 1)),
-      ),
-    ).toThrow(InfeasibleAllocationError);
-    expect(() =>
-      optimizeWeek(682, 1, forecasts, undefined, [], coverage),
-    ).toThrow(/only 681 available locations/);
+describe("post-service scenario HNI", () => {
+  it("lowers only a host and its in-range neighbors while the rest keeps rising", () => {
+    const host = LAGUNA_BARANGAYS.find((record) => coverage.has(record.psgc))!;
+    const neighbors = coverage.get(host.psgc)!;
+    const outside = forecasts[0].find((record) => !neighbors.has(record.psgc))!;
+    const allocation = [{ clinicId: "MC-1", psgc: host.psgc }];
+    const first = simulateDay(1, "day-1", forecasts[0], undefined, allocation, coverage);
+    const second = simulateDay(2, "day-2", forecasts[1], first, allocation, coverage);
+    const byId = new Map(first.records.map((record) => [record.psgc, record]));
+    const hostRecord = byId.get(host.psgc)!;
+    const neighborPsgc = [...neighbors.keys()].find((psgc) => psgc !== host.psgc)!;
+    const neighborRecord = byId.get(neighborPsgc)!;
+    const outsideRecord = byId.get(outside.psgc)!;
+    expect(hostRecord.serviceFraction).toBeCloseTo(0.35);
+    expect(hostRecord.scenarioHni).toBeLessThan(hostRecord.hni);
+    expect(neighborRecord.scenarioHni).toBeLessThan(neighborRecord.hni);
+    expect(outsideRecord.scenarioHni).toBe(outsideRecord.hni);
+    expect(second.records.find((record) => record.psgc === outside.psgc)!.scenarioHni)
+      .toBeGreaterThan(outsideRecord.scenarioHni);
+    expect(serviceAdjustedHni(80, 1)).toBe(52);
   });
-  it("uses future demand and covers neighbours instead of picking the current top score", () => {
-    const a = { ...forecasts[0][0], psgc: "A", population: 1, hni: 100 };
-    const b = { ...a, psgc: "B", population: 100, hni: 1 };
-    const c = { ...a, psgc: "C", population: 100, hni: 1 };
-    const days = Array.from({ length: 30 }, (_, i) => [
-      a,
-      { ...b, hni: i === 0 ? 1 : 80 },
-      { ...c, hni: i === 0 ? 1 : 80 },
-    ]);
-    const areas = new Map([
-      ["A", new Map([["A", 0.35]])],
-      [
-        "B",
-        new Map([
-          ["B", 0.35],
-          ["C", 0.35],
-        ]),
-      ],
-      ["C", new Map([["C", 0.35]])],
-    ]);
-    expect(
-      optimizeWeek(1, 1, days, undefined, [], areas).recommendations[0].psgc,
-    ).toBe("B");
+  it("applies three simultaneous host deductions without changing baseline HNI", () => {
+    const allocation = [...coverage.keys()].slice(0, 3).map((psgc, index) => ({
+      clinicId: `MC-${index + 1}`,
+      psgc,
+    }));
+    const snapshot = simulateDay(1, "day-1", forecasts[0], undefined, allocation, coverage);
+    const affectedHosts = allocation.map(({ psgc }) => snapshot.records.find((record) => record.psgc === psgc)!);
+    expect(snapshot.allocation).toHaveLength(3);
+    expect(new Set(snapshot.allocation.map((assignment) => assignment.psgc)).size).toBe(3);
+    expect(affectedHosts.every((record) => record.scenarioHni < record.hni)).toBe(true);
+    expect(snapshot.metrics.baselineHni).toBeCloseTo(
+      snapshot.records.reduce((sum, record) => sum + record.hni * record.population, 0) /
+        snapshot.records.reduce((sum, record) => sum + record.population, 0),
+    );
   });
-  it("keeps a clinic at its existing site on tied coverage and rejects duplicate assignments", () => {
-    const ids = forecasts[0].slice(0, 2).map((b) => b.psgc);
-    const tied = new Map(ids.map((id) => [id, new Map([[ids[0], 0.35]])]));
-    expect(
-      optimizeWeek(
-        1,
-        1,
-        forecasts,
-        undefined,
-        [{ clinicId: "MC-1", psgc: ids[1] }],
-        tied,
-      ).recommendations[0].psgc,
-    ).toBe(ids[1]);
+  it("maps simulator conditions onto the province planning API without changing HNI weights", () => {
+    const municipality = LAGUNA_BARANGAYS[0];
+    const request = buildSimulationPlacementRequest(3, {
+      ...conditions,
+      floodOverrides: { [municipality.municipalityPsgc]: "severe" },
+      morbiditySpikes: { [municipality.municipalityPsgc]: 1.5 },
+    });
+    expect(request).toMatchObject({
+      ...defaultConfig,
+      clinic_count: 3,
+      capacity: 180,
+      max_travel_minutes: 25,
+      municipality_flood_levels: { [municipality.municipality]: "severe" },
+      municipality_outbreak_multipliers: { [municipality.municipality]: 1.5 },
+    });
+    expect(request.weights).toEqual(defaultConfig.weights);
+  });
+});
+
+describe("allocation validation", () => {
+  it("rejects duplicate clinic sites", () => {
+    const ids = [...coverage.keys()].slice(0, 2);
     expect(() =>
       validateAllocation(
         [
@@ -188,12 +172,63 @@ describe("weekly greedy maximum coverage", () => {
 
 describe("interventions and independent scenario history", () => {
   beforeEach(() => {
+    const initialSiteIds = [...coverage.keys()];
+    useAppStore.setState({ adminUser: "simulation-test" });
+    setCredentials("simulation-test", "simulation-test-password");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        const body = JSON.parse(String(init?.body)) as { clinic_count: number };
+        const clinics = initialSiteIds.slice(0, body.clinic_count).map((psgc) => {
+          const barangay = LAGUNA_BARANGAYS.find((record) => record.psgc === psgc)!;
+          return {
+            id: psgc,
+            barangay_id: psgc,
+            name: barangay.name,
+            lat: barangay.lat,
+            lng: barangay.lng,
+            capacity: 180,
+            eligible: true,
+            served: 20,
+            daily_capacity: 180,
+            assignments: [],
+            utilization: 0.2,
+            reason: "Test server allocation",
+          };
+        });
+        const plan = {
+          plan_id: "simulation-test-plan",
+          notes: ["XGBoost dated demand forecast", "Agreed Balanced HNI"],
+          optimized: {
+            clinics,
+            metrics: {
+              demand_served_pct: 72,
+              capacity_utilization: 60,
+              average_travel_minutes: 12,
+              total_demand: 200,
+              residents_served: 144,
+            },
+            solver_status: "OPTIMAL",
+            optimal: true,
+          },
+        } as unknown as Plan;
+        return new Response(JSON.stringify(plan), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
     useForecastStore.getState().reset();
     useForecastStore.getState().setStrategy("optimizer");
   });
-  it("requires explicit confirmation; rejection and modifications never deploy silently", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    clearCredentials();
+    useAppStore.setState({ adminUser: null });
+  });
+  it("requires a real backend draft and explicit confirmation before deploying", async () => {
     const s = useForecastStore.getState();
-    s.recommend();
+    await s.recommend();
     expect(
       useForecastStore.getState().runs.optimizer.snapshots[0].allocation,
     ).toEqual([]);
@@ -202,7 +237,7 @@ describe("interventions and independent scenario history", () => {
     );
     s.reject();
     expect(useForecastStore.getState().proposal).toBeNull();
-    s.recommend();
+    await useForecastStore.getState().recommend();
     s.apply();
     const next = useForecastStore.getState();
     expect(next.runs.optimizer.snapshots[0].allocation).toHaveLength(3);
@@ -215,9 +250,9 @@ describe("interventions and independent scenario history", () => {
       next.runs.none.snapshots[0].metrics.uhni,
     );
   });
-  it("applies identical service effects for identical manual and optimized allocations", () => {
+  it("applies identical service effects for identical manual and optimized allocations", async () => {
     const s = useForecastStore.getState();
-    s.recommend();
+    await s.recommend();
     const draft = [...useForecastStore.getState().draft];
     s.apply();
     s.setStrategy("manual");
@@ -226,9 +261,9 @@ describe("interventions and independent scenario history", () => {
     const state = useForecastStore.getState();
     expect(state.runs.manual.snapshots).toEqual(state.runs.optimizer.snapshots);
   });
-  it("pauses at decision points, preserves recorded history, and prevents editing past days", () => {
+  it("pauses at decision points, preserves recorded history, and prevents editing past days", async () => {
     const s = useForecastStore.getState();
-    s.recommend();
+    await s.recommend();
     s.apply();
     const firstWeek = useForecastStore
       .getState()
@@ -236,7 +271,7 @@ describe("interventions and independent scenario history", () => {
     useForecastStore.setState({ playing: true });
     for (let i = 0; i < 7; i++) s.advance();
     expect(useForecastStore.getState().playing).toBe(false);
-    s.recommend();
+    await useForecastStore.getState().recommend();
     s.apply();
     expect(
       useForecastStore.getState().runs.optimizer.snapshots.slice(0, 7),
@@ -250,10 +285,10 @@ describe("interventions and independent scenario history", () => {
       Object.keys(useForecastStore.getState().runs.optimizer.history),
     ).toEqual(["1", "8"]);
   });
-  it("recalculates for changed k and simulates 30 independent reproducible days", () => {
+  it("uses the requested clinic count and simulates 30 independent reproducible days", async () => {
     const s = useForecastStore.getState();
     s.setK(5);
-    s.recommend();
+    await useForecastStore.getState().recommend();
     expect(useForecastStore.getState().proposal?.recommendations).toHaveLength(
       5,
     );
@@ -278,15 +313,18 @@ describe("interventions and independent scenario history", () => {
     s.setK(3);
   });
   it("does not double-count overlapping service or mutate previous snapshots", () => {
-    const proposal = optimizeWeek(2, 1, forecasts, undefined, [], coverage);
-    const fractions = serviceFractions(proposal.recommendations, coverage);
+    const allocation = [...coverage.keys()].slice(0, 2).map((psgc, index) => ({
+      clinicId: `MC-${index + 1}`,
+      psgc,
+    }));
+    const fractions = serviceFractions(allocation, coverage);
     expect(Math.max(...fractions.values())).toBeLessThanOrEqual(0.35);
     const first = simulateDay(
       1,
       "test",
       forecasts[0],
       undefined,
-      proposal.recommendations,
+      allocation,
       coverage,
     );
     const saved = JSON.stringify(first);
@@ -295,7 +333,7 @@ describe("interventions and independent scenario history", () => {
       "test",
       forecasts[1],
       first,
-      proposal.recommendations,
+      allocation,
       coverage,
     );
     expect(JSON.stringify(first)).toBe(saved);

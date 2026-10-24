@@ -8,11 +8,13 @@ export interface Assignment {
   psgc: string;
 }
 export interface DailyRecord extends ForecastRecord {
+  scenarioHni: number;
   uhni: number;
   demand: number;
   serviceFraction: number;
 }
 export interface DailyMetrics {
+  baselineHni: number;
   hni: number;
   uhni: number;
   totalUnmetPriority: number;
@@ -62,7 +64,7 @@ export function buildCoverage(records: ForecastRecord[]): CoverageMatrix {
     ]),
   );
 }
-/** Shared backlog recurrence; clinics do not change underlying HNI. */
+/** Shared backlog recurrence for unmet need; baseline HNI remains unchanged. */
 export function untreatedDemand(hni: number, priorUnmet = 0) {
   return Math.min(100, hni + 0.15 * priorUnmet);
 }
@@ -76,6 +78,9 @@ export function serviceFractions(
     for (const [psgc, fraction] of coverage.get(a.psgc) ?? [])
       served.set(psgc, Math.max(served.get(psgc) ?? 0, fraction));
   return served;
+}
+export function serviceAdjustedHni(hni: number, serviceFraction: number) {
+  return hni * (1 - Math.max(0, Math.min(SERVICE_FRACTION, serviceFraction)));
 }
 export function validateAllocation(
   allocation: Assignment[],
@@ -117,13 +122,15 @@ export function simulateDay(
     const serviceFraction = served.get(b.psgc) ?? 0;
     return {
       ...b,
+      scenarioHni: serviceAdjustedHni(b.hni, serviceFraction),
       demand,
       uhni: demand * (1 - serviceFraction),
       serviceFraction,
     };
   });
   const population = records.reduce((s, b) => s + b.population, 0);
-  const totalNeed = records.reduce((s, b) => s + b.hni * b.population, 0);
+  const baselineNeed = records.reduce((s, b) => s + b.hni * b.population, 0);
+  const totalNeed = records.reduce((s, b) => s + b.scenarioHni * b.population, 0);
   const demand = records.reduce((s, b) => s + b.demand * b.population, 0);
   const unmet = records.reduce((s, b) => s + b.uhni * b.population, 0);
   const moves = allocation.filter((a) => {
@@ -136,6 +143,7 @@ export function simulateDay(
     records,
     allocation: allocation.map((a) => ({ ...a })),
     metrics: {
+      baselineHni: baselineNeed / population,
       hni: totalNeed / population,
       uhni: unmet / population,
       totalUnmetPriority: unmet,

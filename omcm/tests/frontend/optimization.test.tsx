@@ -76,7 +76,7 @@ const plan: Plan = {
   notes: ["XGBoost synthetic demand"],
   metadata: {
     synthetic: true,
-    region: "Los Baños–Bay",
+    region: "Laguna Province",
     generated_at: "2026-10-24",
     source: "test",
     travel_times: "modeled",
@@ -137,7 +137,7 @@ describe("connected optimization", () => {
     fireEvent.change(screen.getByLabelText("Daily capacity per clinic"), {
       target: { value: "100" },
     });
-    fireEvent.change(screen.getByLabelText("Maximum road minutes"), {
+    fireEvent.change(screen.getByLabelText("Maximum modeled travel minutes"), {
       target: { value: "12" },
     });
     fireEvent.click(

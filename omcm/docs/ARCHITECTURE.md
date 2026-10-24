@@ -69,6 +69,13 @@ capacity constraints and Python allocation. Its fixtures are mirrored under
 Do not translate a workspace proposal into an approved server schedule: the
 identifiers, inputs, routes and scoring contracts differ.
 
+The map's connected **Plan clinics** workflow adds separate province-wide
+`/api/planning/*` endpoints. Those use all 681 barangay centroids and adjacency
+links derived from shared province data, the agreed Balanced HNI and XGBoost
+forecasts with CP-SAT allocation. Links are modeled estimates, not verified
+roads, and candidate points are not confirmed clinics. The legacy `/api/*`
+pilot endpoints and their route evidence remain available independently.
+
 The new workspace's approval is labeled a local rehearsal. Server publication
 requires a server-generated draft and authenticated approval via the retained
 schedule workflow. Public routes read approved snapshots, never simulated

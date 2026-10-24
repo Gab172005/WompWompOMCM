@@ -132,7 +132,7 @@ try {
     name: "Plan clinic locations",
   });
   await expect(
-    panel.getByText("Los Baños–Bay · 20-barangay pilot"),
+    panel.getByText("All Laguna · 681 barangays · 30 LGUs"),
   ).toBeVisible();
   await expect(
     panel.getByRole("button", { name: "Generate recommendations" }),
@@ -142,9 +142,10 @@ try {
   await page.getByLabel("Available mobile clinics").press("ArrowLeft");
   await expect(page.getByLabel("Available mobile clinics")).toHaveValue("2");
   await page.getByLabel("Daily capacity per clinic").fill("70");
-  await page.getByLabel("Maximum road minutes").fill("20");
+  await page.getByLabel("Maximum modeled travel minutes").fill("20");
   const generated = page.waitForResponse((response) =>
-    response.url().endsWith("/api/optimize"),
+    response.url().endsWith("/api/planning/optimize"),
+    { timeout: 90000 },
   );
   await panel.getByRole("button", { name: "Generate recommendations" }).click();
   const response = await generated;
@@ -162,6 +163,9 @@ try {
       /^Forecast target date: \d{4}-\d{2}-\d{2}$/.test(note),
     ),
   ).toBe(true);
+  expect(plan.barangays).toHaveLength(681);
+  expect(new Set(plan.barangays.map((b) => b.municipality)).size).toBe(30);
+  expect(plan.notes.join(" ")).toContain("Agreed Balanced HNI");
   expect(plan.optimized.clinics).toHaveLength(2);
   await expect(
     panel.getByRole("region", { name: "Backend allocation results" }),
@@ -187,16 +191,18 @@ try {
   ).json();
   expect(draftSchedules.schedules).toEqual([]);
   const catalog = await (
-    await fetch("http://127.0.0.1:8007/api/clinics")
+    await fetch("http://127.0.0.1:8007/api/planning/clinics")
   ).json();
+  expect(catalog.sites).toHaveLength(681);
   const unused = catalog.sites.find(
     (site) =>
-      site.eligible &&
+      site.eligible && site.name.includes("Calamba") &&
       !plan.optimized.clinics.some((clinic) => clinic.id === site.id),
   );
+  expect(unused, "A Calamba planning point must be available beyond the old pilot").toBeTruthy();
   const previousSites = plan.optimized.clinics.map((clinic) => clinic.id);
   const replan = page.waitForResponse((next) =>
-    next.url().endsWith("/api/optimize"),
+    next.url().endsWith("/api/planning/optimize"),
   );
   await page
     .getByLabel("Replan site " + previousSites[0])
@@ -292,15 +298,20 @@ try {
     Authorization:
       "Basic " + Buffer.from(username + ":" + password).toString("base64"),
   };
-  const revisedResponse = await fetch("http://127.0.0.1:8007/api/optimize", {
+  const revisedResponse = await fetch("http://127.0.0.1:8007/api/planning/optimize", {
     method: "POST",
     headers,
     body: JSON.stringify({ clinic_count: 1, capacity: 70 }),
   });
   expect(revisedResponse.status).toBe(200);
   const revised = await revisedResponse.json();
+  const publicRefresh = fresh.waitForResponse((response) =>
+    response.url().endsWith("/api/schedules"),
+  );
   await fresh.bringToFront();
   await fresh.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await publicRefresh;
+  await expect(fresh.getByText("2 clinics announced")).toBeVisible();
   await expect(fresh.locator(".clinic-staging-marker")).toHaveCount(2);
   const notice = "Test emergency update: revised approved clinic arrangements.";
   const emergencyResponse = await fetch(

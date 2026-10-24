@@ -205,7 +205,7 @@ export function fastAssistant(
         Object.values(HEALTHCARE_NEED_FACTORS)
           .map((f) => `• ${f.label}: ${Math.round(f.weight * 100)}%`)
           .join("\n") +
-        "\n\nMissing inputs are excluded and remaining weights rescaled. Illness inputs are sample data. The 30-day HNI simulation uses the same Balanced weights. Disaster risk is separate context. Connected clinic allocation uses a separately labeled pilot-priority index.",
+        "\n\nMissing inputs are excluded and remaining weights rescaled. Illness inputs are sample data. The 30-day HNI simulation uses the same Balanced weights. Disaster risk is separate context. Connected Plan clinics uses the same Balanced weights with forecast illness inputs across all Laguna.",
     );
   }
   // A compound or negative request must never be partly executed by guessing.

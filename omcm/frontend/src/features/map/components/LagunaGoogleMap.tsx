@@ -6,6 +6,7 @@ import {
   LAGUNA_BOUNDS,
   LAGUNA_CENTER,
   getMetricColor,
+  getSimulationNeedColor,
   interpolateRoutePosition,
 } from "../../../services/lagunaData";
 
@@ -362,7 +363,9 @@ export function LagunaGoogleMap({
       const isSelectedMunicipality = !isBarangay && code === selectedPsgc;
       const projected = forecastOverlay?.records.get(barangayCode);
       const value = projected
-        ? projected[forecastOverlay!.metric]
+        ? forecastOverlay!.metric === "hni"
+          ? projected.scenarioHni
+          : projected.uhni
         : barangay
           ? barangayMetric(barangay, activeMetric)
           : mun
@@ -374,11 +377,13 @@ export function LagunaGoogleMap({
               }[activeMetric]
             : null;
       return {
-        fillColor: isSelected
+        fillColor: isSelected && !forecastOverlay
           ? "#facc15"
           : publicMode
             ? "#f8fafc"
-            : getMetricColor(forecastOverlay ? "score" : activeMetric, value),
+            : forecastOverlay
+              ? getSimulationNeedColor(value)
+              : getMetricColor(activeMetric, value),
         fillOpacity: isSelected
           ? 0.7
           : isBarangay
@@ -437,8 +442,13 @@ export function LagunaGoogleMap({
         const metric = activeMetric;
         const value = barangayMetric(barangay, metric);
         const projected = forecastOverlay?.records.get(barangay.psgc);
+        const simulationValue = projected
+          ? forecastOverlay!.metric === "hni"
+            ? projected.scenarioHni
+            : projected.uhni
+          : null;
         const valDisplay = projected
-          ? `Day ${forecastOverlay!.day} · ${simulationMetricLabels[forecastOverlay!.metric]}: ${projected[forecastOverlay!.metric].toFixed(1)}/100 · Estimate${projected.provisional ? " · Some data missing" : ""}`
+          ? `Day ${forecastOverlay!.day} · ${simulationMetricLabels[forecastOverlay!.metric]}: ${simulationValue!.toFixed(1)}/100${forecastOverlay!.metric === "hni" ? ` · Baseline ${projected.hni.toFixed(1)}` : ""} · Estimate${projected.provisional ? " · Some data missing" : ""}`
           : publicMode
             ? `Population: ${barangay.population.toLocaleString()} · Click for nearby clinics & hospitals`
             : `${barangayMetricLabel(metric)}: ${value === null ? "Information unavailable" : value + (metric === "density" ? "/km²" : metric === "morbidity" ? " / 1,000" : "/100")}${metric === "score" ? ` · Healthcare need rank #${barangay.needRank} of 681${barangay.needProvisional ? " · Some data missing" : ""}` : ""}`;
@@ -710,7 +720,12 @@ export function LagunaGoogleMap({
               fontSize: "10px",
             },
             icon: {
-              url: svgDataUrl(mobileClinicSvg(undefined, kind)),
+              url: svgDataUrl(
+                mobileClinicSvg(
+                  Number(a.clinicId.match(/\d+$/)?.[0] ?? 0) || undefined,
+                  kind,
+                ),
+              ),
               scaledSize: new google.maps.Size(20, 18),
               anchor: new google.maps.Point(8.5, 9.5),
               labelOrigin: new google.maps.Point(8.5, 22),
