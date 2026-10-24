@@ -62,14 +62,16 @@ try {
     "fill",
     "#d1d5db",
   );
-  await expect(page.locator(".forest-land-marker")).toHaveCount(1);
+  await expect(page.locator(".forest-land-marker")).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Map legend" })).toContainText(
     "Verified hospital",
   );
   await mkdir(`${frontend}/test-results`, { recursive: true });
-  // This label extends over the province edge. Raising its pane must not
-  // reveal text that the mask was covering in the normal rendering order.
-  const forestLabel = page.locator(".forest-land-label");
+  await page.locator(".forest-land-area").hover();
+  const forestLabel = page.locator(".laguna-map-tooltip").filter({
+    hasText: "Sierra Madre Mountains Forest Land",
+  });
+  await expect(forestLabel).toBeVisible();
   const normalLabel = await forestLabel.screenshot({
     animations: "disabled",
     path: `${frontend}/test-results/map-label-over-mask.png`,

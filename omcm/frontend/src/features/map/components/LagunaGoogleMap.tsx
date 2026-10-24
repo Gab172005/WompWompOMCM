@@ -329,48 +329,6 @@ export function LagunaGoogleMap({
     };
   }, []);
 
-  // Keep the forest landmark independent of health and facility layers.
-  useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map || !window.google?.maps) return;
-    const { name, jurisdiction, position } = PAETE_FOREST_LAND;
-    const marker = new google.maps.Marker({
-      map,
-      position,
-      title: `${name} · Jurisdiction: ${jurisdiction}`,
-      icon: {
-        url: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="6" height="6"><circle cx="3" cy="3" r="3" fill="#9ca3af"/></svg>')}`,
-        scaledSize: new google.maps.Size(6, 6),
-        anchor: new google.maps.Point(3, 3),
-        labelOrigin: new google.maps.Point(3, -16),
-      },
-      label: {
-        text: name,
-        className: "forest-land-label",
-        color: "#6b7280",
-        fontSize: "10px",
-        fontWeight: "400",
-      },
-      zIndex: 12,
-    });
-    const content = document.createElement("div");
-    const title = document.createElement("strong");
-    title.textContent = name;
-    const detail = document.createElement("p");
-    detail.textContent = `Jurisdiction: ${jurisdiction}`;
-    const restriction = document.createElement("p");
-    restriction.textContent = FOREST_LAND_RESTRICTION;
-    content.append(title, detail, restriction);
-    const info = new google.maps.InfoWindow({ content });
-    const listener = marker.addListener("click", () => {
-      info.open({ map, anchor: marker });
-    });
-    return () => {
-      listener.remove();
-      info.close();
-      marker.setMap(null);
-    };
-  }, []);
 
   // Render municipality polygons into Google Maps Data Layer
   useEffect(() => {
@@ -464,7 +422,7 @@ export function LagunaGoogleMap({
           "no_mobile_clinic_deployment"
         ) {
           setHoveredInfo({
-            name: PAETE_FOREST_LAND.name,
+            name: `${PAETE_FOREST_LAND.name}, Paete`,
             value: FOREST_LAND_RESTRICTION,
             x: event.domEvent?.clientX || 200,
             y: event.domEvent?.clientY || 200,
@@ -506,6 +464,12 @@ export function LagunaGoogleMap({
     });
 
     const clickListener = map.data.addListener("click", (event: any) => {
+      if (
+        event.feature.getProperty("restriction") ===
+        "no_mobile_clinic_deployment"
+      ) {
+        return;
+      }
       const barangay = BARANGAYS_BY_PSGC.get(
         String(event.feature.getProperty("adm4_psgc")),
       );
