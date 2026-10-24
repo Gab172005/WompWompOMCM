@@ -143,6 +143,66 @@ try {
   await expect(
     publicCare.getByRole("region", { name: "Top need contributors" }),
   ).toHaveCount(0);
+  const hospitalCard = publicCare
+    .getByRole("region", { name: "Nearby verified hospitals" })
+    .locator(".place-care-card")
+    .first();
+  const hospitalSource = hospitalCard.locator(".place-care-source");
+  const sourceToggle = hospitalSource.locator("summary");
+  await sourceToggle.focus();
+  await sourceToggle.press("Enter");
+  await expect(hospitalSource).toHaveAttribute("open");
+  await expect(hospitalSource.locator("dl")).toBeVisible();
+  await expect(hospitalSource).toContainText("Recorded verification");
+  await expect(hospitalSource).toContainText(
+    "DOH hospital register, June 2026",
+  );
+  await expect(hospitalSource).toContainText("Bed-count basis");
+  await expect(hospitalSource).toContainText(
+    "DOH authorized bed capacity (ABC)",
+  );
+  await expect(hospitalSource.locator("time")).toHaveAttribute(
+    "datetime",
+    "2026-06-30",
+  );
+  await expect(hospitalSource).toContainText(
+    "published authorized beds; see source date",
+  );
+  await hospitalSource.screenshot({
+    path: `${frontend}/test-results/hospital-source-open-desktop.png`,
+    animations: "disabled",
+  });
+  await sourceToggle.press("Space");
+  await expect(hospitalSource).not.toHaveAttribute("open");
+  await expect(hospitalSource.locator("dl")).not.toBeVisible();
+  await hospitalSource.screenshot({
+    path: `${frontend}/test-results/hospital-source-closed-desktop.png`,
+    animations: "disabled",
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Expand place details" }).click();
+  await sourceToggle.focus();
+  await sourceToggle.press("Enter");
+  await expect(hospitalSource.locator("dl")).toBeVisible();
+  const sourceBounds = await hospitalSource.boundingBox();
+  const hospitalBounds = await hospitalCard.boundingBox();
+  expect(sourceBounds.x).toBeGreaterThanOrEqual(hospitalBounds.x);
+  expect(sourceBounds.x + sourceBounds.width).toBeLessThanOrEqual(
+    hospitalBounds.x + hospitalBounds.width,
+  );
+  expect(
+    await hospitalSource.evaluate(
+      (element) => element.scrollWidth <= element.clientWidth,
+    ),
+  ).toBe(true);
+  await hospitalSource.screenshot({
+    path: `${frontend}/test-results/hospital-source-open-mobile.png`,
+    animations: "disabled",
+  });
+  await sourceToggle.press("Space");
+  await expect(hospitalSource).not.toHaveAttribute("open");
+  await page.getByRole("button", { name: "Collapse place details" }).click();
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({
     path: `${frontend}/test-results/place-public-details.png`,
   });

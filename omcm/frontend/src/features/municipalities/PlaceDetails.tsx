@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronUp,
+  FileText,
   HeartPulse,
   Hospital,
   Info,
@@ -19,6 +20,18 @@ import {
   hospitalsByDistance,
   type NeedFactor,
 } from "../../services/healthcareNeed";
+
+function sourceDate(value: string) {
+  const date = new Date(`${value}T00:00:00Z`);
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat("en-PH", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      }).format(date);
+}
 
 export function PanelExpandButton({
   expanded,
@@ -245,20 +258,61 @@ export function NearbyCare({
                 ? "Capacity unverified"
                 : `${hospital.capacity} beds in source`}
             </small>
-            <details className="place-care-source">
-              <summary>Source record</summary>
-              <p>{hospital.verificationStatus}</p>
-              <p>
-                {hospital.capacityDefinition}
-                {hospital.capacityAsOf
-                  ? ` · As of ${hospital.capacityAsOf}`
-                  : ""}
-              </p>
-            </details>
           </div>
           <span className="place-care-number">
             {String(index + 1).padStart(2, "0")}
           </span>
+          <details className="place-care-source">
+            <summary aria-label={`Source record for ${hospital.name}`}>
+              <FileText size={16} aria-hidden="true" />
+              <span>
+                <strong>Source record</strong>
+                <small>Verification & capacity reference</small>
+              </span>
+              <ChevronDown
+                className="place-source-chevron"
+                size={16}
+                aria-hidden="true"
+              />
+            </summary>
+            <div className="place-source-body">
+              <div className="place-source-status">
+                <span>Recorded verification</span>
+                <p>
+                  {hospital.verificationStatus ||
+                    "Verification information not supplied"}
+                </p>
+              </div>
+              <dl className="place-source-facts">
+                <div>
+                  <dt>Source date</dt>
+                  <dd>
+                    {hospital.capacityAsOf ? (
+                      <time dateTime={hospital.capacityAsOf}>
+                        {sourceDate(hospital.capacityAsOf)}
+                      </time>
+                    ) : (
+                      "Not supplied"
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Bed-count basis</dt>
+                  <dd>{hospital.capacityDefinition || "Not supplied"}</dd>
+                </div>
+                <div>
+                  <dt>Capacity record</dt>
+                  <dd>{hospital.capacityStatus || "Not supplied"}</dd>
+                </div>
+              </dl>
+              {hospital.notes?.trim() && (
+                <p className="place-source-note">
+                  <strong>Record note</strong>
+                  {hospital.notes}
+                </p>
+              )}
+            </div>
+          </details>
         </article>
       ))}
       {nearest.length === 0 && (

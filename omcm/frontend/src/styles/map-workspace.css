@@ -1504,13 +1504,114 @@
   font-weight: 400;
 }
 
-.place-care-source {
-  margin-top: 6px !important;
-  color: #6e8ba2;
+.intelligence-panel .place-care-source {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 4px 0 0;
+  overflow: hidden;
+  border: 1px solid #dce7ef;
+  border-radius: 8px;
+  background: #f8fbfd;
+  color: #456a84;
+  font-size: 11px;
+}
+.place-care-source > summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 48px;
+  padding: 9px 11px;
+  list-style: none;
+  cursor: pointer;
+}
+.place-care-source > summary::-webkit-details-marker {
+  display: none;
+}
+.place-care-source > summary > svg {
+  flex-shrink: 0;
+  color: #6085a0;
+}
+.place-care-source > summary > span {
+  flex: 1;
+  min-width: 0;
+}
+.place-care-source > summary strong {
+  display: block;
+  color: #365c78;
+  font-size: 11px;
+  font-weight: 600;
+}
+.place-care-source > summary small {
+  margin: 2px 0 0;
+  color: #577186;
+  font-size: 9px;
+}
+.place-care-source > summary:hover,
+.place-care-source[open] > summary {
+  background: #edf5fc;
+}
+.place-care-source > summary:focus-visible {
+  outline: 2px solid var(--map-accent);
+  outline-offset: -3px;
+}
+.place-source-chevron {
+  transition: transform 160ms ease;
+}
+.place-care-source[open] .place-source-chevron {
+  transform: rotate(180deg);
+}
+.place-source-body {
+  padding: 12px;
+  border-top: 1px solid #dce7ef;
+  background: #fff;
+}
+.place-source-status > span,
+.place-source-note > strong {
+  display: block;
+  color: #577186;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.workspace .place-source-status p {
+  margin: 5px 0 12px;
+  color: #375871;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.place-source-facts {
+  display: block;
+  margin: 0;
   font-size: 10px;
 }
-.place-care-source summary {
-  cursor: pointer;
+.place-source-facts > div {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid #edf1f5;
+}
+.place-source-facts dt {
+  color: #577186;
+}
+.place-source-facts dd {
+  min-width: 0;
+  margin: 0;
+  color: #436278;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.workspace .place-care-card .place-source-note {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #edf1f5;
+  line-height: 1.6;
+}
+@media (prefers-reduced-motion: reduce) {
+  .place-source-chevron {
+    transition: none;
+  }
 }
 .place-expand-control {
   display: none;
