@@ -67,6 +67,98 @@ try {
     "Verified hospital",
   );
   await mkdir(`${frontend}/test-results`, { recursive: true });
+  // This label extends over the province edge. Raising its pane must not
+  // reveal text that the mask was covering in the normal rendering order.
+  const forestLabel = page.locator(".forest-land-label");
+  const normalLabel = await forestLabel.screenshot({
+    animations: "disabled",
+    path: `${frontend}/test-results/map-label-over-mask.png`,
+  });
+  const tooltipPane = page.locator(".leaflet-tooltip-pane");
+  const originalZIndex = await tooltipPane.evaluate((pane) => {
+    const previous = pane.style.zIndex;
+    pane.style.zIndex = "695";
+    return previous;
+  });
+  let raisedLabel;
+  try {
+    raisedLabel = await forestLabel.screenshot({ animations: "disabled" });
+  } finally {
+    await tooltipPane.evaluate((pane, previous) => {
+      pane.style.zIndex = previous;
+    }, originalZIndex);
+  }
+  expect(
+    normalLabel.equals(raisedLabel),
+    "Location label text must remain fully visible where it overlaps the province mask",
+  ).toBe(true);
+  async function verifyMaskDuringDrag(width, height) {
+    await page.setViewportSize({ width, height });
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.locator(".barangay-boundary")).toHaveCount(681);
+    const map = page.locator(".leaflet-container");
+    const bounds = await map.boundingBox();
+    for (const direction of [1, -1]) {
+      const pane = map.locator(".leaflet-map-pane");
+      const before = await pane.evaluate((element) => element.style.transform);
+      // Begin away from floating controls and inspect BEFORE releasing the mouse.
+      await page.mouse.move(
+        bounds.x + bounds.width * (direction > 0 ? 0.4 : 0.8),
+        bounds.y + bounds.height * 0.46,
+      );
+      await page.mouse.down();
+      try {
+        await page.mouse.move(
+          bounds.x + bounds.width * (direction > 0 ? 0.85 : 0.35),
+          bounds.y + bounds.height * (direction > 0 ? 0.76 : 0.16),
+          { steps: 15 },
+        );
+        expect(
+          await pane.evaluate((element) => element.style.transform),
+        ).not.toBe(before);
+        const covered = await map.evaluate((element, direction) => {
+          const bounds = element.getBoundingClientRect();
+          const point = new DOMPoint(
+            direction > 0 ? bounds.left + 8 : bounds.right - 8,
+            direction > 0 ? bounds.top + 8 : bounds.bottom - 8,
+          );
+          return [...element.querySelectorAll("path")].some((path) => {
+            if (!["#eaf0f4", "#edf2f5"].includes(path.getAttribute("fill")))
+              return false;
+            if (Number(path.getAttribute("fill-opacity")) !== 1) return false;
+            const svg = path.ownerSVGElement;
+            const rect = svg.getBoundingClientRect();
+            const unclipped =
+              getComputedStyle(svg).overflow === "visible" ||
+              (point.x >= rect.left &&
+                point.x <= rect.right &&
+                point.y >= rect.top &&
+                point.y <= rect.bottom);
+            return (
+              unclipped &&
+              path.isPointInFill(
+                point.matrixTransform(path.getScreenCTM().inverse()),
+              )
+            );
+          });
+        }, direction);
+        await page.screenshot({
+          path: `${frontend}/test-results/map-mask-held-drag-${width}-${direction}.png`,
+        });
+        expect(
+          covered,
+          `Outside Laguna stays masked during held drag (${width}px, ${direction})`,
+        ).toBe(true);
+      } finally {
+        await page.mouse.up();
+      }
+    }
+  }
+  await verifyMaskDuringDrag(1440, 1000);
+  await verifyMaskDuringDrag(390, 844);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator(".barangay-boundary")).toHaveCount(681);
   async function verifySearchAlignment(name) {
     const input = page.getByRole("combobox", {
       name: "Find municipality or barangay",
@@ -429,11 +521,20 @@ try {
   await page.getByRole("button", { name: "Collapse place details" }).click();
   await expect(selection).toBeVisible();
   await page.getByRole("button", { name: "Plan clinics", exact: true }).click();
-  const planner = page.getByRole("complementary", { name: "Plan clinic locations", exact: true });
+  const planner = page.getByRole("complementary", {
+    name: "Plan clinic locations",
+    exact: true,
+  });
   await expect(planner).toBeVisible();
-  await planner.getByRole("button", { name: "Generate recommendations", exact: true }).click();
-  await expect(planner.getByRole("status").first()).toContainText("Suggested locations refreshed");
-  await expect(planner).toContainText("Municipality’s estimated healthcare need");
+  await planner
+    .getByRole("button", { name: "Generate recommendations", exact: true })
+    .click();
+  await expect(planner.getByRole("status").first()).toContainText(
+    "Suggested locations refreshed",
+  );
+  await expect(planner).toContainText(
+    "Municipality’s estimated healthcare need",
+  );
   await expect(planner).toContainText("Up to");
   await page
     .getByRole("button", { name: "30-day simulation", exact: true })
@@ -444,7 +545,7 @@ try {
   await expect(selection).not.toBeVisible();
   expect(errors).toEqual([]);
   console.log(
-    "Hospital/HNI and search browser checks passed: 681 polygons, 56 hospitals, fixed search, repeated refocus, blue municipality selection, scoped hospital counts, matching HNI, desktop/mobile without selection-panel or legend overlap, no page errors.",
+    "Hospital/HNI and search browser checks passed: labels above the province mask, opaque mask during held desktop/mobile drags, 681 polygons, 56 hospitals, fixed search, repeated refocus, blue municipality selection, scoped hospital counts, matching HNI, desktop/mobile without selection-panel or legend overlap, no page errors.",
   );
 } finally {
   await browser?.close();

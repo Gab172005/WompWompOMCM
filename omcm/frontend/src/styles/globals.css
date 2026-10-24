@@ -533,6 +533,11 @@ strong {
 .leaflet-container {
   font-family: inherit;
 }
+/* The province mask must keep painting beyond its SVG viewport while panning.
+   Its world polygon is deliberately not clipped by Leaflet either. */
+.leaflet-laguna-mask-pane > svg {
+  overflow: visible;
+}
 .leaflet-control-zoom {
   border: none !important;
   box-shadow: 0 2px 5px #0002 !important;

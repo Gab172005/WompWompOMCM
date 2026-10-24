@@ -1,7 +1,8 @@
 import { SimulationLayers } from "./SimulationLayers";
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, GeoJSON } from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, Pane } from "react-leaflet";
 import type { FeatureCollection } from "geojson";
+import type { PolylineOptions } from "leaflet";
 import type { MapProps } from "./mapTypes";
 import { LAGUNA_BOUNDS, LAGUNA_CENTER } from "../../../services/lagunaData";
 import { OSM_CLINIC_SNAPSHOT } from "../../../services/providedData";
@@ -14,6 +15,14 @@ import { OsmClinicMarkers } from "./OsmClinicMarkers";
 import { RouteLayer } from "./RouteLayer";
 import { BarangayBoundaryLayer } from "./BarangayBoundaryLayer";
 import { ForestLandMarker } from "./ForestLandMarker";
+// Keep the mask's world ring intact between Leaflet's moveend redraws.
+const MASK_STYLE: PolylineOptions = {
+  noClip: true,
+  fillColor: "#eaf0f4",
+  fillOpacity: 1,
+  color: "#102c43",
+  weight: 1,
+};
 function Interaction({
   data,
   selectedPsgc,
@@ -104,16 +113,13 @@ export function LagunaLeafletMap(props: MapProps) {
           selectionRevision={props.selectionRevision}
         />
         {mask && (
-          <GeoJSON
-            data={mask}
-            interactive={false}
-            style={{
-              fillColor: "#eaf0f4",
-              fillOpacity: 0.94,
-              color: "#102c43",
-              weight: 1,
-            }}
-          />
+          <Pane name="laguna-mask" style={{ zIndex: 450, pointerEvents: "none" }}>
+            <GeoJSON
+              data={mask}
+              interactive={false}
+              style={MASK_STYLE}
+            />
+          </Pane>
         )}
         {data && <MunicipalityLayer data={data} {...props} />}
         {barangayData && (
