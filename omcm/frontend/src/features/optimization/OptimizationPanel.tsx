@@ -101,10 +101,15 @@ export function OptimizationPanel() {
               }
             >
               <option value="none">No additional flood scenario</option>
-              <option value="moderate">Moderate flood exclusions</option>
-              <option value="severe">Severe flood exclusions</option>
+              <option value="moderate">25-year mapped flood layer</option>
+              <option value="severe">100-year mapped flood layer</option>
             </select>
           </label>
+          <p className="workspace-note">
+            Flood inputs use the supplied 25- and 100-year return-period
+            layers. The dataset does not provide measured flood depths in
+            meters.
+          </p>
           <RoadExclusions
             roads={roads}
             selected={config.closed_roads}

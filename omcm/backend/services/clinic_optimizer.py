@@ -165,7 +165,7 @@ def optimize(request, provincial=False):
             "Scope: all 681 Laguna barangays and all 30 LGUs. One illustrative planning point per barangay; these are not verified operating facilities.",
             "Agreed Balanced HNI: morbidity 35%, hospital distance 30%, density 15%, municipal income class 10%, clinic distance 5%, clinic provision 5%. Disaster risk has no HNI weight. Legacy pilot request weights do not alter this fixed provincial policy.",
             "Travel is estimated on supplied barangay adjacency links at 20 km/h, minimum 3 minutes per link. Shared borders are not verified roads; no live traffic, road geometry or provincial OSRM matrix is asserted.",
-            "Flood scenarios exclude planning points and touching model links using supplied positive 25-year (moderate) or 100-year (severe) point flood scores. Coverage is unverified; unknown hazards are not proof of safety.",
+            "Flood scenarios exclude planning points and touching model links using the selected supplied 25-year or 100-year point flood layer. Coverage is unverified; unknown hazards are not proof of safety.",
             "Appointment features use synthetic children/elderly shares and a neutral 50% poverty assumption; hospital minutes are a straight-line proxy at 20 km/h, capped at 120. These inputs do not change the agreed HNI weights.",
             f"Appointment demand uses the unchanged {model['demand_model_id']} XGBoost model and explicit surge controls.",
             f"{len(sites)} eligible provincial planning points under the selected restrictions. Search times are bounded; Feasible results do not claim global optimality.",
