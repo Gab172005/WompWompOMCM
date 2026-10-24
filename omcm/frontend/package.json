@@ -13,7 +13,8 @@
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write src",
     "test:e2e:legacy": "node ../tests/frontend/legacy-e2e.mjs",
-    "test:e2e:upstream": "node ../tests/frontend/map-first.mjs"
+    "test:e2e:upstream": "node ../tests/frontend/map-first.mjs",
+    "test:simulation": "node scripts/simulation-browser.mjs"
   },
   "dependencies": {
     "leaflet": "^1.9.4",

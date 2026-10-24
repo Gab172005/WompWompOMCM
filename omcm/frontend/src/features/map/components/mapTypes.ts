@@ -1,3 +1,4 @@
+import type { DailyRecord } from "../../../services/forecasting/interventions";
 import type {
   ComputedMunicipality,
   HospitalFacility,
@@ -7,6 +8,7 @@ import type { RoadDisruption } from "../../../types/simulation";
 import type { Clinic } from "../../../types/clinic";
 import type { LocatedOsmClinic } from "../../../types/osmClinic";
 export interface MapProps {
+  forecastOverlay?: SimulationOverlay;
   municipalities: ComputedMunicipality[];
   selectedPsgc: string | null;
   selectedBarangayPsgc: string | null;
@@ -29,4 +31,25 @@ export interface MapProps {
   zoomDelta: number;
   publicMode?: boolean;
   publicScheduleInfo?: string;
+}
+
+export interface SimulationOverlay {
+  day: number;
+  metric: "hni" | "uhni";
+  records: Map<string, DailyRecord>;
+  active: {
+    clinicId: string;
+    psgc: string;
+    name: string;
+    lat: number;
+    lng: number;
+  }[];
+  recommended: {
+    clinicId: string;
+    psgc: string;
+    name: string;
+    lat: number;
+    lng: number;
+  }[];
+  select: (psgc: string) => void;
 }

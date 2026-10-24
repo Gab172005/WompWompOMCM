@@ -22,7 +22,7 @@ export default defineConfig({
         new URL("./node_modules/react-leaflet", import.meta.url),
       ),
     },
-    include: ["../tests/frontend/**/*.test.{ts,tsx}"],
+    include: ["../tests/frontend/**/*.test.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
     globals: false,
     environment: "jsdom",
     setupFiles: ["./src/test-setup.ts"],

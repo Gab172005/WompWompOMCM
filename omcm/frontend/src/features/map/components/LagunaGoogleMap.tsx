@@ -1,3 +1,4 @@
+import { COVERAGE_RADIUS_KM } from "../../../services/forecasting/interventions";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState, useMemo } from "react";
 import {
@@ -85,6 +86,7 @@ export function LagunaGoogleMap({
   proposedClinics,
   osmClinics,
   simulationActive,
+  forecastOverlay,
   simulationProgress,
   selectedClinicId,
   onSelectClinic,
@@ -329,23 +331,32 @@ export function LagunaGoogleMap({
       const mun = byPsgc.get(code);
       const isBarangay = Boolean(barangayCode);
       const isSelected = isBarangay && selectedBarangayPsgc === barangayCode;
-      const value = barangay
-        ? barangayMetric(barangay, activeMetric)
-        : mun
-          ? {
-              score: mun.needScore,
-              density: mun.density,
-              disasterRisk: mun.adjustedDisasterRisk,
-              morbidity: mun.adjustedMorbidity,
-            }[activeMetric]
-          : null;
+      const projected = forecastOverlay?.records.get(barangayCode);
+      const value = projected
+        ? projected[forecastOverlay!.metric]
+        : barangay
+          ? barangayMetric(barangay, activeMetric)
+          : mun
+            ? {
+                score: mun.needScore,
+                density: mun.density,
+                disasterRisk: mun.adjustedDisasterRisk,
+                morbidity: mun.adjustedMorbidity,
+              }[activeMetric]
+            : null;
       return {
         fillColor: isSelected
           ? "#facc15"
           : publicMode
             ? "#f8fafc"
-            : getMetricColor(activeMetric, value),
-        fillOpacity: isSelected ? 0.7 : isBarangay ? (publicMode ? 0.45 : 0.62) : 0,
+            : getMetricColor(forecastOverlay ? "score" : activeMetric, value),
+        fillOpacity: isSelected
+          ? 0.7
+          : isBarangay
+            ? publicMode
+              ? 0.45
+              : 0.62
+            : 0,
         strokeColor: isSelected
           ? "#102c43"
           : isBarangay
@@ -370,9 +381,12 @@ export function LagunaGoogleMap({
         const name = `${barangay.name}, ${barangay.municipality}`;
         const metric = activeMetric;
         const value = barangayMetric(barangay, metric);
-        const valDisplay = publicMode
-          ? `Population: ${barangay.population.toLocaleString()} · Click for nearby clinics & hospitals`
-          : `${barangayMetricLabel(metric)}: ${value === null ? "Needs review" : value + (metric === "density" ? "/km²" : metric === "morbidity" ? " / 1,000" : "/100")}${metric === "score" ? ` · Healthcare need rank #${barangay.needRank} of 681${barangay.needProvisional ? " · Provisional" : ""}` : ""}`;
+        const projected = forecastOverlay?.records.get(barangay.psgc);
+        const valDisplay = projected
+          ? `Day ${forecastOverlay!.day} · ${forecastOverlay!.metric.toUpperCase()}: ${projected[forecastOverlay!.metric].toFixed(2)}${projected.provisional ? " · Provisional" : ""}`
+          : publicMode
+            ? `Population: ${barangay.population.toLocaleString()} · Click for nearby clinics & hospitals`
+            : `${barangayMetricLabel(metric)}: ${value === null ? "Needs review" : value + (metric === "density" ? "/km²" : metric === "morbidity" ? " / 1,000" : "/100")}${metric === "score" ? ` · Healthcare need rank #${barangay.needRank} of 681${barangay.needProvisional ? " · Provisional" : ""}` : ""}`;
 
         setHoveredInfo({
           name,
@@ -399,7 +413,8 @@ export function LagunaGoogleMap({
         String(event.feature.getProperty("adm4_psgc")),
       );
       if (!barangay) return;
-      onSelectBarangay(barangay.psgc, barangay.municipalityPsgc);
+      if (forecastOverlay) forecastOverlay.select(barangay.psgc);
+      else onSelectBarangay(barangay.psgc, barangay.municipalityPsgc);
     });
 
     return () => {
@@ -409,6 +424,7 @@ export function LagunaGoogleMap({
     };
   }, [
     geoJsonData,
+    forecastOverlay,
     activeMetric,
     byPsgc,
     selectedPsgc,
@@ -620,6 +636,57 @@ export function LagunaGoogleMap({
 
     clinicMarkersRef.current = markers;
   }, [proposedClinics, showClinics, onSelectClinic]);
+
+  // Independent recommendation, active deployment and geographic service layers.
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !window.google?.maps || !forecastOverlay || !showClinics)
+      return;
+    const markers: google.maps.Marker[] = [];
+    const circles: google.maps.Circle[] = [];
+    for (const kind of ["active", "recommended"] as const) {
+      for (const a of forecastOverlay[kind]) {
+        markers.push(
+          new google.maps.Marker({
+            map,
+            position: { lat: a.lat, lng: a.lng },
+            title: `${kind === "active" ? "Active clinic" : "Recommendation (not deployed)"}: ${a.clinicId} · ${a.name} · PSGC ${a.psgc}`,
+            label: {
+              text: a.clinicId,
+              color: kind === "active" ? "#ffffff" : "#6d28d9",
+              fontSize: "10px",
+            },
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: kind === "active" ? 15 : 22,
+              fillColor: kind === "active" ? "#059669" : "#ede9fe",
+              fillOpacity: kind === "active" ? 1 : 0.4,
+              strokeColor: kind === "active" ? "#047857" : "#7c3aed",
+              strokeWeight: 2,
+            },
+            zIndex: kind === "active" ? 40 : 39,
+          }),
+        );
+        if (kind === "active")
+          circles.push(
+            new google.maps.Circle({
+              map,
+              center: { lat: a.lat, lng: a.lng },
+              radius: COVERAGE_RADIUS_KM * 1000,
+              strokeColor: "#059669",
+              strokeWeight: 1,
+              fillColor: "#059669",
+              fillOpacity: 0.08,
+              clickable: false,
+            }),
+          );
+      }
+    }
+    return () => {
+      markers.forEach((m) => m.setMap(null));
+      circles.forEach((c) => c.setMap(null));
+    };
+  }, [forecastOverlay, showClinics]);
 
   // Render Simulated Road Disruptions
   useEffect(() => {

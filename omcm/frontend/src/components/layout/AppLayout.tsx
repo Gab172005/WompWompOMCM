@@ -9,6 +9,7 @@ import { LagunaMap } from "../../features/map/components/LagunaMap";
 import { MapLegend } from "../../features/map/components/MapLegend";
 import { OptimizationPanel } from "../../features/optimization/OptimizationPanel";
 import { usePlanningResults } from "../../features/optimization/usePlanningResults";
+import { useSimulationMap } from "../../features/simulation/useSimulationMap";
 import { SimulationPanel } from "../../features/simulation/SimulationPanel";
 import { SimulationPlayback } from "../../features/simulation/SimulationPlayback";
 import { ClinicTracker } from "../../features/tracking/ClinicTracker";
@@ -18,7 +19,10 @@ import { PublicSidePanel } from "../../features/public/PublicSidePanel";
 import { AdminLoginModal } from "../../features/auth/AdminLoginModal";
 import { LAGUNA_HOSPITALS } from "../../services/lagunaData";
 // Fixed OSM facilities come from the offline snapshot; they are not simulated clinics.
-import { MAPPED_OSM_CLINICS, OSM_CLINIC_SNAPSHOT } from "../../services/providedData";
+import {
+  MAPPED_OSM_CLINICS,
+  OSM_CLINIC_SNAPSHOT,
+} from "../../services/providedData";
 import { useAppStore } from "../../store/useAppStore";
 
 const ADMIN_ROUTES = new Set([
@@ -34,6 +38,7 @@ export function AppLayout() {
     { municipalities, plan, disruptions } = usePlanningResults();
   const { pathname } = useLocation();
   useClinicAnimation();
+  const forecastOverlay = useSimulationMap();
 
   useEffect(() => {
     const store = useAppStore.getState();
@@ -60,11 +65,13 @@ export function AppLayout() {
     state.publishedSchedules[state.selectedScheduleDate] ?? null;
   const displayedClinics = isPublic
     ? (publicSchedule?.plan.clinics ?? [])
-    : plan.clinics;
+    : forecastOverlay
+      ? []
+      : plan.clinics;
 
   const titles = {
     optimization: "Clinic optimization",
-    simulation: "Disaster simulator",
+    simulation: "Healthcare simulation",
     chatbot: "Operations assistant",
   };
 
@@ -74,6 +81,7 @@ export function AppLayout() {
     >
       <main className="workspace-stage" aria-label="Laguna planning map">
         <LagunaMap
+          forecastOverlay={forecastOverlay}
           municipalities={municipalities}
           selectedPsgc={state.selectedPsgc}
           selectedBarangayPsgc={state.selectedBarangayPsgc}
@@ -134,7 +142,7 @@ export function AppLayout() {
           </aside>
         )}
         {!isPublic && state.panel === "simulation" && <SimulationPlayback />}
-        <ClinicTracker />
+        {!forecastOverlay && <ClinicTracker />}
         <AdminLoginModal />
       </main>
       <div className="map-disclaimer">

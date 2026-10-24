@@ -1,3 +1,4 @@
+import { SimulationLayers } from "./SimulationLayers";
 import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, GeoJSON } from "react-leaflet";
 import type { FeatureCollection } from "geojson";
@@ -111,6 +112,7 @@ export function LagunaLeafletMap(props: MapProps) {
           <BarangayBoundaryLayer data={barangayData} {...props} />
         )}
         {props.showHospitals && <HospitalMarkers hospitals={props.hospitals} />}
+        {props.forecastOverlay && props.showClinics && <SimulationLayers overlay={props.forecastOverlay} />}
         <RouteLayer {...props} />
         {props.showClinics && <ClinicMarkers {...props} />}
         {props.showOsmClinics && (

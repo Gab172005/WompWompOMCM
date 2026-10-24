@@ -859,3 +859,15 @@
   border-radius: 3px;
   background: #dc2626;
 }
+
+/* Keep the daily clock, allocation panel and compact legend separate on phones. */
+@media (max-width: 760px) {
+  .workspace.is-simulating .workspace-playback {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto auto;
+    bottom: 180px;
+  }
+  .workspace.is-simulating .workspace-timeline { grid-column: 1 / -1; grid-row: 2; }
+  .workspace.is-simulating .tool-panel { bottom: 334px; max-height: calc(100dvh - 476px); }
+  .workspace.is-simulating .workspace-legend { bottom: 26px; }
+}

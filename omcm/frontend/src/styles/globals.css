@@ -3113,3 +3113,12 @@ dd {
   .clinic-inspector { right: 8px; bottom: 170px; width: calc(100% - 16px); max-height: 38dvh; }
   .workspace-alerts { bottom: 22px; max-height: 90px; overflow: auto; }
 }
+
+.simulation-allocation { border: 1px solid #cbd5e1; padding: 12px; border-radius: 10px; margin: 14px 0; min-width: 0; }
+.simulation-allocation select { max-width: 100%; }
+.simulation-statistics { display: grid; grid-template-columns: 1fr auto; gap: 7px 12px; font-size: 12px; }
+.simulation-statistics dd { margin: 0; font-weight: 600; text-align: right; }
+.simulation-table-scroll { overflow-x: auto; }
+.simulation-results table { font-size: 11px; border-collapse: collapse; }
+.simulation-results th, .simulation-results td { padding: 6px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+.simulation-results li { margin-bottom: 10px; }

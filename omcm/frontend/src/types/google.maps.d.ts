@@ -106,6 +106,11 @@ declare namespace google {
       map?: Map;
     }
 
+    export class Circle {
+      constructor(opts?: PolygonOptions & { center: LatLngLiteral; radius: number });
+      setMap(map: Map | null): void;
+    }
+
     export class Polyline {
       constructor(opts?: PolylineOptions);
       setMap(map: Map | null): void;

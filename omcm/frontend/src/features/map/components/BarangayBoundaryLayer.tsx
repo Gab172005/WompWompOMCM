@@ -16,11 +16,16 @@ export function BarangayBoundaryLayer({
   selectedBarangayPsgc,
   onSelectBarangay,
   publicMode = false,
+  forecastOverlay,
 }: {
   data: FeatureCollection;
 } & Pick<
   MapProps,
-  "activeMetric" | "selectedBarangayPsgc" | "onSelectBarangay" | "publicMode"
+  | "activeMetric"
+  | "selectedBarangayPsgc"
+  | "onSelectBarangay"
+  | "publicMode"
+  | "forecastOverlay"
 >) {
   const ref = useRef<LeafletGeoJSON>(null);
   const current = useRef({
@@ -28,12 +33,14 @@ export function BarangayBoundaryLayer({
     selectedBarangayPsgc,
     onSelectBarangay,
     publicMode,
+    forecastOverlay,
   });
   current.current = {
     activeMetric,
     selectedBarangayPsgc,
     onSelectBarangay,
     publicMode,
+    forecastOverlay,
   };
   function style(feature?: Feature): PathOptions {
     const b = BARANGAYS_BY_PSGC.get(String(feature?.properties?.adm4_psgc));
@@ -41,6 +48,7 @@ export function BarangayBoundaryLayer({
       activeMetric: metric,
       selectedBarangayPsgc: selected,
       publicMode: isPublic,
+      forecastOverlay: overlay,
     } = current.current;
     const isSelected = b?.psgc === selected;
     return {
@@ -48,7 +56,14 @@ export function BarangayBoundaryLayer({
         ? "#facc15"
         : isPublic
           ? "#f8fafc"
-          : getMetricColor(metric, b ? barangayMetric(b, metric) : null),
+          : getMetricColor(
+              overlay ? "score" : metric,
+              overlay && b
+                ? (overlay.records.get(b.psgc)?.[overlay.metric] ?? null)
+                : b
+                  ? barangayMetric(b, metric)
+                  : null,
+            ),
       fillOpacity: isSelected ? 0.7 : isPublic ? 0.45 : 0.62,
       color: isSelected ? "#102c43" : "#64748b",
       weight: isSelected ? 3.5 : 0.7,
@@ -75,7 +90,7 @@ export function BarangayBoundaryLayer({
         String(b?.psgc === selectedBarangayPsgc),
       );
     });
-  }, [activeMetric, selectedBarangayPsgc, publicMode]);
+  }, [activeMetric, selectedBarangayPsgc, publicMode, forecastOverlay]);
   return (
     <GeoJSON
       ref={ref}
@@ -84,11 +99,20 @@ export function BarangayBoundaryLayer({
       onEachFeature={(feature, layer) => {
         const b = BARANGAYS_BY_PSGC.get(String(feature.properties?.adm4_psgc));
         if (!b) return;
-        const select = () =>
-          current.current.onSelectBarangay(b.psgc, b.municipalityPsgc);
+        const select = () => {
+          if (current.current.forecastOverlay)
+            current.current.forecastOverlay.select(b.psgc);
+          else current.current.onSelectBarangay(b.psgc, b.municipalityPsgc);
+        };
         layer.bindTooltip(
           () => {
             const label = document.createElement("span");
+            const overlay = current.current.forecastOverlay;
+            if (overlay) {
+              const record = overlay.records.get(b.psgc);
+              label.textContent = `${b.name}, ${b.municipality} · Day ${overlay.day} · ${overlay.metric.toUpperCase()}: ${record?.[overlay.metric].toFixed(2)}${record?.provisional ? " · Provisional" : ""}`;
+              return label;
+            }
             if (current.current.publicMode) {
               label.textContent = `${b.name}, ${b.municipality} · Population: ${b.population.toLocaleString()} · Click for nearby clinics & hospitals`;
               return label;

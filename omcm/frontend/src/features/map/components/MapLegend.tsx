@@ -1,3 +1,4 @@
+import { useForecastStore } from "../../../store/useForecastStore";
 import { getMetricColor } from "../../../services/lagunaData";
 import { useAppStore } from "../../../store/useAppStore";
 import { metricLabels } from "../../filters/HeatmapSelector";
@@ -27,6 +28,10 @@ export function MapLegend({
     showClinics,
     showOsmClinics,
   } = useAppStore();
+  const forecast = useForecastStore();
+  const simulation = useAppStore(
+    (v) => v.panel === "simulation" && v.viewMode === "admin",
+  );
   const osmClinicAttribution = showOsmClinics && (
     <small
       className="workspace-attribution workspace-osm-clinic-attribution"
@@ -38,8 +43,11 @@ export function MapLegend({
         color: "#62788a",
       }}
     >
-      Clinic type: {clinicSnapshot?.valid === false ? "unavailable" : "OSM clinic · amenity=clinic or healthcare=clinic"} ·{" "}
-      {clinicSnapshot?.attribution || "© OpenStreetMap contributors"} ·{" "}
+      Clinic type:{" "}
+      {clinicSnapshot?.valid === false
+        ? "unavailable"
+        : "OSM clinic · amenity=clinic or healthcare=clinic"}{" "}
+      · {clinicSnapshot?.attribution || "© OpenStreetMap contributors"} ·{" "}
       {clinicSnapshot?.license || "ODbL 1.0"} ·{" "}
       {clinicSnapshot?.retrievedAt
         ? `offline snapshot retrieved ${clinicSnapshot.retrievedAt}`
@@ -75,12 +83,20 @@ export function MapLegend({
           </span>
         </div>
         {showOsmClinics && (
-          <div className="workspace-facility-keys" aria-label="Facility layer keys">
+          <div
+            className="workspace-facility-keys"
+            aria-label="Facility layer keys"
+          >
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <i
                 className="facility-key osm-clinic-facility-key"
                 aria-hidden="true"
-                style={{ width: 8, height: 8, borderRadius: "50%", background: "#7c3aed" }}
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "#7c3aed",
+                }}
               />{" "}
               OSM clinic · fixed facility, not an approved mobile clinic
             </span>
@@ -90,6 +106,28 @@ export function MapLegend({
       </section>
     );
   }
+  if (simulation)
+    return (
+      <section className="workspace-legend card" aria-label="Map legend">
+        <strong>
+          Day {forecast.runs[forecast.strategy].day} ·{" "}
+          {forecast.metric === "hni"
+            ? "Projected healthcare need (HNI)"
+            : "Unmet healthcare need (UHNI)"}
+        </strong>
+        <span>Index 0–100 · synthetic forecast</span>
+        <div className="workspace-colorbar">
+          {[0, 20, 35, 50, 70].map((value) => (
+            <div key={value}>
+              <i style={{ background: getMetricColor("score", value) }} />
+              <small>{value}+</small>
+            </div>
+          ))}
+        </div>
+        <span>Green: active clinic & 3 km catchment</span>
+        <span>Purple: recommended, awaiting confirmation</span>
+      </section>
+    );
   const steps =
     metric === "disasterRisk"
       ? [0, 33.33, 66.67, 100]

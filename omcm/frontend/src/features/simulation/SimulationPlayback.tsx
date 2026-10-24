@@ -1,7 +1,17 @@
+import { useEffect } from "react";
 import { Play, Pause, RotateCcw } from "lucide-react";
-import { useAppStore } from "../../store/useAppStore";
+import { useForecastStore } from "../../store/useForecastStore";
 export function SimulationPlayback() {
-  const { progress, isPlaying, playbackSpeed, seek } = useAppStore();
+  const s = useForecastStore(),
+    run = s.runs[s.strategy];
+  useEffect(() => {
+    if (!s.playing) return;
+    const timer = window.setInterval(
+      () => useForecastStore.getState().advance(),
+      1000 / s.speed,
+    );
+    return () => window.clearInterval(timer);
+  }, [s.playing, s.speed]);
   return (
     <section
       className="workspace-playback card"
@@ -9,48 +19,47 @@ export function SimulationPlayback() {
     >
       <button
         className="primary"
-        aria-label={isPlaying ? "Pause simulation" : "Play simulation"}
-        onClick={() =>
-          useAppStore.setState({
-            isPlaying: !isPlaying,
-            progress: progress >= 1 ? 0 : progress,
-          })
-        }
+        aria-label={s.playing ? "Pause simulation" : "Play simulation"}
+        disabled={run.day === 30}
+        onClick={() => useForecastStore.setState({ playing: !s.playing })}
       >
-        {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+        {s.playing ? <Pause size={16} /> : <Play size={16} />}
       </button>
       <button
         className="icon-button"
         aria-label="Reset playback"
-        onClick={() => seek(0)}
+        onClick={() => s.seek(1)}
       >
         <RotateCcw size={17} />
       </button>
       <label className="workspace-timeline">
-        Deployment timeline
+        30-day simulation timeline
         <input
           type="range"
-          aria-label="Deployment timeline"
-          min={0}
-          max={1}
-          step={0.001}
-          value={progress}
-          onChange={(e) => seek(Number(e.target.value))}
+          aria-label="30-day simulation timeline"
+          min={1}
+          max={30}
+          step={1}
+          value={run.day}
+          onChange={(e) => s.seek(Number(e.target.value))}
         />
       </label>
-      <output>{Math.round(progress * 100)}%</output>
+      <output>Day {run.day}/30</output>
+      <button disabled={run.day === 30} onClick={s.advance}>
+        Next day
+      </button>
       <label>
         <span className="sr-only">Playback speed</span>
         <select
           aria-label="Playback speed"
-          value={playbackSpeed}
+          value={s.speed}
           onChange={(e) =>
-            useAppStore.setState({ playbackSpeed: Number(e.target.value) })
+            useForecastStore.setState({ speed: Number(e.target.value) })
           }
         >
-          {[1, 2, 5, 10].map((v) => (
-            <option value={v} key={v}>
-              {v}×
+          {[1, 2, 5, 10].map((n) => (
+            <option key={n} value={n}>
+              {n}×
             </option>
           ))}
         </select>
