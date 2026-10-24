@@ -416,12 +416,13 @@ export function MapLegend({
         {!isPublic && (
           <p className="workspace-note">
             Colors compare estimated planning information, not confirmed illness
-          counts. Gray areas have no displayed value; Paete forest land is restricted for clinic placement.{" "}
+            counts. Gray areas have no displayed value; Paete forest land is
+            restricted for clinic placement.{" "}
             {metric === "disasterRisk" &&
               !simulation &&
               "Risk applies to one reference point; a low score does not establish safety."}{" "}
             {simulation &&
-              "Lighter red shows lower scenario HNI after estimated clinic service. Clinic circles show modeled reach within 3 km in a straight line."}
+              "Lighter red shows lower scenario HNI. A soft coral outline marks barangays receiving modeled service; circles show the 3 km reach."}
           </p>
         )}
         {!simulation && (
@@ -469,6 +470,13 @@ export function MapLegend({
           >
             <h3>{simulation ? "Clinic status" : "Facilities"}</h3>
             <ul className="workspace-facility-keys">
+              {simulation && forecast.metric === "hni" && (
+                <LegendKey
+                  symbol={<i className="simulation-impact-key" />}
+                  label="Estimated HNI reduction area"
+                  description="Host barangay and affected neighbors"
+                />
+              )}
               {!simulation && showHospitals && (
                 <LegendKey
                   symbol={
@@ -526,8 +534,8 @@ export function MapLegend({
                       alt=""
                     />
                   }
-                  label="Recommended clinic"
-                  description="Proposed deployment awaiting confirmation"
+                  label="Draft clinic · not applied"
+                  description="Preview of the location selected in this panel"
                 />
               )}
               {!simulation && showOsmClinics && (

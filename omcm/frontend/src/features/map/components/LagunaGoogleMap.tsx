@@ -330,7 +330,6 @@ export function LagunaGoogleMap({
     };
   }, []);
 
-
   // Render municipality polygons into Google Maps Data Layer
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -362,6 +361,9 @@ export function LagunaGoogleMap({
       const isSelected = isBarangay && selectedBarangayPsgc === barangayCode;
       const isSelectedMunicipality = !isBarangay && code === selectedPsgc;
       const projected = forecastOverlay?.records.get(barangayCode);
+      const hasClinicImpact = Boolean(
+        projected && projected.serviceFraction > 0,
+      );
       const value = projected
         ? forecastOverlay!.metric === "hni"
           ? projected.scenarioHni
@@ -377,33 +379,40 @@ export function LagunaGoogleMap({
               }[activeMetric]
             : null;
       return {
-        fillColor: isSelected && !forecastOverlay
-          ? "#facc15"
-          : publicMode
-            ? "#f8fafc"
-            : forecastOverlay
-              ? getSimulationNeedColor(value)
-              : getMetricColor(activeMetric, value),
+        fillColor:
+          isSelected && !forecastOverlay
+            ? "#facc15"
+            : publicMode
+              ? "#f8fafc"
+              : forecastOverlay
+                ? getSimulationNeedColor(value)
+                : getMetricColor(activeMetric, value),
         fillOpacity: isSelected
           ? 0.7
           : isBarangay
             ? publicMode
               ? 0.45
-              : 0.62
+              : hasClinicImpact
+                ? 0.72
+                : 0.62
             : 0,
         strokeColor: isSelected
           ? "#102c43"
           : isSelectedMunicipality
             ? "#1a73e8"
             : isBarangay
-              ? "#64748b"
+              ? hasClinicImpact
+                ? "#f17d8b"
+                : "#64748b"
               : "#334155",
         strokeWeight: isSelected
           ? 3.5
           : isSelectedMunicipality
             ? 5
             : isBarangay
-              ? 0.7
+              ? hasClinicImpact
+                ? 1.15
+                : 0.7
               : 1.8,
         strokeOpacity: 0.95,
         clickable: isBarangay,
@@ -713,7 +722,7 @@ export function LagunaGoogleMap({
           new google.maps.Marker({
             map,
             position: { lat: a.lat, lng: a.lng },
-            title: `${kind === "active" ? "Active clinic" : "Recommendation (not deployed)"}: ${a.clinicId} · ${a.name} · PSGC ${a.psgc}`,
+            title: `${kind === "active" ? "Active clinic" : "Draft clinic (not applied)"}: ${a.clinicId} · ${a.name} · PSGC ${a.psgc}`,
             label: {
               text: a.clinicId,
               color: kind === "active" ? "#047857" : "#6d28d9",

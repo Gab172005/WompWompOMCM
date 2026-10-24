@@ -536,7 +536,7 @@ export function executeAssistantTool(
                 .reached)
         )
           throw new Error(
-            "Only days this scenario has already reached can be reviewed.",
+            "Only days reached by the shared simulation timeline can be reviewed.",
           );
         // Synchronize conditions before taking actions, so mounting the panel
         // cannot subsequently reset the changes just made by the assistant.

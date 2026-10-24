@@ -18,7 +18,10 @@ import {
 import {
   buildSimulationPlacementRequest,
 } from "./optimizer";
-import { useForecastStore } from "../../store/useForecastStore";
+import {
+  canEditAllocation,
+  useForecastStore,
+} from "../../store/useForecastStore";
 import { useAppStore } from "../../store/useAppStore";
 import { clearCredentials, setCredentials } from "../api";
 import { defaultConfig } from "../defaults";
@@ -170,7 +173,7 @@ describe("allocation validation", () => {
   });
 });
 
-describe("interventions and independent scenario history", () => {
+describe("interventions and synchronized scenario history", () => {
   beforeEach(() => {
     const initialSiteIds = [...coverage.keys()];
     useAppStore.setState({ adminUser: "simulation-test" });
@@ -261,6 +264,31 @@ describe("interventions and independent scenario history", () => {
     const state = useForecastStore.getState();
     expect(state.runs.manual.snapshots).toEqual(state.runs.optimizer.snapshots);
   });
+  it("advances all scenario outcomes together and opens one placement window per week", () => {
+    const s = useForecastStore.getState();
+    s.setK(1);
+    s.setStrategy("none");
+    s.advance();
+    let state = useForecastStore.getState();
+    expect(Object.values(state.runs).map((run) => run.day)).toEqual([2, 2, 2]);
+    expect(Object.values(state.runs).map((run) => run.reached)).toEqual([2, 2, 2]);
+
+    s.setStrategy("manual");
+    expect(canEditAllocation("manual", state.runs.manual)).toBe(true);
+    const host = [...state.coverage.keys()][0];
+    s.setDraft(0, host);
+    s.apply();
+    state = useForecastStore.getState();
+    expect(state.runs.manual.history[2]).toEqual([
+      { clinicId: "MC-1", psgc: host },
+    ]);
+    expect(canEditAllocation("manual", state.runs.manual)).toBe(false);
+
+    for (let day = 0; day < 6; day++) useForecastStore.getState().advance();
+    state = useForecastStore.getState();
+    expect(Object.values(state.runs).map((run) => run.day)).toEqual([8, 8, 8]);
+    expect(canEditAllocation("manual", state.runs.manual)).toBe(true);
+  });
   it("pauses at decision points, preserves recorded history, and prevents editing past days", async () => {
     const s = useForecastStore.getState();
     await s.recommend();
@@ -278,14 +306,16 @@ describe("interventions and independent scenario history", () => {
     ).toEqual(firstWeek);
     s.seek(1);
     s.apply();
-    expect(useForecastStore.getState().error).toMatch(/latest decision day/);
+    expect(useForecastStore.getState().error).toMatch(/latest day/);
     s.seek(30);
-    expect(useForecastStore.getState().runs.optimizer.day).toBe(8);
+    expect(Object.values(useForecastStore.getState().runs).map((run) => run.day)).toEqual([
+      8, 8, 8,
+    ]);
     expect(
       Object.keys(useForecastStore.getState().runs.optimizer.history),
     ).toEqual(["1", "8"]);
   });
-  it("uses the requested clinic count and simulates 30 independent reproducible days", async () => {
+  it("uses the requested clinic count and simulates 30 reproducible shared days", async () => {
     const s = useForecastStore.getState();
     s.setK(5);
     await useForecastStore.getState().recommend();
@@ -297,6 +327,9 @@ describe("interventions and independent scenario history", () => {
     for (let i = 1; i < 30; i++) s.advance();
     const run = useForecastStore.getState().runs.optimizer;
     expect(run.day).toBe(30);
+    expect(Object.values(useForecastStore.getState().runs).map((item) => item.day)).toEqual([
+      30, 30, 30,
+    ]);
     expect(run.snapshots).toHaveLength(30);
     expect(run.snapshots[29].metrics.cumulativeUnmetPriority).toBeCloseTo(
       run.snapshots.reduce(

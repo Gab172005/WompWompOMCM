@@ -21,7 +21,7 @@ export function SimulationLayers({ overlay }: { overlay: SimulationOverlay }) {
           <Marker
             key={`${kind}-${a.clinicId}`}
             position={[a.lat, a.lng]}
-            title={`${kind === "active" ? "Active clinic" : "Recommendation (not deployed)"}: ${a.clinicId}`}
+            title={`${kind === "active" ? "Active clinic" : "Draft clinic (not applied)"}: ${a.clinicId}`}
             icon={divIcon({
               className: "clinic-staging-marker",
               html: mobileClinicSvg(
@@ -36,7 +36,7 @@ export function SimulationLayers({ overlay }: { overlay: SimulationOverlay }) {
               <strong>
                 {kind === "active"
                   ? "Active clinic"
-                  : "Recommendation (not deployed)"}
+                  : "Draft clinic (not applied)"}
               </strong>
               <p>
                 {a.clinicId} · {a.name}

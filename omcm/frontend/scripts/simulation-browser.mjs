@@ -95,7 +95,9 @@ try {
     headless: true,
     channel: process.env.OMCM_BROWSER_CHANNEL || "chrome",
   });
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 1000 },
+  });
   const errors = [];
   let plannerResponse;
   page.on("pageerror", (error) => errors.push(error.message));
@@ -128,7 +130,26 @@ try {
     exact: true,
   });
   await expect(panel).toBeVisible();
-  await expect(panel.getByLabel("Map colors show")).toHaveValue("hni");
+  await expect(
+    panel.getByRole("button", { name: /^No intervention, day 1, HNI/ }),
+  ).toBeVisible();
+  await expect(
+    panel.getByRole("button", {
+      name: /^Manual clinic allocation, day 1, HNI/,
+    }),
+  ).toBeVisible();
+  await expect(
+    panel.getByRole("button", {
+      name: /^Optimized clinic allocation, day 1, HNI/,
+    }),
+  ).toBeVisible();
+  await expect(
+    panel.getByRole("button", { name: "HNI", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await panel.locator(".workspace-panel-body").evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  await page.screenshot({ path: "/tmp/omcm-simulation-desktop.png" });
 
   const baselineDay1 = await page.evaluate(async () => {
     const { useForecastStore } = await import("/src/store/useForecastStore.ts");
@@ -165,8 +186,15 @@ try {
   expect(baselineDay3.hni).toBeGreaterThan(baselineDay1.hni);
   expect(baselineDay3.averageDay3).toBeGreaterThan(baselineDay3.averageDay1);
   expect(baselineDay3.color).not.toBe(baselineDay1.color);
+  const sharedDay = await page.evaluate(async () => {
+    const { useForecastStore } = await import("/src/store/useForecastStore.ts");
+    return Object.values(useForecastStore.getState().runs).map((run) => run.day);
+  });
+  expect(sharedDay).toEqual([3, 3, 3]);
 
-  await panel.getByLabel("Simulation scenario").selectOption("manual");
+  await panel
+    .getByRole("button", { name: /^Manual clinic allocation, day 3, HNI/ })
+    .click();
   await panel.getByLabel("Available mobile clinics").fill("1");
   const manualSites = await page.evaluate(async () => {
     const { useForecastStore } = await import("/src/store/useForecastStore.ts");
@@ -183,21 +211,28 @@ try {
       (record) => !state.coverage.get(host).has(record.psgc),
     );
     if (!neighbors.length || !outside)
-      throw new Error("The selected site needs a neighbor and an unaffected area.");
+      throw new Error(
+        "The selected site needs a neighbor and an unaffected area.",
+      );
     return { host, neighbor: neighbors[0], outside: outside.psgc };
   });
   await panel
     .getByLabel("MC-1 barangay", { exact: true })
     .selectOption(manualSites.host);
+  await expect(page.locator(".clinic-staging-marker")).toHaveCount(1);
   await panel
     .getByRole("button", { name: "Apply my clinic locations", exact: true })
     .click();
   const manualImpact = await page.evaluate(async (sites) => {
     const { useForecastStore } = await import("/src/store/useForecastStore.ts");
-    const { getSimulationNeedColor } = await import("/src/services/lagunaData.ts");
+    const { getSimulationNeedColor } =
+      await import("/src/services/lagunaData.ts");
     const state = useForecastStore.getState();
     const records = new Map(
-      state.runs.manual.snapshots[0].records.map((record) => [record.psgc, record]),
+      state.runs.manual.snapshots[0].records.map((record) => [
+        record.psgc,
+        record,
+      ]),
     );
     const host = records.get(sites.host);
     const hostColor = document
@@ -209,9 +244,11 @@ try {
         hostColor !== getSimulationNeedColor(host.hni) &&
         hostColor === getSimulationNeedColor(host.scenarioHni),
       neighborLower:
-        records.get(sites.neighbor).scenarioHni < records.get(sites.neighbor).hni,
+        records.get(sites.neighbor).scenarioHni <
+        records.get(sites.neighbor).hni,
       outsideUnchanged:
-        records.get(sites.outside).scenarioHni === records.get(sites.outside).hni,
+        records.get(sites.outside).scenarioHni ===
+        records.get(sites.outside).hni,
       deployed: state.runs.manual.snapshots[0].allocation.length,
     };
   }, manualSites);
@@ -221,13 +258,36 @@ try {
   expect(manualImpact.outsideUnchanged).toBe(true);
   expect(manualImpact.deployed).toBe(1);
   await expect(page.locator(".clinic-staging-marker")).toHaveCount(1);
+  await expect(
+    panel.getByText("Scenario activity", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    panel.getByText("1 clinic placed", { exact: true }),
+  ).toBeVisible();
+  const manualReach = await page.evaluate(
+    (sites) => ({
+      host: document
+        .querySelector('path[data-barangay-psgc="' + sites.host + '"]')
+        ?.classList.contains("has-clinic-impact"),
+      neighbor: document
+        .querySelector('path[data-barangay-psgc="' + sites.neighbor + '"]')
+        ?.classList.contains("has-clinic-impact"),
+      outside: document
+        .querySelector('path[data-barangay-psgc="' + sites.outside + '"]')
+        ?.classList.contains("has-clinic-impact"),
+    }),
+    manualSites,
+  );
+  expect(manualReach).toEqual({ host: true, neighbor: true, outside: false });
 
   await panel.getByLabel("Available mobile clinics").fill("3");
-  await panel.getByLabel("Simulation scenario").selectOption("optimizer");
+  await panel
+    .getByRole("button", { name: /^Optimized clinic allocation, day 1, HNI/ })
+    .click();
   await panel
     .getByRole("button", { name: "Generate optimized locations", exact: true })
     .click();
-  await expect(panel.getByText(/Backend draft:/)).toBeVisible({ timeout: 90000 });
+  await expect(panel.getByText(/^Draft /)).toBeVisible({ timeout: 90000 });
   expect(plannerResponse, logs).toBeTruthy();
   const response = plannerResponse;
   expect(response.status()).toBe(200);
@@ -236,11 +296,12 @@ try {
   expect(plan.notes.join(" ")).toContain("XGBoost");
   expect(plan.notes.join(" ")).toContain("Agreed Balanced HNI");
   expect(plan.optimized.clinics).toHaveLength(3);
-  await expect(panel.getByText("Backend draft: " + plan.plan_id)).toBeVisible();
+  await expect(panel.getByText("Draft " + plan.plan_id)).toBeVisible();
   await expect(page.locator(".clinic-staging-marker")).toHaveCount(3);
   const unconfirmed = await page.evaluate(async () => {
     const { useForecastStore } = await import("/src/store/useForecastStore.ts");
-    return useForecastStore.getState().runs.optimizer.snapshots[0].allocation.length;
+    return useForecastStore.getState().runs.optimizer.snapshots[0].allocation
+      .length;
   });
   expect(unconfirmed).toBe(0);
   await panel
@@ -250,23 +311,35 @@ try {
     const { useForecastStore } = await import("/src/store/useForecastStore.ts");
     const state = useForecastStore.getState();
     const snapshot = state.runs.optimizer.snapshots[0];
-    const records = new Map(snapshot.records.map((record) => [record.psgc, record]));
+    const records = new Map(
+      snapshot.records.map((record) => [record.psgc, record]),
+    );
     const hosts = snapshot.allocation.map((entry) => records.get(entry.psgc));
     return {
       deployed: snapshot.allocation.length,
       allHostsLower: hosts.every((record) => record.scenarioHni < record.hni),
-      affectedAreas: snapshot.records.filter((record) => record.serviceFraction > 0).length,
+      affectedAreas: snapshot.records.filter(
+        (record) => record.serviceFraction > 0,
+      ).length,
     };
   });
   expect(optimizedImpact.deployed).toBe(3);
   expect(optimizedImpact.allHostsLower).toBe(true);
   expect(optimizedImpact.affectedAreas).toBeGreaterThan(3);
   await expect(page.locator(".clinic-staging-marker")).toHaveCount(3);
+  await page.getByRole("button", { name: "Next day", exact: true }).click();
+  const synchronizedDay = await page.evaluate(async () => {
+    const { useForecastStore } = await import("/src/store/useForecastStore.ts");
+    return Object.values(useForecastStore.getState().runs).map((run) => run.day);
+  });
+  expect(synchronizedDay).toEqual([2, 2, 2]);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(panel).toBeVisible();
   expect(
-    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
   ).toBe(true);
   await page.screenshot({ path: "/tmp/omcm-simulation-mobile.png" });
   expect(errors, logs).toEqual([]);
