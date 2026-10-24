@@ -157,6 +157,7 @@ declare namespace google {
       scaledSize?: Size;
       origin?: Point;
       anchor?: Point;
+      labelOrigin?: Point;
     }
 
     export interface Symbol {
@@ -171,6 +172,7 @@ declare namespace google {
 
     export interface MarkerLabel {
       text: string;
+      className?: string;
       color?: string;
       fontFamily?: string;
       fontSize?: string;

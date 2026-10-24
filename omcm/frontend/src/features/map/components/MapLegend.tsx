@@ -32,6 +32,11 @@ export function MapLegend({
   const simulation = useAppStore(
     (v) => v.panel === "simulation" && v.viewMode === "admin",
   );
+  const restrictionKey = (
+    <span className="workspace-restriction-key">
+      <i aria-hidden="true" /> Gray: No mobile clinic deployment
+    </span>
+  );
   const osmClinicAttribution = showOsmClinics && (
     <small
       className="workspace-attribution workspace-osm-clinic-attribution"
@@ -102,6 +107,7 @@ export function MapLegend({
             </span>
           </div>
         )}
+        {restrictionKey}
         {osmClinicAttribution}
       </section>
     );
@@ -126,6 +132,7 @@ export function MapLegend({
         </div>
         <span>Green: active clinic & 3 km catchment</span>
         <span>Purple: recommended, awaiting confirmation</span>
+        {restrictionKey}
       </section>
     );
   const steps =
@@ -236,6 +243,7 @@ export function MapLegend({
           </span>
         )}
       </div>
+      {restrictionKey}
       {osmClinicAttribution}
     </section>
   );

@@ -28,6 +28,7 @@ export function ManualPlacement({
             }
           >
             {site.municipality} — {site.name}
+            {!site.eligible && ` · ${site.status}`}
           </option>
         ))}
       </select>

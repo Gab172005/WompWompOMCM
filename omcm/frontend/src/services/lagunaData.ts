@@ -1,4 +1,5 @@
 import { MAPPED_HOSPITALS, municipalityDataset } from "./providedData";
+import { isDeploymentRestricted } from "./mapLandmarks";
 // Supplied barangay data aggregated for the municipality planning heuristic.
 // Vulnerability, staging sites and route estimates remain illustrative.
 import type {
@@ -402,7 +403,15 @@ export const LAGUNA_CANDIDATE_SITES: StagingSite[] = [
     eligible: true,
     status: "Active Staging Site",
   },
-];
+].map((site) =>
+  isDeploymentRestricted(site)
+    ? {
+        ...site,
+        eligible: false,
+        status: "No mobile clinic deployment — forest land",
+      }
+    : site,
+);
 
 // Simulated Road Disruptions
 export const LAGUNA_DISRUPTIONS: RoadDisruption[] = [
@@ -860,7 +869,9 @@ export function runClinicOptimizer(
   manualSiteIds: string[] | null = null,
 ) {
   // If manual site selection is provided, use those
-  const candidatePool = [...LAGUNA_CANDIDATE_SITES];
+  const candidatePool = LAGUNA_CANDIDATE_SITES.filter(
+    (site) => site.eligible && !isDeploymentRestricted(site),
+  );
 
   // Evaluate candidate sites: score each candidate site by the need of its host and surrounding areas
   const scoredSites = candidatePool.map((site) => {
@@ -905,6 +916,15 @@ export function runClinicOptimizer(
       .map((id) => candidatePool.find((s) => s.id === id))
       .filter((s): s is StagingSite => s !== undefined)
       .slice(0, k);
+    // Replace obsolete or restricted overrides with eligible recommendations.
+    selectedSites = [
+      ...new Map(selectedSites.map((site) => [site.id, site])).values(),
+    ];
+    for (const { site } of scoredSites) {
+      if (selectedSites.length >= k) break;
+      if (!selectedSites.some((selected) => selected.id === site.id))
+        selectedSites.push(site);
+    }
   } else {
     selectedSites = scoredSites
       .slice(0, Math.min(k, scoredSites.length))

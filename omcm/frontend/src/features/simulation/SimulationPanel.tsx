@@ -172,9 +172,13 @@ export function SimulationPanel() {
                   <option
                     key={b.psgc}
                     value={b.psgc}
-                    disabled={s.draft.some((v, j) => j !== i && v === b.psgc)}
+                    disabled={
+                      !s.coverage.has(b.psgc) ||
+                      s.draft.some((v, j) => j !== i && v === b.psgc)
+                    }
                   >
                     {b.municipality} · {b.name} · {b.psgc}
+                    {!s.coverage.has(b.psgc) && " · Deployment unavailable"}
                   </option>
                 ))}
               </select>
