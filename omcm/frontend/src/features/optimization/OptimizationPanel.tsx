@@ -31,18 +31,18 @@ export function OptimizationPanel() {
         </span>
         <h3>Put your fleet where it can help</h3>
         <p>
-          XGBoost estimates daily appointment demand. The backend solver chooses
-          capacity-limited sites using priority scores and safe modeled road
-          access.
+          Choose your available clinics and daily appointment capacity, then
+          review suggested locations before approving a schedule. Estimates use
+          sample healthcare needs and modeled road access.
         </p>
         <span className="optimizer-scope">
           <ShieldCheck size={15} aria-hidden="true" />
           Los Baños–Bay · 20-barangay pilot
         </span>
         <p className="workspace-note">
-          Synthetic planning inputs and unverified staging sites. The
-          province-wide seven-factor HNI heatmap remains the baseline; this
-          allocation uses the separate six-factor pilot priority index.
+          Locations and capacities need local verification. Recommendations use
+          a separate clinic planning score and XGBoost appointment estimates.
+          The map's province-wide Healthcare Need Score remains the baseline.
         </p>
       </div>
       <form
@@ -122,7 +122,7 @@ export function OptimizationPanel() {
         <div className="workspace-button-row">
           <Button type="submit" disabled={busy || !sites.length}>
             <BrainCircuit size={16} aria-hidden="true" />{" "}
-            {busy ? "Optimizing…" : "Generate recommendations"}
+            {busy ? "Finding clinic locations…" : "Generate recommendations"}
           </Button>
           {busy && (
             <Button variant="secondary" onClick={invalidate}>
@@ -146,7 +146,7 @@ export function OptimizationPanel() {
       )}
       {busy && (
         <p role="status">
-          Solving with backend road constraints and XGBoost demand estimates…
+          Calculating suggested locations and estimated appointments…
         </p>
       )}
       {!result && !busy && (
@@ -157,6 +157,10 @@ export function OptimizationPanel() {
       )}
       {result && (
         <>
+          <p role="status">
+            Suggested locations calculated. Review them below before publishing
+            a schedule.
+          </p>
           <PlacementRecommendations plan={result} />
           <DeploymentApproval key={result.plan_id} plan={result} />
         </>

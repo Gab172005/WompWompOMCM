@@ -8,7 +8,7 @@ export function ScenarioBuilder() {
   return (
     <>
       <label className="workspace-field">
-        Target municipality
+        Choose the municipality to change
         <select
           aria-label="Scenario municipality"
           value={psgc}
@@ -21,6 +21,10 @@ export function ScenarioBuilder() {
           ))}
         </select>
       </label>
+      <p className="workspace-note">
+        Try sample flooding or illness increases. Changing conditions restarts
+        all three 30-day runs. These are practice conditions, not live alerts.
+      </p>
       <FloodControls psgc={psgc} />
       <MorbidityControls psgc={psgc} />
       <RoadBlockageTool />

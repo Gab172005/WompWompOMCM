@@ -4,7 +4,7 @@ from typing import Protocol
 
 FOOTER = "Decision-support only. Final deployment is decided by LGU health officers."
 LABELS = {
-    "population": "represented population", "disease": "disease burden",
+    "population": "represented population", "disease": "sample illness rate",
     "vulnerability": "children and elderly share", "accessibility": "hospital access difficulty",
     "poverty": "poverty", "flood": "flood exposure",
 }
@@ -20,19 +20,19 @@ class DeterministicProvider:
         allocation = after["optimized"]
         metrics = allocation["metrics"]
         rows = {b["id"]: b for b in after["barangays"]}
-        lines = ["Deterministic explanation from synthetic model results. No external AI provider is connected.",
-                 "The optimizer balances priority-weighted daily appointments against clinic availability, capacity, travel limits, and modeled safety restrictions. Factor contributions describe need; they do not prove that any single factor caused a site to be selected."]
+        lines = ["Explanation based on the sample plan. These are estimates, not confirmed healthcare outcomes.",
+                 "The system suggests locations that could offer more appointments in areas with higher estimated need. It considers the number of clinics, appointment capacity, travel limits and sample road and flood restrictions. A factor that raises a need score does not alone explain a clinic location."]
         for clinic in allocation["clinics"]:
             lines.append(f"{clinic['name']}: {clinic['reason']}")
             for assignment in clinic["assignments"]:
                 barangay = rows[assignment["barangay_id"]]
                 factors = sorted(barangay["contributions"].items(), key=lambda item: (-item[1], item[0]))[:3]
-                top = ", ".join(f"{LABELS.get(key, key)} ({value:.1f} need-index points)" for key, value in factors)
-                lines.append(f"For {barangay['name']}, the largest weighted need factors are {top}. This site allocates {assignment['residents']} appointments with a modeled journey of {assignment['minutes']} minutes.")
-            lines.append(f"Capacity trade-off: {clinic['served']} of {clinic['daily_capacity']} daily appointments allocated ({clinic['utilization']}% utilization). Selecting this hub uses one of the available clinics; the model does not guarantee the shortest trip for every community.")
+                top = ", ".join(f"{LABELS.get(key, key)} ({value:.1f} score points)" for key, value in factors)
+                lines.append(f"For {barangay['name']}, the factors adding the most points to the need score are {top}. This site allocates {assignment['residents']} appointments with a estimated sample journey of {assignment['minutes']} minutes.")
+            lines.append(f"Appointments available: {clinic['served']} of {clinic['daily_capacity']} daily appointments allocated ({clinic['utilization']}% of available slots filled). Selecting this hub uses one of the available clinics; the model does not guarantee the shortest trip for every community.")
         if not allocation["clinics"]:
             lines.append("No clinic was allocated under these inputs. There is no chosen site to explain.")
-        lines.append(f"Overall trade-offs: {metrics['residents_served']} appointments served; {metrics['unserved_demand']} daily appointments remain unserved. Average modeled travel is {metrics['average_travel_minutes']} minutes. The population-first baseline serves {after['baseline']['metrics']['residents_served']} appointments under the same restrictions.")
+        lines.append(f"Estimated results: {metrics['residents_served']} appointments served; {metrics['unserved_demand']} daily appointments remain unserved. Average modeled travel is {metrics['average_travel_minutes']} minutes. The population-first baseline serves {after['baseline']['metrics']['residents_served']} appointments under the same restrictions.")
         if after["inputs"].get("manual_sites") is not None:
             lines.append("The staging sites were manually selected by the planner; the optimizer allocated appointments subject to its constraints.")
         lines.extend(evidence["exclusions"])

@@ -17,13 +17,13 @@ export function PlanningControls({ detailed = false }: { detailed?: boolean }) {
         <summary className="card-title">
           <h3>
             <SlidersHorizontal size={17} />
-            Clinic Optimization
+            Plan clinic locations
           </h3>
           <span className="badge">DRAFT</span>
         </summary>
         <div className="controls-grid">
           <label>
-            Available clinics (K)
+            Available mobile clinics
             <input
               type="number"
               min="0"
@@ -87,11 +87,11 @@ export function PlanningControls({ detailed = false }: { detailed?: boolean }) {
             onClick={() => requireAdmin(generate)}
           >
             <Sparkles size={17} />
-            {busy ? "Solving allocation…" : "Generate recommendation"}
+            {busy ? "Finding clinic locations…" : "Generate recommendation"}
           </button>
         </div>
         {detailed && browserDemo && (
-          <p>Connect the Python API to generate a recommendation.</p>
+          <p>Connect the planning service to calculate suggested locations.</p>
         )}
         {detailed && (
           <div className="site-selection">
@@ -104,12 +104,12 @@ export function PlanningControls({ detailed = false }: { detailed?: boolean }) {
                   updateConfig({ manual_sites: e.target.checked ? [] : null })
                 }
               />
-              Place clinics manually at candidate sites
+              Choose clinic locations yourself
             </label>
-            <h4>Eligible staging locations</h4>
+            <h4>Available clinic locations</h4>
             <p>
-              Select the hubs the optimizer may use. Locations and capacities
-              are synthetic and unverified.
+              Choose which locations the system may recommend. These are sample
+              locations and capacities, not verified facilities.
             </p>
             <div className="checkbox-grid">
               {sites.map((s) => (
@@ -140,7 +140,7 @@ export function PlanningControls({ detailed = false }: { detailed?: boolean }) {
             </div>
             {config.manual_sites !== null && (
               <fieldset>
-                <legend>Manual placement (up to K sites)</legend>
+                <legend>Choose up to the number of available clinics</legend>
                 <div className="checkbox-grid">
                   {sites.map((s) => (
                     <label className="checkbox" key={s.id}>
@@ -173,8 +173,9 @@ export function PlanningControls({ detailed = false }: { detailed?: boolean }) {
                   ))}
                 </div>
                 <p>
-                  The Python API validates flood safety and road access before
-                  allocating appointments.
+                  The planning service checks the sample flood restrictions and
+                  road access before assigning appointments. This does not
+                  verify real-world safety.
                 </p>
               </fieldset>
             )}

@@ -71,7 +71,7 @@ def solve(barangays, sites, times, request, selected=None):
         capacity = min(request.capacity, s["capacity"])
         clinics.append(dict(**s, daily_capacity=capacity, served=served, assignments=assignments,
                             utilization=round(served / capacity * 100, 2),
-                            reason=f"Scenario-feasible site reaching {len(assignments)} barangays within {request.max_travel_minutes} modeled road minutes; {served} of {capacity} daily appointments allocated." + preventive_services(assignments, barangays)))
+                            reason=f"This sample location could serve {len(assignments)} barangays within an estimated {request.max_travel_minutes}-minute road journey. The plan assigns {served} of {capacity} available daily appointments. Local access and safety still need review." + preventive_services(assignments, barangays)))
     served = sum(served_by_barangay.values())
     demand = sum(b["demand"] for b in barangays)
     return dict(clinics=clinics, served_by_barangay=served_by_barangay,

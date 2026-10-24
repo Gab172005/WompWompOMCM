@@ -34,8 +34,8 @@ export function ClinicMarkers({
             i + 1,
             selectedClinicId === c.clinicId ? "selected" : "active",
           ),
-          iconSize: [40, 36],
-          iconAnchor: [17, 19],
+          iconSize: [20, 18],
+          iconAnchor: [8.5, 9.5],
         });
         return (
           <Marker
@@ -58,12 +58,12 @@ export function ClinicMarkers({
                 {c.clinicId} · {c.siteName}
               </strong>
               <p>
-                {c.capacity} patients/day ·{" "}
+                Up to {c.capacity} estimated appointments/day ·{" "}
                 {publicMode
                   ? publicScheduleInfo || "Approved mobile clinic"
                   : simulationActive
                     ? "Simulated position"
-                    : "Proposed staging site"}
+                    : "Suggested clinic location"}
               </p>
             </Popup>
           </Marker>

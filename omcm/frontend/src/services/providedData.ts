@@ -209,9 +209,9 @@ export function barangayMetric(
 
 export const barangayMetricLabel = (metric: MapMetric) =>
   metric === "score"
-    ? "Barangay healthcare need"
+    ? "Healthcare Need Score"
     : metric === "disasterRisk"
-      ? "Disaster risk index"
+      ? "Disaster Risk Score"
       : metric === "density"
-        ? "Population density"
-        : "Synthetic morbidity rate";
+        ? "People per square kilometre"
+        : "Illness rate (sample data)";

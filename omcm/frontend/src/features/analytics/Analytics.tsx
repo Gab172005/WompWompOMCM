@@ -86,9 +86,9 @@ export function Analytics() {
   return (
     <>
       <PageHeader
-        eyebrow="DATA & ANALYTICS"
-        title="Evidence behind every placement"
-        description="Inspect community need, vulnerability, demand coverage, and the trade-offs in each allocation."
+        eyebrow="PLANNING RESULTS"
+        title="Understand healthcare needs and clinic plans"
+        description="Compare estimated needs, clinic appointments and sample travel times. These demonstration results help you review a plan."
         action={
           <button className="secondary" onClick={download}>
             <Download size={16} />
@@ -106,7 +106,7 @@ export function Analytics() {
           <RankingChart barangays={barangays} />
         </Card>
         <Card>
-          <h3>Population vulnerability</h3>
+          <h3>Residents who may need extra support</h3>
           <p>
             Children and elderly residents in the eight highest-need cities and
             municipalities with available demo data.
@@ -117,14 +117,14 @@ export function Analytics() {
           <h3>Healthcare need distribution</h3>
           <RiskDistribution barangays={barangays} />
           <p className="tiny">
-            Disease burden uses cases per 1,000 residents, rather than raw
-            counts.
+            Sample illness rates show cases per 1,000 residents. These are not
+            reported illness counts.
           </p>
           <div className="table-scroll">
             <table>
               <thead>
                 <tr>
-                  <th>Disease burden / 1,000</th>
+                  <th>Sample illness rate / 1,000</th>
                   <th>Cities / municipalities</th>
                 </tr>
               </thead>
@@ -155,25 +155,25 @@ export function Analytics() {
           </div>
         </Card>
         <Card>
-          <h3>Allocation & travel comparison</h3>
+          <h3>Clinic appointments and travel</h3>
           {plan ? (
             <>
               <ComparisonChart plan={plan} />
               <div className="summary-line">
-                <span>OMCM / baseline travel</span>
+                <span>Suggested / population-first plan travel</span>
                 <strong>
                   {plan.optimized.metrics.average_travel_minutes} /{" "}
                   {plan.baseline.metrics.average_travel_minutes} min
                 </strong>
               </div>
               <div className="summary-line">
-                <span>Unserved daily demand</span>
+                <span>Estimated daily appointments still needed</span>
                 <strong>
                   {number(plan.optimized.metrics.unserved_demand)}
                 </strong>
               </div>
               <div className="summary-line">
-                <span>Priority-weighted improvement</span>
+                <span>Improvement in appointments weighted by need</span>
                 <strong>
                   {plan.improvement_pct === null
                     ? "N/A"
@@ -184,7 +184,8 @@ export function Analytics() {
           ) : (
             <div className="empty-state">
               <p>
-                Generate a placement on Clinic Optimization to compare results.
+                Generate a placement on Plan clinic locations to compare
+                results.
               </p>
             </div>
           )}
@@ -192,7 +193,7 @@ export function Analytics() {
       </div>
       <div className="two-grid">
         <Card>
-          <h3>Disease burden distribution</h3>
+          <h3>Sample illness rate distribution</h3>
           <p>Synthetic cases per 1,000 residents, grouped by burden.</p>
           <DiseaseDistribution barangays={barangays} />
         </Card>
@@ -202,12 +203,14 @@ export function Analytics() {
             <TravelChart plan={plan} />
           ) : (
             <div className="empty-state">
-              <p>Generate an allocation to compare calculated travel times.</p>
+              <p>
+                Generate clinic suggestions to compare calculated travel times.
+              </p>
             </div>
           )}
           <p className="tiny">
-            Patient-allocation-weighted shortest paths on the demo network; not
-            live traffic.
+            Average sample road journey, weighted by assigned appointments. It
+            does not use live traffic.
           </p>
         </Card>
       </div>
@@ -240,7 +243,7 @@ export function Analytics() {
             </div>
             <div>
               <strong>{flood.changes.losing_coverage}</strong>
-              <span>Allocation lost</span>
+              <span>Estimated appointments lost</span>
             </div>
             <div>
               <strong>{flood.changes.average_travel_delta} min</strong>

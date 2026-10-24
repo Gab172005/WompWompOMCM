@@ -20,7 +20,7 @@ import {
 import { useOMCM } from "../../store/LegacyProvider";
 const links = [
   { path: "/risk", label: "Healthcare Risk Map", icon: Map },
-  { path: "/admin", label: "Clinic Optimization", icon: Crosshair },
+  { path: "/admin", label: "Plan clinic locations", icon: Crosshair },
   { path: "/driver", label: "Disaster Simulator", icon: CloudRain },
   {
     path: "/analytics",

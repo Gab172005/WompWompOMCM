@@ -51,6 +51,6 @@ describe("Paete forest-land deployment exclusion", () => {
         1,
         coverage,
       ),
-    ).toThrow("not geographically eligible");
+    ).toThrow("not available for clinic placement");
   });
 });

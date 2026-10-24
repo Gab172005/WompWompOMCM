@@ -32,7 +32,7 @@ export function LayerToggles() {
             useAppStore.setState({ showOsmClinics: e.target.checked })
           }
         />{" "}
-        Clinics
+        Fixed clinics (OpenStreetMap)
       </label>
     </div>
   );

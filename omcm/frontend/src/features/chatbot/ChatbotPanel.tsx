@@ -3,27 +3,31 @@ import { useAppStore } from "../../store/useAppStore";
 import { usePlanningResults } from "../optimization/usePlanningResults";
 import { ChatMessage, type Message } from "./ChatMessage";
 import { Button } from "../../components/ui/Button";
+import { MUNICIPALITY_HEALTHCARE_NEED } from "../../services/providedData";
 export function ChatbotPanel() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const { selectedPsgc, scenario } = useAppStore();
   const { municipalities, plan } = usePlanningResults();
   const selected = municipalities.find((m) => m.psgc === selectedPsgc);
+  const selectedNeed =
+    selectedPsgc && MUNICIPALITY_HEALTHCARE_NEED.get(selectedPsgc);
   function send(text: string) {
     if (!text.trim()) return;
     const lower = text.toLowerCase();
     let answer =
-      "Select a municipality to inspect its need score, or open Optimize and Simulate to explore clinic recommendations and scenario effects.";
+      "Select a municipality to view its healthcare needs. Open Plan clinics to review suggested locations, or 30-day simulation to compare estimated results.";
     if (/score|rank|why|need/.test(lower))
-      answer = selected
-        ? `${selected.name}: municipal allocation estimate ${selected.needScore}/100, allocation rank #${selected.rank}. ${selected.explanation} This separate heuristic is not the barangay HNI shown on the heatmap; the municipality panel shows its HNI rollup.`
-        : "The municipal allocation estimate combines supplied synthetic morbidity (35%), illustrative vulnerability (25%), supplied disaster risk index (20%) and population density (20%). It is separate from the seven-factor barangay HNI heatmap. Select a municipality to compare its HNI rollup and allocation estimate.";
+      answer =
+        selected && selectedNeed
+          ? `${selected.name}: estimated Healthcare Need Score ${selectedNeed.needScore.toFixed(1)}/100, municipality rank ${selectedNeed.needRank}. This is the population-weighted barangay score shown in community details. ${selectedNeed.provisionalBarangays ? "Some barangay inputs are missing, so the estimate is provisional. " : ""}Clinic suggestions use the separate Los Baños–Bay pilot priority score and sample appointment demand.`
+          : "The Healthcare Need Score compares estimated planning priorities, not numbers of sick residents. Higher scores suggest greater need. Sample illness rates, hospital and clinic access, disaster risk, population concentration and municipal resources contribute. Missing factors are left out. Clinic suggestions use separate pilot priority scores and estimated appointment demand.";
     else if (/clinic|recommend|placement/.test(lower))
       answer = plan.clinics.length
-        ? `The backend draft proposes ${plan.clinics.length} clinics: ${plan.clinics.map((c) => c.clinicId + " at " + c.siteName).join("; ")}. Total capacity: ${plan.metrics.totalCapacity} appointments/day. XGBoost demand estimates use synthetic inputs and the allocation is limited to the road pilot.`
-        : "Open Optimize and generate a backend draft to inspect clinic recommendations. No allocation has been generated.";
+        ? `The current saved draft suggests ${plan.clinics.length} clinics: ${plan.clinics.map((c) => c.clinicId + " at " + c.siteName).join("; ")}. Total capacity: ${plan.metrics.totalCapacity} appointments/day. These demonstration estimates cover the Los Baños–Bay road pilot and do not confirm service delivery.`
+        : "Open Plan clinics and generate recommendations to review suggested locations. No allocation has been generated.";
     else if (/scenario|flood|disaster|simulation/.test(lower))
-      answer = `Configured scenario: ${Object.keys(scenario.floodOverrides).length} flood overrides, ${Object.keys(scenario.morbiditySpikes).length} morbidity overrides, ${scenario.closedRoadIds.length} closed corridors. Open Simulate to apply and compare these conditions.`;
+      answer = `Practice conditions: ${Object.keys(scenario.floodOverrides).length} flood changes, ${Object.keys(scenario.morbiditySpikes).length} sample illness increases, ${scenario.closedRoadIds.length} roads marked closed. Open 30-day simulation to compare estimated results. Road marks are for reference and do not change the 30-day clinic reach estimates.`;
     setMessages((prev) => [
       ...prev,
       { id: prev.length, sender: "user", text },
@@ -34,7 +38,8 @@ export function ChatbotPanel() {
   return (
     <>
       <p>
-        Local, rule-based planning assistant. Answers use the current demo data.
+        Get help understanding scores, clinic suggestions and practice
+        scenarios. Answers use the current demonstration data.
       </p>
       <div
         className="workspace-chat-log"

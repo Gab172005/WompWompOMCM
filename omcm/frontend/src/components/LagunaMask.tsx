@@ -37,9 +37,14 @@ export function LagunaMask({
     return { exterior, interiors };
   }, [data]);
   return (
-    <Pane name="laguna-mask" style={{ zIndex: 690 }}>
+    // Cover map artwork, while keeping markers and place labels above the mask.
+    <Pane name="laguna-mask" style={{ zIndex: 450, pointerEvents: "none" }}>
       <Polygon
         positions={exterior}
+        interactive={false}
+        // Leaflet normally clips paths to the viewport until moveend. Keep the
+        // world ring intact so a held drag never uncovers another province.
+        noClip
         pathOptions={{
           stroke: false,
           fillColor: "#edf2f5",
@@ -51,6 +56,8 @@ export function LagunaMask({
         <Polygon
           key={index}
           positions={ring}
+          interactive={false}
+          noClip
           pathOptions={{ stroke: false, fillColor: "#edf2f5", fillOpacity: 1 }}
         />
       ))}

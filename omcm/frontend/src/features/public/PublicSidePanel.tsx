@@ -84,7 +84,7 @@ export function PublicSidePanel() {
         />
         <button
           className="icon-button"
-          aria-label="Close intelligence panel"
+          aria-label="Close community details"
           onClick={() => useAppStore.setState({ sidePanelOpen: false })}
         >
           <X size={17} />

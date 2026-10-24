@@ -106,7 +106,7 @@ export function DeploymentApproval({ plan }: { plan: Plan }) {
         <span className="badge">ADMIN PUBLICATION</span>
       </div>
       <p className="workspace-note">
-        Publishing a schedule makes these staging sites, operating hours, and
+        Publishing a schedule makes these clinic locations, operating hours, and
         services visible to residents in Public View. Unapproved drafts and
         simulations remain private.
       </p>

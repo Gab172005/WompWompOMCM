@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { planningFactorLabels } from "../services/planningLanguage";
 import { api } from "../services/api";
 import { useOMCM } from "../store/LegacyProvider";
 import type { Config, Plan } from "../types";
@@ -34,7 +35,10 @@ export function ExplanationAssistant({
           `${row.name}: ${Object.entries(row.contributions)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 3)
-            .map(([key, value]) => `${key} ${value.toFixed(1)} need points`)
+            .map(
+              ([key, value]) =>
+                `${planningFactorLabels[key] ?? "Other factor"}: ${value.toFixed(1)} score points`,
+            )
             .join(", ")}`,
       )
       .join(". ");
@@ -42,7 +46,7 @@ export function ExplanationAssistant({
     const clinics = plan?.optimized.clinics
       .map((c) => `${c.name}: ${c.served}/${c.daily_capacity} appointments`)
       .join("; ");
-    return `Local template for “${question}”. ${top}. ${m ? `Coverage: ${m.residents_served} daily appointments, ${m.unserved_demand} unserved; average modeled travel ${m.average_travel_minutes} minutes. ${clinics}. Blocked roads: ${plan?.inputs.closed_roads.length}; excluded sites: ${plan?.inputs.flooded_sites.length}.` : "Generate a recommendation to discuss coverage, capacity and modeled travel."} Connect and sign in to the Python API for server-grounded scenario differences and optional AI responses. These are synthetic inputs and simulated tracking. Final deployment decisions belong to LGU health officers.`;
+    return `From the current sample plan, in response to “${question}”: ${top}. ${m ? `Coverage: ${m.residents_served} daily appointments, ${m.unserved_demand} unserved; average modeled travel ${m.average_travel_minutes} minutes. ${clinics}. Blocked roads: ${plan?.inputs.closed_roads.length}; excluded sites: ${plan?.inputs.flooded_sites.length}.` : "Generate a recommendation to discuss coverage, capacity and modeled travel."} Sign in with the planning service connected to compare practice scenarios. These are sample inputs and simulated clinic movements, not reported cases or live tracking. Final deployment decisions belong to LGU health officers.`;
   }
   async function send() {
     const content = input.trim();
@@ -87,16 +91,18 @@ export function ExplanationAssistant({
         aria-controls="assistant-explanation"
         onClick={() => setOpen(!open)}
       >
-        AI chatbot: {open ? "Open" : "Closed"}
+        Planning help: {open ? "Open" : "Closed"}
       </button>
       {open && (
-        <section id="assistant-explanation" aria-label="AI chatbot">
+        <section id="assistant-explanation" aria-label="Planning help">
           <button className="text-link" onClick={() => setOpen(false)}>
-            Collapse chatbot
+            Close planning help
           </button>
           <h2>OMCM assistant</h2>
           <p className="tiny">
-            {provider} · Explains the currently displayed plan or scenario.
+            {provider.includes("unavailable")
+              ? "Using local sample data; the planning service is unavailable."
+              : "Explains the current plan using available app data."}
           </p>
           <div
             ref={history}
@@ -122,7 +128,8 @@ export function ExplanationAssistant({
           )}
           {error && (
             <p role="alert">
-              Server reply unavailable; a local template is shown. {error}
+              The planning service could not reply. A local explanation of the
+              available sample data is shown. {error}
             </p>
           )}
           <form

@@ -12,6 +12,7 @@ import {
   useForecastStore,
   type Strategy,
 } from "../../store/useForecastStore";
+import { BARANGAYS_BY_PSGC } from "../../services/providedData";
 const strategies = Object.keys(STRATEGIES) as Strategy[];
 const colors = { none: "#b91c1c", manual: "#2563eb", optimizer: "#047857" };
 export function SimulationResults() {
@@ -34,43 +35,54 @@ export function SimulationResults() {
       aria-label="Simulation results"
       aria-live="polite"
     >
-      <h3>Day {run.day} outcomes</h3>
+      <h3>Day {run.day} estimated results</h3>
       <p>
         {new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(
           new Date(snapshot.timestamp),
         )}{" "}
         · {snapshot.records.length} barangays ·{" "}
-        {snapshot.records.filter((b) => b.provisional).length} provisional
-        scores
+        {snapshot.records.filter((b) => b.provisional).length} scores with some
+        data missing
       </p>
       <dl className="simulation-statistics">
-        <dt>Population-weighted HNI</dt>
-        <dd>{m.hni.toFixed(2)}</dd>
-        <dt>Population-weighted UHNI</dt>
-        <dd>{m.uhni.toFixed(2)}</dd>
-        <dt>Total unmet priority</dt>
-        <dd>{Math.round(m.totalUnmetPriority).toLocaleString()}</dd>
-        <dt>Barangays receiving service</dt>
+        <dt>Expected healthcare need</dt>
+        <dd>{m.hni.toFixed(1)}/100</dd>
+        <dt>Healthcare needs not yet covered</dt>
+        <dd>{m.uhni.toFixed(1)}/100</dd>
+        <dt>Barangays within estimated clinic reach</dt>
         <dd>{m.servedBarangays}</dd>
-        <dt>Modeled priority covered</dt>
-        <dd>{m.coveredPercent.toFixed(2)}%</dd>
-        <dt>Clinic relocations</dt>
+        <dt>Estimated planning need covered today</dt>
+        <dd>{m.coveredPercent.toFixed(1)}%</dd>
+        <dt>Total clinic moves so far</dt>
         <dd>{m.relocations}</dd>
-        <dt>Cumulative unmet priority</dt>
-        <dd>{Math.round(m.cumulativeUnmetPriority).toLocaleString()}</dd>
       </dl>
-      <h3>Strategy comparison · daily UHNI</h3>
       <p className="workspace-note">
-        Each strategy records its own progress. Run each through Day 30 for a
-        complete comparison. Historical days can be inspected without changing
-        allocations.
+        Scores are averages based on population. Lower uncovered need means more
+        estimated need is being met. Uncovered need includes some need carried
+        over from earlier days, so it can exceed today’s expected need score.
+        Coverage is the share of estimated need met, not the share of residents
+        treated. A barangay within reach may still have needs the clinics cannot
+        cover.
+      </p>
+      <h3>Compare needs not yet covered</h3>
+      <p className="workspace-note">
+        Lower lines mean less estimated need left uncovered. Each scenario
+        records its own progress. Run all three through Day 30 for a complete
+        comparison. Blank results mean that scenario has not reached that day
+        yet.
       </p>
       <div style={{ width: "100%", height: 220 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
-            <XAxis dataKey="day" />
+            <XAxis
+              dataKey="day"
+              tickFormatter={(day: number) => `Day ${day}`}
+            />
             <YAxis domain={[0, 100]} />
-            <Tooltip />
+            <Tooltip
+              labelFormatter={(day) => `Day ${day}`}
+              formatter={(value) => `${Number(value).toFixed(1)}/100`}
+            />
             <Legend />
             {strategies.map((id) => (
               <Line
@@ -88,17 +100,17 @@ export function SimulationResults() {
       </div>
       <div className="simulation-table-scroll">
         <table>
-          <caption>Comparison at Day {run.day} (recorded strategies)</caption>
+          <caption>
+            Estimated results on Day {run.day} · scores out of 100
+          </caption>
           <thead>
             <tr>
-              <th>Strategy</th>
-              <th>HNI</th>
-              <th>UHNI</th>
-              <th>Unmet priority</th>
-              <th>Served</th>
-              <th>Covered %</th>
-              <th>Moves</th>
-              <th>Cumulative unmet</th>
+              <th>Scenario</th>
+              <th>Expected need</th>
+              <th>Need not yet covered</th>
+              <th>Barangays within reach</th>
+              <th>Need covered (%)</th>
+              <th>Total clinic moves</th>
             </tr>
           </thead>
           <tbody>
@@ -114,22 +126,14 @@ export function SimulationResults() {
                     <>
                       <td>{metrics.hni.toFixed(2)}</td>
                       <td>{metrics.uhni.toFixed(2)}</td>
-                      <td>
-                        {Math.round(
-                          metrics.totalUnmetPriority,
-                        ).toLocaleString()}
-                      </td>
                       <td>{metrics.servedBarangays}</td>
                       <td>{metrics.coveredPercent.toFixed(2)}</td>
                       <td>{metrics.relocations}</td>
-                      <td>
-                        {Math.round(
-                          metrics.cumulativeUnmetPriority,
-                        ).toLocaleString()}
-                      </td>
                     </>
                   ) : (
-                    <td colSpan={7}>Advance this strategy to Day {run.day}</td>
+                    <td colSpan={5}>
+                      Run this scenario through Day {run.day} to compare
+                    </td>
                   )}
                 </tr>
               );
@@ -137,13 +141,67 @@ export function SimulationResults() {
           </tbody>
         </table>
       </div>
+      <details className="place-disclosure">
+        <summary>Detailed planning totals</summary>
+        <p>
+          These totals multiply uncovered need scores by population. They help
+          compare plans and are not counts of sick people or missed
+          appointments. Lower totals mean less estimated need left uncovered.
+        </p>
+        <table>
+          <caption>
+            Population × uncovered score · through Day {run.day}
+          </caption>
+          <thead>
+            <tr>
+              <th>Scenario</th>
+              <th>Today’s total</th>
+              <th>Total across days so far</th>
+            </tr>
+          </thead>
+          <tbody>
+            {strategies.map((id) => {
+              const metrics =
+                s.runs[id].reached >= run.day
+                  ? s.runs[id].snapshots[run.day - 1].metrics
+                  : null;
+              return (
+                <tr key={id}>
+                  <th>{STRATEGIES[id]}</th>
+                  {metrics ? (
+                    <>
+                      <td>
+                        {Math.round(
+                          metrics.totalUnmetPriority,
+                        ).toLocaleString()}
+                      </td>
+                      <td>
+                        {Math.round(
+                          metrics.cumulativeUnmetPriority,
+                        ).toLocaleString()}
+                      </td>
+                    </>
+                  ) : (
+                    <td colSpan={2}>Run through Day {run.day} to compare</td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </details>
       <details>
         <summary>Weekly deployment history</summary>
         {Object.entries(run.history).length ? (
           Object.entries(run.history).map(([day, allocation]) => (
             <p key={day}>
               Day {day}:{" "}
-              {allocation.map((a) => `${a.clinicId} → ${a.psgc}`).join("; ")}
+              {allocation
+                .map((a) => {
+                  const b = BARANGAYS_BY_PSGC.get(a.psgc);
+                  return `${a.clinicId} → ${b ? `${b.name}, ${b.municipality}` : "Location details unavailable"}`;
+                })
+                .join("; ")}
             </p>
           ))
         ) : (

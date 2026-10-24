@@ -25,7 +25,7 @@ def test_missing_data_is_visible():
     frame.loc[0, "disease_cases"] = float("nan")
     scores = calculate_scores(frame, network, travel_times(road_graph(frame, network)), Weights())
     b = next(b for b in scores if b["id"] == frame.iloc[0].id)
-    assert any("Missing disease_cases" in warning for warning in b["warnings"])
+    assert any("Illness information is missing" in warning for warning in b["warnings"])
     assert 0 <= b["score"] <= 100
 
 

@@ -1,5 +1,10 @@
 # Optimization allocation review and implementation
 
+Current review branch: `feat/xgboost-clinic-allocation`, reconciled with main
+at `537dde3`. The UI now uses main's **Plan clinics** label. See
+[the final PR review](OPTIMIZATION_PR_REVIEW.md) for current checks, compatibility
+decisions, scope and the complete diff inventory against that main commit.
+
 Date: 2026-10-24. Branch: `feat/optimization-xgboost-allocation`.
 Starting commit: `1cf68a2`, including the hospital/HNI refinements and main's
 Paete forest-land overlay/facility icons. Remote main had not incorporated that

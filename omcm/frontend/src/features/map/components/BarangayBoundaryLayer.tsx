@@ -1,3 +1,4 @@
+import { simulationMetricLabels } from "../../../services/planningLanguage";
 import { useEffect, useRef } from "react";
 import { GeoJSON } from "react-leaflet";
 import type { Feature, FeatureCollection } from "geojson";
@@ -110,7 +111,7 @@ export function BarangayBoundaryLayer({
             const overlay = current.current.forecastOverlay;
             if (overlay) {
               const record = overlay.records.get(b.psgc);
-              label.textContent = `${b.name}, ${b.municipality} · Day ${overlay.day} · ${overlay.metric.toUpperCase()}: ${record?.[overlay.metric].toFixed(2)}${record?.provisional ? " · Provisional" : ""}`;
+              label.textContent = `${b.name}, ${b.municipality} · Day ${overlay.day} · ${simulationMetricLabels[overlay.metric]}: ${record?.[overlay.metric].toFixed(1)}/100 · Estimate${record?.provisional ? " · Some data missing" : ""}`;
               return label;
             }
             if (current.current.publicMode) {
@@ -119,9 +120,9 @@ export function BarangayBoundaryLayer({
             }
             const metric = current.current.activeMetric;
             const value = barangayMetric(b, metric);
-            label.textContent = `${b.name}, ${b.municipality} · ${barangayMetricLabel(metric)}: ${value === null ? "Needs review" : `${value.toLocaleString()}${metric === "density" ? "/km²" : metric === "morbidity" ? " / 1,000" : "/100"}`}`;
+            label.textContent = `${b.name}, ${b.municipality} · ${barangayMetricLabel(metric)}: ${value === null ? "Information unavailable" : `${value.toLocaleString()}${metric === "density" ? "/km²" : metric === "morbidity" ? " / 1,000" : "/100"}`}`;
             if (metric === "score")
-              label.textContent += ` · Healthcare need rank #${b.needRank} of 681${b.needProvisional ? " · Provisional" : ""}`;
+              label.textContent += ` · Healthcare need rank #${b.needRank} of 681${b.needProvisional ? " · Some data missing" : ""}`;
             return label;
           },
           { sticky: true, className: "laguna-map-tooltip" },

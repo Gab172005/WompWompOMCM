@@ -6,8 +6,8 @@ import { hospitalMarkerSvg } from "./facilityIcons";
 const icon = divIcon({
   className: "hospital-marker-custom",
   html: hospitalMarkerSvg,
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
+  iconSize: [16, 16],
+  iconAnchor: [8, 8],
 });
 export function HospitalMarkers({
   hospitals,
@@ -34,6 +34,10 @@ export function HospitalMarkers({
               {h.capacity === null ? "Beds unverified" : `${h.capacity} beds`}
             </p>
             <small>{h.verificationStatus}</small>
+            <p>
+              Bed counts come from dated records and do not show beds available
+              today.
+            </p>
             {h.capacityAsOf && (
               <p>
                 {h.capacityDefinition} · As of {h.capacityAsOf}

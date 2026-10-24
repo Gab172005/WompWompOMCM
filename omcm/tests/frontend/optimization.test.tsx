@@ -169,7 +169,9 @@ describe("connected optimization", () => {
     );
     await useOptimizationStore.getState().generate();
     expect(useOptimizationStore.getState().result).toBeNull();
-    expect(useOptimizationStore.getState().error).toBe("Model unavailable");
+    expect(useOptimizationStore.getState().error).toMatch(
+      /could not calculate clinic suggestions/,
+    );
   });
 
   it("discards late responses after cancellation or changed constraints", async () => {

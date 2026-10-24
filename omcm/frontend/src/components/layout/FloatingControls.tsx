@@ -52,12 +52,13 @@ export function FloatingControls() {
         ref={toggle}
         className="map-layers-button"
         aria-label="Map layers"
+        title="Choose map colors and show hospitals or clinics"
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen(!open)}
       >
         <Layers size={24} aria-hidden="true" />
-        <span>Layers</span>
+        <span>Map details</span>
       </button>
     </div>
   );

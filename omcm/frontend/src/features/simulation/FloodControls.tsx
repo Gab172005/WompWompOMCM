@@ -23,7 +23,7 @@ export function FloodControls({ psgc }: { psgc: string }) {
           else updateFlood(psgc, e.target.value as FloodSeverity);
         }}
       >
-        <option value="baseline">Baseline</option>
+        <option value="baseline">Use starting conditions</option>
         {["none", "low", "moderate", "severe"].map((s) => (
           <option key={s} value={s}>
             {s}

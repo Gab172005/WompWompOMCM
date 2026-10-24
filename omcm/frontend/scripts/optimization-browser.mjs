@@ -108,7 +108,7 @@ try {
     .first()
     .click();
   await expect(
-    page.getByRole("button", { name: "Fill demo credentials" }),
+    page.getByRole("button", { name: "Use demo sign-in details" }),
   ).toHaveCount(0);
   await expect(
     page.getByText("Connected administrator sign-in", { exact: true }),
@@ -127,9 +127,9 @@ try {
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in to Admin View" }).click();
   await expect(page.locator(".workspace")).toHaveClass(/is-admin-view/);
-  await page.getByRole("button", { name: "Optimize", exact: true }).click();
+  await page.getByRole("button", { name: "Plan clinics", exact: true }).click();
   const panel = page.getByRole("complementary", {
-    name: "Clinic optimization",
+    name: "Plan clinic locations",
   });
   await expect(
     panel.getByText("Los Baños–Bay · 20-barangay pilot"),
@@ -160,6 +160,9 @@ try {
   await expect(
     panel.getByRole("region", { name: "Backend allocation results" }),
   ).toContainText(plan.plan_id);
+  await expect(panel).toContainText(
+    "Municipality’s estimated healthcare need (map)",
+  );
   await expect(page.locator(".clinic-staging-marker")).toHaveCount(
     plan.optimized.clinics.length,
   );
@@ -231,9 +234,11 @@ try {
   expect(approved.status()).toBe(200);
   const schedule = await approved.json();
   expect(schedule.plan_id).toBe(plan.plan_id);
-  await expect(panel.getByRole("status")).toContainText(
-    "Published approved schedule",
-  );
+  await expect(
+    panel
+      .getByRole("status")
+      .filter({ hasText: "Published approved schedule" }),
+  ).toContainText("Published approved schedule");
   await panel.getByRole("button", { name: "Preview Public View" }).click();
   await expect(page.locator(".workspace")).toHaveClass(/is-public-view/);
   await expect(page.locator(".clinic-staging-marker")).toHaveCount(2);
@@ -260,13 +265,13 @@ try {
     .getByRole("button", { name: "Admin View", exact: true })
     .first()
     .click();
-  await page.getByRole("button", { name: "Optimize", exact: true }).click();
+  await page.getByRole("button", { name: "Plan clinics", exact: true }).click();
   await stop(api);
   await panel.getByRole("button", { name: "Generate recommendations" }).click();
   await expect(
     panel
       .getByRole("alert")
-      .filter({ hasText: /API returned|fetch|Network|backend/i })
+      .filter({ hasText: /could not (connect|read|calculate)|unavailable/i })
       .first(),
   ).toBeVisible();
   await expect(

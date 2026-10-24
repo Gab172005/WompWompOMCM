@@ -1,3 +1,4 @@
+import { requestFeedback } from "./requestFeedback";
 const base = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 let authorization = "";
 let browserDemo = import.meta.env.VITE_DEMO_MODE === "true";
@@ -63,6 +64,11 @@ export async function backendApi<T>(
       ...(authorization ? { Authorization: authorization } : {}),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  }).catch((error: Error) => {
+    if (signal?.aborted) throw error;
+    throw new Error(
+      "We could not connect to the planning service. Check your connection and try again.",
+    );
   });
   let data;
   try {
@@ -70,23 +76,13 @@ export async function backendApi<T>(
   } catch {
     throw new BackendApiError(
       response.status,
-      `API returned an unreadable response (${response.status}). Check the backend URL.`,
+      "We could not read the planning service’s response. Please try again. If the problem continues, contact your system administrator.",
     );
   }
   if (!response.ok) {
-    const detail = data.detail;
     throw new BackendApiError(
       response.status,
-      typeof detail === "string"
-        ? detail
-        : Array.isArray(detail)
-          ? detail
-              .map(
-                (e: { loc: string[]; msg: string }) =>
-                  `${e.loc.join(".")}: ${e.msg}`,
-              )
-              .join("; ")
-          : `Request failed (${response.status})`,
+      requestFeedback(path, response.status, data?.detail),
     );
   }
   return data as T;

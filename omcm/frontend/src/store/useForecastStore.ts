@@ -20,9 +20,9 @@ import {
 import type { SimulationScenario } from "../types/simulation";
 export type Strategy = "none" | "manual" | "optimizer";
 export const STRATEGIES: Record<Strategy, string> = {
-  none: "No Intervention",
-  manual: "Manual Allocation",
-  optimizer: "Optimizer-Assisted Allocation",
+  none: "No mobile clinics",
+  manual: "Choose locations yourself",
+  optimizer: "Use recommended locations",
 };
 export interface RunState {
   day: number;
@@ -128,7 +128,7 @@ export const useForecastStore = create<ForecastState>((set, get) => ({
   setK: (k) => {
     if (!Number.isInteger(k) || k < 1 || k > get().coverage.size) {
       set({
-        error: `Infeasible allocation: enter 1–${get().coverage.size} clinics.`,
+        error: `Enter between 1 and ${get().coverage.size} mobile clinics. Each clinic needs an available location.`,
       });
       return;
     }
@@ -144,7 +144,7 @@ export const useForecastStore = create<ForecastState>((set, get) => ({
     try {
       if (s.strategy !== "optimizer" || run.day !== run.reached)
         throw new Error(
-          "Inspecting history: return to the latest decision day.",
+          "You are viewing an earlier day. Return to the latest weekly decision day to choose clinic locations.",
         );
       const proposal = optimizeWeek(
         s.k,
@@ -198,7 +198,9 @@ export const useForecastStore = create<ForecastState>((set, get) => ({
         run.day !== run.reached ||
         operationalPeriod(run.day).start !== run.day
       )
-        throw new Error("Deploy only at the latest weekly decision point.");
+        throw new Error(
+          "Choose clinic locations on the latest decision day: Day 1, 8, 15 or 22.",
+        );
       const allocation = s.draft.map((psgc, i) => ({
         psgc,
         clinicId: `MC-${i + 1}`,

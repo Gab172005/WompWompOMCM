@@ -6,19 +6,21 @@ import type { Factor } from "../types";
 import { Card } from "./ui/LegacyUI";
 const descriptions: Record<Factor, string> = {
   population:
-    "Average-rank population percentile within the active dataset; limits outlier dominance",
-  disease: "Cases per 1,000 residents ÷ 100, capped at 1",
-  vulnerability: "(Children + elderly) ÷ population ÷ 0.60, capped at 1",
+    "Compares the number of residents with other areas in this dataset.",
+  disease: "Higher sample illness rates add more planning priority.",
+  vulnerability:
+    "A larger share of children and older residents adds more planning priority.",
   accessibility:
-    "Synthetic hospital-access minutes ÷ 60; capped at 1 in road pilot",
-  poverty: "Poverty percentage ÷ 100",
-  flood: "Synthetic flood exposure index ÷ 100",
+    "Longer sample journeys to a hospital add more planning priority.",
+  poverty:
+    "A higher estimated share of residents in poverty adds more priority.",
+  flood: "Higher sample flood exposure adds more planning priority.",
 };
 const labels: Record<Factor, string> = {
-  population: "Population (percentile)",
-  disease: "Disease burden",
-  vulnerability: "Vulnerable population",
-  accessibility: "Hospital inaccessibility",
+  population: "Number of residents",
+  disease: "Illness rate (sample data)",
+  vulnerability: "Children and older residents",
+  accessibility: "Difficulty reaching a hospital",
   poverty: "Poverty",
   flood: "Flood exposure",
 };
@@ -67,14 +69,14 @@ export function NeedWeights() {
       <div className="card-title">
         <h3>
           <SlidersHorizontal size={18} />
-          Healthcare need weights
+          How much each planning factor counts
         </h3>
         <span className="badge">ILLUSTRATIVE</span>
       </div>
       <p>
-        Weights are normalized by their total. All indicators point toward
-        greater need. These thresholds and weights are demo assumptions, not
-        scientific validation.
+        A larger share makes a factor count more toward the score. These
+        settings are demonstration assumptions and have not been scientifically
+        validated.
       </p>
       {!username && !browserDemo && (
         <button className="secondary" onClick={() => requireAdmin()}>
@@ -118,16 +120,17 @@ export function NeedWeights() {
         Restore initial weights
       </button>
       <div className="formula">
-        Need = Σ (normalized indicator × normalized weight) × 100
+        The planning score combines each factor according to its share of the
+        total weight.
       </div>
       <p className="tiny">
         Scores recalculate in the active planning mode after each change.
         Missing inputs use visible conservative demo estimates. Existing
         published schedules remain unchanged.
       </p>
-      <h4>Top-K barangay sensitivity</h4>
+      <h4>Would small changes affect the top-ranked barangays?</h4>
       <label>
-        Top K
+        Number of top barangays to compare
         <input
           aria-label="Sensitivity top K"
           type="number"
@@ -140,20 +143,19 @@ export function NeedWeights() {
         />
       </label>
       <p className="tiny">
-        Each weight is changed independently by ±5 points (clamped to 0–100),
-        then renormalized. This checks barangay need rankings, not clinic
-        placement. Population is percentile-scaled; disease and vulnerability
-        use rates rather than counts.
+        This check raises and lowers each factor’s weight by 5 points, within
+        0–100, then compares the rankings. It checks whether small changes
+        affect the top group. It does not check clinic locations.
       </p>
       <div role="status">
         {browserDemo
-          ? "Sensitivity requires the Python backend; unavailable in browser demo mode."
+          ? "This comparison needs a connection to the planning service. It is unavailable in browser demo mode."
           : !username
-            ? "Sign in to run sensitivity."
+            ? "Sign in to check how rankings change."
             : sensitivityError ||
               (sensitivity
-                ? `Top ${sensitivity.top_k} membership: ${sensitivity.membership_stable ? "stable" : "changes"}; order: ${sensitivity.order_stable ? "stable" : "changes"}.`
-                : "Checking sensitivity…")}
+                ? `Top ${sensitivity.top_k} barangays: ${sensitivity.membership_stable ? "the same barangays stay in the group" : "the group changes"}; ${sensitivity.order_stable ? "their order stays the same" : "their order changes"}.`
+                : "Checking whether the rankings change…")}
       </div>
       {sensitivity && (
         <ul>
@@ -164,8 +166,8 @@ export function NeedWeights() {
                 {labels[trial.factor as Factor]} {trial.change > 0 ? "+" : ""}
                 {trial.change}:{" "}
                 {trial.membership_changed
-                  ? "membership changes"
-                  : "order changes"}
+                  ? "different barangays enter the top group"
+                  : "the same barangays appear in a different order"}
               </li>
             ))}
         </ul>

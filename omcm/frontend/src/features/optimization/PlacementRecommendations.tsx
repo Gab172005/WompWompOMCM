@@ -1,6 +1,11 @@
 import type { Plan } from "../../types";
 import { useEffect, useRef } from "react";
 import { ManualPlacement } from "./ManualPlacement";
+import {
+  BARANGAYS_BY_PSGC,
+  MUNICIPALITY_HEALTHCARE_NEED,
+} from "../../services/providedData";
+import { needLevel } from "../../services/planningLanguage";
 
 export function PlacementRecommendations({ plan }: { plan: Plan }) {
   const { metrics, clinics } = plan.optimized;
@@ -14,11 +19,15 @@ export function PlacementRecommendations({ plan }: { plan: Plan }) {
       aria-label="Backend allocation results"
     >
       <div className="optimizer-result-heading">
-        <h3 ref={heading}>Recommended placements</h3>
+        <h3 ref={heading}>Suggested clinic locations</h3>
         <span className="badge">
           {plan.optimized.optimal ? "Optimal" : "Feasible"}
         </span>
       </div>
+      <p>
+        These locations aim to help communities with higher estimated healthcare
+        needs. Review local access and facility readiness before approving.
+      </p>
       <p className="workspace-note">
         Server draft {plan.plan_id} · {plan.metadata.region}
       </p>
@@ -58,29 +67,44 @@ export function PlacementRecommendations({ plan }: { plan: Plan }) {
           travel limit, more capacity or different exclusions.
         </p>
       )}
-      {clinics.map((clinic) => (
-        <article className="workspace-subcard" key={clinic.id}>
-          <h3>
-            {clinic.name}
-            <span className="badge">
-              {clinic.served} / {clinic.daily_capacity} appointments
-            </span>
-          </h3>
-          <ManualPlacement clinic={clinic} clinics={clinics} />
-          <p>{clinic.reason}</p>
-          <details>
-            <summary>Communities served ({clinic.assignments.length})</summary>
-            <ul>
-              {clinic.assignments.map((assignment) => (
-                <li key={assignment.barangay_id}>
-                  {assignment.name}: {assignment.residents} appointments ·{" "}
-                  {assignment.minutes} road minutes
-                </li>
-              ))}
-            </ul>
-          </details>
-        </article>
-      ))}
+      {clinics.map((clinic) => {
+        const community = BARANGAYS_BY_PSGC.get(clinic.barangay_id);
+        const need =
+          community &&
+          MUNICIPALITY_HEALTHCARE_NEED.get(community.municipalityPsgc);
+        return (
+          <article className="workspace-subcard" key={clinic.id}>
+            <h3>
+              {clinic.name}
+              <span className="badge">
+                {clinic.served} / {clinic.daily_capacity} appointments
+              </span>
+            </h3>
+            {need && (
+              <p>
+                Municipality’s estimated healthcare need (map):{" "}
+                {needLevel(need.needScore)} · {need.needScore.toFixed(1)}/100
+                {need.provisionalBarangays ? " · Some data missing" : ""}
+              </p>
+            )}
+            <ManualPlacement clinic={clinic} clinics={clinics} />
+            <p>{clinic.reason}</p>
+            <details>
+              <summary>
+                Communities served ({clinic.assignments.length})
+              </summary>
+              <ul>
+                {clinic.assignments.map((assignment) => (
+                  <li key={assignment.barangay_id}>
+                    {assignment.name}: {assignment.residents} appointments ·{" "}
+                    {assignment.minutes} road minutes
+                  </li>
+                ))}
+              </ul>
+            </details>
+          </article>
+        );
+      })}
       <details className="optimizer-method">
         <summary>Model, scoring and allocation evidence</summary>
         <ul>

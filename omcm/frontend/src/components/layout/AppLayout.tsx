@@ -77,9 +77,9 @@ export function AppLayout() {
       : plan.clinics;
 
   const titles = {
-    optimization: "Clinic optimization",
-    simulation: "Healthcare simulation",
-    chatbot: "Operations assistant",
+    optimization: "Plan clinic locations",
+    simulation: "Try a 30-day clinic plan",
+    chatbot: "Planning help",
   };
 
   return (

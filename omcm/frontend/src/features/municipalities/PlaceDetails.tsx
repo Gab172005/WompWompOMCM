@@ -10,6 +10,7 @@ import {
   MapPin,
   type LucideIcon,
 } from "lucide-react";
+import { needLevel } from "../../services/planningLanguage";
 import { getMetricColor } from "../../services/lagunaData";
 import {
   PROVIDED_HOSPITALS,
@@ -108,10 +109,14 @@ export function NeedScoreCard({
       <div className="place-section-heading">
         <span>
           <HeartPulse size={15} aria-hidden="true" />
-          Healthcare need
+          Healthcare Need Score
         </span>
         <span className={`place-status ${provisional ? "is-provisional" : ""}`}>
-          {provisional ? "Provisional" : "Inputs complete"}
+          {score === null
+            ? "Information unavailable"
+            : provisional
+              ? "Some data missing"
+              : "All factors available"}
         </span>
       </div>
       <div className="place-need-value">
@@ -119,6 +124,7 @@ export function NeedScoreCard({
         <span>/ 100</span>
       </div>
       <span className="place-rank">{rankLabel}</span>
+      {score !== null && <strong>{needLevel(score)}</strong>}
       {score !== null && (
         <meter
           className="place-need-meter"
@@ -128,9 +134,15 @@ export function NeedScoreCard({
           aria-label="Healthcare need out of 100"
         />
       )}
-      <p>Higher scores indicate greater relative planning need.</p>
-      <div className="place-coverage">
-        <span>Available input weight</span>
+      <p>
+        Higher scores suggest greater priority for healthcare planning. They are
+        not a count of sick residents.
+      </p>
+      <div
+        className="place-coverage"
+        title="This percentage is based on how much each available factor counts toward the score, rather than the number of factors."
+      >
+        <span>Share of score factors available</span>
         <strong>{coverage}%</strong>
       </div>
       {children && (
@@ -164,13 +176,19 @@ export function PlaceStats({
 }
 
 const driverContext: Record<NeedFactor, string> = {
-  morbidity: "Relative burden from the supplied mock illness rates.",
-  hospitalAccess: "Distance to source-verified hospitals across Laguna.",
-  disasterRisk: "Hazard screening from the supplied barangay points.",
-  density: "Population concentration within barangay boundaries.",
-  incomeClass: "Municipal income class as a resource proxy.",
-  clinicDistance: "Distance to active, mapped OpenStreetMap clinics.",
-  clinicProvision: "Relative mapped clinic provision per resident.",
+  morbidity:
+    "Higher sample illness rates add more points. These are not reported cases.",
+  hospitalAccess:
+    "Being farther from a verified hospital can add more points. Distances are straight lines.",
+  disasterRisk:
+    "Mapped hazards at a reference point can add more points. Coverage has not been verified.",
+  density: "More people living close together can add more points.",
+  incomeClass:
+    "The municipality’s income class estimates local resources, not household income.",
+  clinicDistance:
+    "Being farther from a clinic listed on OpenStreetMap can add more points.",
+  clinicProvision:
+    "Fewer mapped clinics for the population can add more points. Mapping may be incomplete.",
 };
 
 export function NeedDrivers({
@@ -189,7 +207,10 @@ export function NeedDrivers({
         <h3>What drives this score</h3>
         <span>Top {drivers.length}</span>
       </div>
-      <p>Largest contributions to the index, measured in points.</p>
+      <p>
+        These factors add the most points to this score. More points mean
+        greater estimated planning need.
+      </p>
       {drivers.map((key) => (
         <div className="place-driver" key={key}>
           <div>
@@ -321,8 +342,9 @@ export function NearbyCare({
         </p>
       )}
       <small className="place-evidence-note">
-        Distances are straight-line estimates, not travel times. Source bed
-        counts do not indicate current availability.
+        Distances are measured in a straight line. Actual travel distance and
+        time may be longer. Recorded bed counts do not show beds available
+        today.
       </small>
     </section>
   );

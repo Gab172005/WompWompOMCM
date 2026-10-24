@@ -56,7 +56,7 @@ describe("administrator sign-in mode", () => {
     open();
     expect(screen.getByText("Connected administrator sign-in")).toBeVisible();
     expect(
-      screen.queryByRole("button", { name: "Fill demo credentials" }),
+      screen.queryByRole("button", { name: "Use demo sign-in details" }),
     ).toBeNull();
     expect(screen.queryByText("laguna-lgu-2026")).toBeNull();
   });
@@ -65,7 +65,7 @@ describe("administrator sign-in mode", () => {
     transport.demo = true;
     open();
     fireEvent.click(
-      screen.getByRole("button", { name: "Fill demo credentials" }),
+      screen.getByRole("button", { name: "Use demo sign-in details" }),
     );
     expect(screen.getByLabelText("Administrator username")).toHaveValue(
       "admin",

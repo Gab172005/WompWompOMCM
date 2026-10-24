@@ -1,3 +1,4 @@
+import { planningFactorLabels } from "../../../services/planningLanguage";
 import { useMemo, useState, type ReactNode } from "react";
 import {
   MapContainer,
@@ -15,7 +16,11 @@ import { useMunicipalities } from "../../../hooks/useMunicipalities";
 import { coveredMunicipalities } from "../../../services/municipalities";
 import { Hospital as HospitalIcon, MapPin, Navigation, X } from "lucide-react";
 import { useOMCM } from "../../../store/LegacyProvider";
-import { areaKm2, metricNames, type MapMetric } from "../../../components/mapMetrics";
+import {
+  areaKm2,
+  metricNames,
+  type MapMetric,
+} from "../../../components/mapMetrics";
 import type { Barangay, Clinic } from "../../../types";
 import { NeedBadge, number } from "../../../components/ui/LegacyUI";
 const icon = (kind: "hospital" | "site" | "clinic") =>
@@ -206,7 +211,7 @@ export function MapView({
               [
                 ["density", "Population density"],
                 ["flood", "Flood risk"],
-                ["disease", "Morbidity"],
+                ["disease", "Illness rate (sample)"],
                 ["score", "Overall need"],
               ] as const
             ).map(([metric, label]) => (
@@ -270,7 +275,7 @@ export function MapView({
                   <Popup>
                     <strong>{h.name}</strong>
                     <br />
-                    Synthetic participating hospital
+                    Sample hospital location (unverified)
                     <br />
                     {h.services.join(" · ")}
                   </Popup>
@@ -298,7 +303,7 @@ export function MapView({
                       ? "Flooded — excluded"
                       : "Candidate staging site"}
                     <br />
-                    Synthetic demonstration site
+                    Sample clinic location (unverified)
                   </Popup>
                 </Marker>
               ))}
@@ -434,7 +439,7 @@ export function MapView({
           <h3>{selectedArea.name}</h3>
           <p>
             {selected.aggregated
-              ? `${selected.barangay_count} available barangay records · Population-weighted indicators`
+              ? `${selected.barangay_count} available barangay records · Averages based on population`
               : "City / municipality healthcare record"}
           </p>
           <NeedBadge level={selected.level} />
@@ -444,18 +449,14 @@ export function MapView({
           </strong>
           <h4>Top contributing factors</h4>
           <p className="tiny">
-            Population-weighted rollup of barangay score contributions.
+            Average points added by each factor, based on barangay population.
           </p>
           {Object.entries(selected.contributions)
             .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
             .slice(0, 3)
             .map(([key, value]) => (
               <div className="summary-line" key={key}>
-                <span>
-                  {key === "accessibility"
-                    ? "Hospital access"
-                    : key.charAt(0).toUpperCase() + key.slice(1)}
-                </span>
+                <span>{planningFactorLabels[key] ?? "Other factor"}</span>
                 <strong>{value.toFixed(1)} points</strong>
               </div>
             ))}
@@ -467,7 +468,7 @@ export function MapView({
               </strong>
             </div>
             <div>
-              Represented population
+              Residents included in this dataset
               <strong>{number(selected.population)}</strong>
             </div>
             <div>
@@ -482,7 +483,8 @@ export function MapView({
               <strong>{selected.factors.poverty.toFixed(1)}%</strong>
             </div>
             <div>
-              Disease burden<strong>{selected.disease_per_1000}/1k</strong>
+              Sample illness rate
+              <strong>{selected.disease_per_1000} per 1,000 residents</strong>
             </div>
             <div>
               Vulnerability
@@ -527,14 +529,14 @@ export function MapView({
             <summary>All score contributions</summary>
             {Object.entries(selected.contributions).map(([key, value]) => (
               <p className="tiny" key={key}>
-                {key}: {value.toFixed(1)} points
+                {planningFactorLabels[key] ?? "Other factor"}:{" "}
+                {value.toFixed(1)} points
               </p>
             ))}
           </details>
           <p className="tiny">
-            Boundary: 2023 PSGC snapshot · Health inputs: 2026-10-15 ·
-            Confidence: synthetic. Illustrative synthetic data — not reported
-            disease cases.
+            Boundary: 2023 PSGC snapshot · Health inputs: 2026-10-15 · Sample
+            data for planning practice, not reported disease cases.
           </p>
           <h4>Preventive services to consider</h4>
           <div className="service-tags">

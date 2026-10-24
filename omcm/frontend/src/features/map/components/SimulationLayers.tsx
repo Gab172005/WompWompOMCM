@@ -3,6 +3,7 @@ import { Circle, Marker, Popup } from "react-leaflet";
 import { mobileClinicSvg } from "./facilityIcons";
 import type { SimulationOverlay } from "./mapTypes";
 import { COVERAGE_RADIUS_KM } from "../../../services/forecasting/interventions";
+import { BARANGAYS_BY_PSGC } from "../../../services/providedData";
 export function SimulationLayers({ overlay }: { overlay: SimulationOverlay }) {
   return (
     <>
@@ -24,8 +25,8 @@ export function SimulationLayers({ overlay }: { overlay: SimulationOverlay }) {
             icon={divIcon({
               className: "clinic-staging-marker",
               html: mobileClinicSvg(undefined, kind),
-              iconSize: [40, 36],
-              iconAnchor: [17, 19],
+              iconSize: [20, 18],
+              iconAnchor: [8.5, 9.5],
             })}
           >
             <Popup>
@@ -37,7 +38,12 @@ export function SimulationLayers({ overlay }: { overlay: SimulationOverlay }) {
               <p>
                 {a.clinicId} · {a.name}
                 <br />
-                PSGC {a.psgc}
+                {BARANGAYS_BY_PSGC.get(a.psgc)?.municipality} · Simulated
+                location
+              </p>
+              <p>
+                Estimated reach: up to 3 km in a straight line. Actual road
+                access and service capacity need local review.
               </p>
             </Popup>
           </Marker>

@@ -157,9 +157,9 @@ describe("Healthcare need weights", () => {
     expect(defaultNeedWeights()).toEqual(PRODUCTION);
     for (const [key, factor] of Object.entries(HEALTHCARE_NEED_FACTORS))
       expect(factor.weight).toBe(PRODUCTION[key as NeedFactor]);
-    expect(HEALTHCARE_NEED_FACTORS.clinicDistance.label).toBe("Clinic distance");
+    expect(HEALTHCARE_NEED_FACTORS.clinicDistance.label).toBe("Distance to a mapped clinic");
     expect(HEALTHCARE_NEED_FACTORS.clinicProvision.label).toBe(
-      "Clinic provision deficit",
+      "Fewer mapped clinics per resident",
     );
     expect(Object.keys(HEALTHCARE_NEED_FACTORS)).not.toContain("urbanRural");
     expect(

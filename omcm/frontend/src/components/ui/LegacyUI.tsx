@@ -19,7 +19,11 @@ export const colors = {
   Low: "#2caa8a",
 };
 export function NeedBadge({ level }: { level: string }) {
-  return <span className={`badge need-${level.toLowerCase()}`}>{level}</span>;
+  return (
+    <span className={`badge need-${level.toLowerCase()}`}>
+      {level === "Critical" ? "Very high" : level} estimated need
+    </span>
+  );
 }
 export function PageHeader({
   eyebrow,
@@ -47,14 +51,14 @@ export function Statistics() {
   const { municipalities: barangays, plan, config } = useOMCM();
   const stats = [
     {
-      label: "Represented population",
+      label: "Residents included in this dataset",
       value: number(barangays.reduce((s, b) => s + b.population, 0)),
       detail: `${barangays.length} cities / municipalities with data`,
       icon: Users,
       color: "blue",
     },
     {
-      label: "High-priority demand",
+      label: "Appointments needed in high-priority areas",
       value: number(
         barangays
           .filter((b) => b.high_priority)
@@ -72,7 +76,7 @@ export function Statistics() {
       color: "teal",
     },
     {
-      label: "Demand served",
+      label: "Estimated daily appointment needs covered",
       value: plan ? `${plan.optimized.metrics.demand_served_pct}%` : "—",
       detail: plan
         ? `${number(plan.optimized.metrics.residents_served)} appointments allocated`
@@ -122,7 +126,7 @@ export function PlanMetrics() {
       <div>
         <ArrowUpRight size={18} />
         <strong>{m.capacity_utilization}%</strong>
-        <span>Selected capacity used</span>
+        <span>Available appointment slots filled</span>
       </div>
     </div>
   );

@@ -31,7 +31,7 @@ export function ClinicDetails({
           </div>
           <div>
             <strong>{clinic.capacity}</strong>
-            <span>Appointments / day capacity</span>
+            <span>Estimated appointments available per day</span>
           </div>
         </div>
         <h4>Services offered</h4>
@@ -46,8 +46,8 @@ export function ClinicDetails({
           Assigned communities: {clinic.municipality} and neighboring barangays.
         </p>
         <p className="workspace-note">
-          Approved mobile clinic staging site. Location sharing is disabled;
-          only administrator-published schedules are shown.
+          Approved mobile clinic location. Location sharing is disabled; only
+          administrator-published schedules are shown.
         </p>
       </>
     );
@@ -63,7 +63,7 @@ export function ClinicDetails({
       <div className="workspace-metrics">
         <div>
           <strong>{clinic.capacity}</strong>
-          <span>Appointments / day capacity</span>
+          <span>Estimated appointments available per day</span>
         </div>
         <div>
           <strong>
@@ -72,13 +72,16 @@ export function ClinicDetails({
           <span>Route progress</span>
         </div>
       </div>
-      <p>
-        Position: {position.lat.toFixed(4)}, {position.lng.toFixed(4)}
-      </p>
+      <details>
+        <summary>Map coordinates</summary>
+        <p>
+          {position.lat.toFixed(4)}, {position.lng.toFixed(4)}
+        </p>
+      </details>
       <p className="workspace-note">
         {clinic.route.length
-          ? "Illustrative route animation; no live GPS or traffic-based ETA."
-          : "Backend-recommended staging location; no deployment route or live position is implied."}
+          ? "Practice clinic movement along a sample route. It is not live tracking."
+          : "Suggested clinic location. A driving route and live position are not provided."}
       </p>
     </>
   );

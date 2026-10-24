@@ -27,7 +27,7 @@ export function MunicipalityPanel() {
         subtitle={
           selected
             ? `Laguna Province · ${selected.barangayCount} barangays`
-            : "Understand community need. Plan care with context."
+            : "Find communities that may need more healthcare support."
         }
         onBack={selected ? () => selectMunicipality(null) : undefined}
         backLabel="Province overview"
@@ -59,7 +59,8 @@ export function MunicipalityPanel() {
           </div>
           <p>
             {LAGUNA_BARANGAYS.length} barangays · {PROVIDED_HOSPITALS.length}{" "}
-            hospital records. Select a barangay on the map or search by name.
+            hospital records. Click a barangay on the map or search by name.
+            Click a hospital symbol for facility information.
           </p>
         </>
       )}
@@ -72,17 +73,17 @@ export function MunicipalityPanel() {
           Plan deployment
         </Button>
         <Button variant="secondary" onClick={() => openPanel("simulation")}>
-          Test scenario
+          Try a 30-day plan
         </Button>
       </div>
       <details className="place-disclosure">
-        <summary>Municipality HNI ranking</summary>
+        <summary>Compare municipality healthcare needs</summary>
         <MunicipalityRanking municipalities={municipalities} />
       </details>
       <p className="workspace-note">
-        Supplied barangay population, disaster screening and hospital records
-        with PSGC boundary geometry. Morbidity is synthetic; vulnerability,
-        routes and deployment estimates remain illustrative.
+        Uses supplied population, disaster risk and hospital records. Illness
+        rates are sample data. Estimates of residents needing extra support,
+        routes and clinic plans are for demonstration only.
       </p>
     </>
   );

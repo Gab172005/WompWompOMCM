@@ -38,15 +38,17 @@ export function optimizeWeek(
 ): AllocationProposal {
   const period = operationalPeriod(day);
   if (period.start !== day)
-    throw new Error("Allocation is available on Days 1, 8, 15 and 22.");
+    throw new Error(
+      "Choose clinic locations on Day 1, 8, 15 or 22. Locations stay in place until the next decision day.",
+    );
   if (!Number.isInteger(k) || k < 1)
-    throw new Error("Clinic count must be a positive integer.");
+    throw new Error("Enter a whole number of mobile clinics, starting at 1.");
   const records = forecasts[day - 1];
   const byId = new Map(records.map((b) => [b.psgc, b]));
   const candidates = [...coverage.keys()].filter((id) => byId.has(id)).sort();
   if (candidates.length < k)
     throw new InfeasibleAllocationError(
-      `Infeasible allocation: ${k} clinics requested, only ${candidates.length} eligible barangays.`,
+      `There are only ${candidates.length} available locations for ${k} mobile clinics. Choose fewer clinics or review the available locations.`,
     );
   const priority = new Map<string, number>();
   let projected = previous;
@@ -106,7 +108,7 @@ export function optimizeWeek(
       lng: b.lng,
       expectedCoverage: choice.gain,
       coveredBarangays: coverage.get(choice.id)!.size,
-      reason: `Adds ${Math.round(choice.gain).toLocaleString()} population × index priority-days across a ${coverage.get(choice.id)!.size}-barangay catchment, after overlap; ${choice.km.toFixed(1)} km relocation. Forecast Days ${day}–${period.end}.`,
+      reason: `Could help reach ${coverage.get(choice.id)!.size} barangays with estimated healthcare needs during Days ${day}–${period.end}. The estimate accounts for areas already reached by other suggested clinics and favors shorter moves. ${existing.some((a) => a.clinicId === choice.clinicId) ? `Estimated move: ${choice.km.toFixed(1)} km in a straight line.` : "This is a first placement; travel from a starting depot is not estimated."}`,
     });
   }
   validateAllocation(recommendations, k, coverage);

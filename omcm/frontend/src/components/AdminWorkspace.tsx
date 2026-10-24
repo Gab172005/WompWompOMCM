@@ -263,7 +263,7 @@ export function AdminWorkspace() {
               setPanel(panel === "optimization" ? "" : "optimization")
             }
           >
-            Clinic Optimization
+            Plan clinic locations
           </button>
           <div className="workspace-assistant">
             <ExplanationAssistant
@@ -281,14 +281,14 @@ export function AdminWorkspace() {
         <section
           className="workspace-panel"
           id="workspace-optimization"
-          aria-label="Clinic Optimization"
+          aria-label="Plan clinic locations"
           hidden={panel !== "optimization"}
         >
           <button
             className="secondary panel-close"
             onClick={() => setPanel("")}
           >
-            Close Clinic Optimization
+            Close Plan clinic locations
           </button>
           <AdminDashboard />
           <div className="need-weights-section">
@@ -316,13 +316,14 @@ export function AdminWorkspace() {
             </p>
             {!username && !browserDemo && (
               <button className="primary" onClick={() => requireAdmin()}>
-                Sign in to recompute scenarios
+                Sign in to calculate practice scenarios
               </button>
             )}
             {browserDemo && (
               <p role="alert">
-                Scenario recomputation needs the Python API. Reconnect the API
-                and reload; no simulated calculation is fabricated.
+                The planning service is not connected. Ask your system
+                administrator to reconnect it, then reload to calculate this
+                scenario.
               </p>
             )}
             {geographyError && <p role="alert">{geographyError}</p>}
@@ -342,15 +343,16 @@ export function AdminWorkspace() {
             </label>
             {!supported && (
               <p role="status">
-                No health or road inputs for this municipality. The pilot
-                supports Bay and Los Baños only; no results will be invented.
+                Health and road information is unavailable for this
+                municipality. This demonstration supports Bay and Los Baños
+                only.
               </p>
             )}
             <fieldset disabled={!supported || browserDemo}>
               <label>
-                Municipal flood severity: {floodLevels[flood]}
+                Municipality flood level: {floodLevels[flood]}
                 <input
-                  aria-label="Municipal flood severity"
+                  aria-label="Municipality flood level"
                   type="range"
                   min="0"
                   max="2"
@@ -360,9 +362,9 @@ export function AdminWorkspace() {
                 />
               </label>
               <label>
-                Municipal morbidity spike: +{Math.round((morbidity - 1) * 100)}%
+                Sample illness increase: +{Math.round((morbidity - 1) * 100)}%
                 <input
-                  aria-label="Municipal morbidity spike"
+                  aria-label="Sample illness increase"
                   type="range"
                   min="1"
                   max="5"
@@ -409,8 +411,8 @@ export function AdminWorkspace() {
               ].map((name) => (
                 <li key={name}>
                   {name}: flood{" "}
-                  {scenario.municipality_flood_levels?.[name] ?? "none"},
-                  morbidity{" "}
+                  {scenario.municipality_flood_levels?.[name] ?? "none"}, sample
+                  illness rate{" "}
                   {scenario.municipality_outbreak_multipliers?.[name] ?? 1}×
                 </li>
               ))}
@@ -418,8 +420,9 @@ export function AdminWorkspace() {
             <h3>Blocked roads ({scenario.closed_roads.length})</h3>
             <p>
               Click any displayed road segment to block it. Affected modeled
-              routes are excluded, and the optimizer selects other supported
-              sites. No unsupported diversion is invented.
+              routes are left out. The system suggests other available
+              locations. It cannot assume a different route without supporting
+              road information.
             </p>
             <ul className="blocked-roads">
               {scenario.closed_roads.map((id) => (

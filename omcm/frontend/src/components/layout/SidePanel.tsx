@@ -12,9 +12,7 @@ export function SidePanel() {
     <aside
       className={`workspace-panel intelligence-panel card ${expanded ? "is-expanded" : ""}`}
       aria-label={
-        selectedBarangayPsgc
-          ? "Barangay intelligence"
-          : "Municipality intelligence"
+        selectedBarangayPsgc ? "Barangay details" : "Municipality details"
       }
     >
       <div className="workspace-panel-heading">
@@ -32,7 +30,7 @@ export function SidePanel() {
         />
         <button
           className="icon-button"
-          aria-label="Close intelligence panel"
+          aria-label="Close community details"
           onClick={() => useAppStore.setState({ sidePanelOpen: false })}
         >
           <X size={17} />
