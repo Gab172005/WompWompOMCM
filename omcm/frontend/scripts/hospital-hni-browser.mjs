@@ -67,8 +67,7 @@ try {
     "Verified hospital",
   );
   await mkdir(`${frontend}/test-results`, { recursive: true });
-  // This label extends over the province edge. Raising its pane must not
-  // reveal text that the mask was covering in the normal rendering order.
+  await page.locator(".forest-land-marker").hover();
   const forestLabel = page.locator(".forest-land-label");
   const normalLabel = await forestLabel.screenshot({
     animations: "disabled",
