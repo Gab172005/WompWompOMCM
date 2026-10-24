@@ -1,0 +1,162 @@
+.assistant-launcher {
+  position: fixed;
+  z-index: 1001;
+  right: 18px;
+  bottom: 188px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 1px solid #164a65;
+  border-radius: 24px;
+  background: #102f46;
+  color: #fff;
+  box-shadow: 0 4px 16px #102f4630;
+  font-weight: 650;
+}
+.assistant-widget {
+  position: fixed;
+  z-index: 1100;
+  right: 18px;
+  bottom: 18px;
+  width: min(430px, calc(100vw - 36px));
+  height: min(680px, calc(100dvh - 100px));
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid #d7e3eb;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 40px #102f462e;
+  overflow: hidden;
+}
+.assistant-widget-heading,
+.assistant-widget-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.assistant-widget-heading {
+  justify-content: space-between;
+  padding: 15px 16px;
+  border-bottom: 1px solid #e2eaf0;
+  flex-shrink: 0;
+}
+.assistant-widget-heading h2 {
+  font-size: 16px;
+  margin: 0;
+  color: #102f46;
+}
+.assistant-widget-heading span {
+  color: #526b7c;
+  font-size: 11px;
+}
+.assistant-widget .assistant-intro {
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: #526b7c;
+}
+.assistant-widget .assistant-chat-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  max-height: none;
+  padding: 0 16px 12px;
+  overscroll-behavior: contain;
+}
+.assistant-widget .workspace-chat-message {
+  margin: 10px 0;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  border-radius: 12px;
+  overflow-wrap: anywhere;
+}
+.assistant-widget .workspace-chat-message.assistant {
+  background: #f0f5f8;
+}
+.assistant-widget .workspace-chat-message.user {
+  background: #e6f1ff;
+  margin-left: 24px;
+}
+.assistant-widget .workspace-chat-message p {
+  white-space: pre-wrap;
+  margin: 5px 0 0;
+}
+.assistant-action-list {
+  padding-left: 18px;
+  margin: 6px 0;
+  color: #16604a;
+  font-size: 12px;
+}
+.assistant-message-error {
+  color: #a02f30;
+}
+.assistant-widget .assistant-empty {
+  color: #526b7c;
+  line-height: 1.65;
+  padding: 14px 0;
+}
+.assistant-progress {
+  color: #32657f;
+  font-size: 12px;
+  padding: 8px 0;
+}
+.assistant-widget .assistant-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 16px;
+}
+.assistant-prompts button {
+  font-size: 11px;
+  padding: 7px 10px;
+}
+.assistant-form {
+  flex-shrink: 0;
+  border-top: 1px solid #e2eaf0;
+  padding: 12px 16px;
+}
+.assistant-form .workspace-field {
+  margin: 0;
+  font-size: 12px;
+}
+.assistant-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 60px;
+  max-height: 130px;
+  margin-top: 6px;
+  padding: 9px 11px;
+  font: inherit;
+  border: 1px solid #cad8e2;
+  border-radius: 10px;
+}
+.assistant-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+.assistant-form-actions > span {
+  font-size: 11px;
+  color: #526b7c;
+}
+@media (max-width: 760px) {
+  .assistant-launcher {
+    right: 12px;
+    bottom: 190px;
+    padding: 11px 13px;
+    font-size: 12px;
+  }
+  .assistant-widget {
+    right: 12px;
+    bottom: 12px;
+    width: calc(100vw - 24px);
+    height: min(650px, calc(100dvh - 88px));
+  }
+}
