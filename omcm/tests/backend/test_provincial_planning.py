@@ -50,6 +50,23 @@ def test_flood_and_explicit_link_exclusions_remove_modeled_connections():
     assert times[road["source"]] == {road["source"]: 0}
 
 
+def test_flood_plan_returns_affected_barangays_for_map_overlay(client, auth):
+    frame, network, _ = load_provincial_data()
+    request = PlacementRequest(flood_level="moderate", clinic_count=1, max_travel_minutes=0)
+    _, excluded, affected = provincial_evidence(frame, network, request)
+    site = next(s for s in network["sites"] if s["eligible"] and s["id"] not in excluded)
+    request.manual_sites = [site["id"]]
+
+    response = client.post(
+        "/api/planning/optimize",
+        json=request.model_dump(),
+        auth=auth,
+    )
+
+    assert response.status_code == 200, response.text
+    assert set(response.json()["flood_affected_barangays"]) == affected
+
+
 def test_manual_allocation_can_reach_each_lgu_and_enforces_capacity():
     frame, network, _ = load_provincial_data()
     chosen = []
@@ -90,6 +107,7 @@ def test_provincial_draft_approval_reaches_public_without_forecast_details(clien
     assert public["schedules"][0]["clinics"][0]["barangay_id"] in calamba
     assert "case_rate_lag1" not in json.dumps(public)
     assert "Forecast target date" not in json.dumps(public)
+    assert "flood_affected_barangays" not in json.dumps(public)
 
 
 def test_unknown_pilot_site_is_not_silently_used_by_provincial_planning(client, auth):

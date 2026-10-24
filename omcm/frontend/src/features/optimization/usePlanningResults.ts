@@ -9,8 +9,22 @@ import { useOptimizationStore } from "../../store/useOptimizationStore";
 import { EMPTY_PLAN, planToMapPlan } from "../../services/optimization";
 
 export function usePlanningResults() {
-  const { panel, scenario, clinicCount, manualSiteOverrides } = useAppStore();
+  const { panel, viewMode, scenario, clinicCount, manualSiteOverrides } = useAppStore();
   const result = useOptimizationStore((s) => s.result);
+  const floodOverlay = useMemo(() => {
+    if (viewMode !== "admin" || panel !== "optimization" || !result) return null;
+    const returnPeriodYears =
+      result.inputs.flood_level === "moderate"
+        ? 25
+        : result.inputs.flood_level === "severe"
+          ? 100
+          : null;
+    if (!returnPeriodYears) return null;
+    return {
+      returnPeriodYears: returnPeriodYears as 25 | 100,
+      barangayIds: new Set(result.flood_affected_barangays ?? []),
+    };
+  }, [panel, result, viewMode]);
   const activeScenario = useMemo(
     () => (panel === "simulation" ? scenario : emptyScenario()),
     [panel, scenario],
@@ -49,5 +63,5 @@ export function usePlanningResults() {
       })),
     [activeScenario],
   );
-  return { municipalities, plan, disruptions };
+  return { municipalities, plan, disruptions, floodOverlay };
 }

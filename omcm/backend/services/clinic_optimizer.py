@@ -101,6 +101,7 @@ def optimize(request, provincial=False):
         frame, network, metadata = load_data()
     validate_references(request, frame, network)
     excluded = set(request.flooded_sites)
+    affected = set()
     if provincial:
         times, excluded, affected = provincial_evidence(frame, network, request)
         frame["scenario_flood_exposure"] = [100 if row["id"] in affected else row["flood_exposure"] for row in frame.to_dict("records")]
@@ -145,6 +146,7 @@ def optimize(request, provincial=False):
         allocation["metrics"]["flood_safe_accessibility_pct"] = round(reachable_demand / total * 100, 2) if total else 0
     result = dict(optimized=optimum, baseline=baseline, improvement_pct=gain, barangays=barangays,
                 inputs=request.model_dump(), metadata=metadata,
+                flood_affected_barangays=sorted(affected) if provincial else [],
                 notes=["Demand represents estimated daily appointments, not total population coverage.",
                        TARGET_PREFIX + model["target_date"],
                        f"Forecast issued: {model['issue_date']} (Asia/Manila). Dated synthetic history ends on the issue date; actual future observations are excluded.",

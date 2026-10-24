@@ -974,6 +974,10 @@
   border-radius: 1px;
 }
 
+.flood-affected-key {
+  border-top: 2px dashed #0369a1;
+}
+
 .selected-key {
   width: 18px;
   height: 11px;

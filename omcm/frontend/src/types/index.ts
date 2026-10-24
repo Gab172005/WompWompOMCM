@@ -123,6 +123,7 @@ export interface Plan {
   inputs: Config;
   metadata: Metadata;
   notes: string[];
+  flood_affected_barangays?: string[];
 }
 export interface FleetOrigin {
   siteId: string;

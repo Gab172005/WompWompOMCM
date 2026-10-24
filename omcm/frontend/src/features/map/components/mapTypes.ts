@@ -9,6 +9,7 @@ import type { Clinic } from "../../../types/clinic";
 import type { LocatedOsmClinic } from "../../../types/osmClinic";
 export interface MapProps {
   forecastOverlay?: SimulationOverlay;
+  floodOverlay?: FloodMapOverlay | null;
   municipalities: ComputedMunicipality[];
   selectedPsgc: string | null;
   selectedBarangayPsgc: string | null;
@@ -33,6 +34,11 @@ export interface MapProps {
   zoomDelta: number;
   publicMode?: boolean;
   publicScheduleInfo?: string;
+}
+
+export interface FloodMapOverlay {
+  returnPeriodYears: 25 | 100;
+  barangayIds: ReadonlySet<string>;
 }
 
 export interface SimulationOverlay {

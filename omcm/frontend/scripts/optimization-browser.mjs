@@ -167,6 +167,7 @@ try {
   expect(new Set(plan.barangays.map((b) => b.municipality)).size).toBe(30);
   expect(plan.notes.join(" ")).toContain("Agreed Balanced HNI");
   expect(plan.optimized.clinics).toHaveLength(2);
+  expect(plan.flood_affected_barangays).toEqual([]);
   await expect(
     panel.getByRole("region", { name: "Backend allocation results" }),
   ).toContainText(plan.plan_id);
@@ -341,6 +342,35 @@ try {
   await expect(
     panel.getByRole("button", { name: "Generate recommendations" }),
   ).toBeEnabled();
+  await panel
+    .getByLabel("Optimization flood scenario")
+    .selectOption("moderate");
+  const floodGenerated = page.waitForResponse((response) =>
+    response.url().endsWith("/api/planning/optimize"),
+  );
+  await panel
+    .getByRole("button", { name: "Generate recommendations" })
+    .click();
+  const floodResponse = await floodGenerated;
+  expect(floodResponse.status()).toBe(200);
+  plan = await floodResponse.json();
+  expect(floodResponse.request().postDataJSON()).toMatchObject({
+    flood_level: "moderate",
+  });
+  expect(plan.flood_affected_barangays.length).toBeGreaterThan(0);
+  await expect(page.locator(".barangay-boundary.has-flood-impact")).toHaveCount(
+    plan.flood_affected_barangays.length,
+  );
+  await expect(
+    page.getByText(
+      new RegExp(
+        `25-year flood layer · ${plan.flood_affected_barangays.length} barangays outlined`,
+      ),
+    ),
+  ).toBeVisible();
+  await page.screenshot({
+    path: join(frontend, "test-results/optimization-flood-impact.png"),
+  });
   await stop(api);
   await fresh.bringToFront();
   await fresh.evaluate(() => window.dispatchEvent(new Event("focus")));
@@ -362,7 +392,7 @@ try {
   await expect(page.locator(".clinic-staging-marker")).toHaveCount(0);
   expect(errors).toEqual([]);
   console.log(
-    "Connected optimizer browser checks passed: real FastAPI/XGBoost/CP-SAT requests, manual replan, saved draft approval, fresh public schedule, mobile layout, no hardcoded fallback when backend stops.",
+    "Connected optimizer browser checks passed: real FastAPI/XGBoost/CP-SAT requests, flood-affected barangay map overlay, manual replan, saved draft approval, fresh public schedule, mobile layout, no hardcoded fallback when backend stops.",
   );
 } catch (error) {
   console.error(logs);

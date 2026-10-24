@@ -109,6 +109,7 @@ export function LagunaGoogleMap({
   recenterTrigger,
   zoomDelta,
   publicMode = false,
+  floodOverlay,
   onAuthFailure,
 }: LagunaGoogleMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -360,6 +361,9 @@ export function LagunaGoogleMap({
       const isBarangay = Boolean(barangayCode);
       const isSelected = isBarangay && selectedBarangayPsgc === barangayCode;
       const isSelectedMunicipality = !isBarangay && code === selectedPsgc;
+      const isFloodAffected = Boolean(
+        isBarangay && floodOverlay?.barangayIds.has(barangayCode),
+      );
       const projected = forecastOverlay?.records.get(barangayCode);
       const hasClinicImpact = Boolean(
         projected && projected.serviceFraction > 0,
@@ -401,7 +405,9 @@ export function LagunaGoogleMap({
           : isSelectedMunicipality
             ? "#1a73e8"
             : isBarangay
-              ? hasClinicImpact
+              ? isFloodAffected
+                ? "#0369a1"
+                : hasClinicImpact
                 ? "#f17d8b"
                 : "#64748b"
               : "#334155",
@@ -410,7 +416,9 @@ export function LagunaGoogleMap({
           : isSelectedMunicipality
             ? 5
             : isBarangay
-              ? hasClinicImpact
+              ? isFloodAffected
+                ? 2.2
+                : hasClinicImpact
                 ? 1.15
                 : 0.7
               : 1.8,
@@ -505,6 +513,7 @@ export function LagunaGoogleMap({
   }, [
     geoJsonData,
     forecastOverlay,
+    floodOverlay,
     activeMetric,
     byPsgc,
     selectedPsgc,

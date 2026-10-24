@@ -38,7 +38,7 @@ const ADMIN_ROUTES = new Set([
 
 export function AppLayout() {
   const state = useAppStore(),
-    { municipalities, plan, disruptions } = usePlanningResults();
+    { municipalities, plan, disruptions, floodOverlay } = usePlanningResults();
   const { pathname } = useLocation();
   useClinicAnimation();
   const forecastOverlay = useSimulationMap();
@@ -88,6 +88,7 @@ export function AppLayout() {
     >
       <main className="workspace-stage" aria-label="Laguna planning map">
         <LagunaMap
+          floodOverlay={floodOverlay}
           forecastOverlay={forecastOverlay}
           municipalities={municipalities}
           selectedPsgc={state.selectedPsgc}
@@ -126,7 +127,10 @@ export function AppLayout() {
         )}
         {isPublic ? <PublicSidePanel /> : !state.panel && <SidePanel />}
         <FloatingControls />
-        <MapLegend clinicSnapshot={OSM_CLINIC_SNAPSHOT} />
+        <MapLegend
+          clinicSnapshot={OSM_CLINIC_SNAPSHOT}
+          floodOverlay={floodOverlay}
+        />
         <MapNavigation />
         {!isPublic && state.panel && (
           <aside
