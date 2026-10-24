@@ -107,14 +107,21 @@ try {
     .getByRole("button", { name: "Admin View", exact: true })
     .first()
     .click();
-  await page.getByRole("button", { name: "Fill demo credentials" }).click();
+  await expect(
+    page.getByRole("button", { name: "Fill demo credentials" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("Connected administrator sign-in", { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Administrator username").fill("admin");
+  await page.getByLabel("Password", { exact: true }).fill("laguna-lgu-2026");
   const rejected = page.waitForResponse((response) =>
     response.url().endsWith("/api/auth/me"),
   );
   await page.getByRole("button", { name: "Sign in to Admin View" }).click();
   expect((await rejected).status()).toBe(401);
   await expect(page.getByRole("alert")).toContainText(
-    "Invalid administrator credentials",
+    "username or password is incorrect",
   );
   await page.getByLabel("Administrator username").fill(username);
   await page.getByLabel("Password", { exact: true }).fill(password);

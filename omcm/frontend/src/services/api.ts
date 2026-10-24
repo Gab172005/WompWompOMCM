@@ -1,6 +1,15 @@
 const base = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 let authorization = "";
 let browserDemo = import.meta.env.VITE_DEMO_MODE === "true";
+export class BackendApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "BackendApiError";
+  }
+}
 export function enableBrowserDemo() {
   browserDemo = true;
   authorization = "";
@@ -59,13 +68,15 @@ export async function backendApi<T>(
   try {
     data = await response.json();
   } catch {
-    throw new Error(
+    throw new BackendApiError(
+      response.status,
       `API returned an unreadable response (${response.status}). Check the backend URL.`,
     );
   }
   if (!response.ok) {
     const detail = data.detail;
-    throw new Error(
+    throw new BackendApiError(
+      response.status,
       typeof detail === "string"
         ? detail
         : Array.isArray(detail)
