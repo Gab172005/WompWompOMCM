@@ -110,6 +110,7 @@ class PlanResult(BaseModel):
     inputs: PlacementRequest
     metadata: Metadata
     notes: list[str]
+    flood_affected_barangays: list[str] = Field(default_factory=list)
 
 
 class SimulationChanges(BaseModel):

@@ -21,6 +21,7 @@ export function BarangayBoundaryLayer({
   onSelectBarangay,
   publicMode = false,
   forecastOverlay,
+  floodOverlay,
 }: {
   data: FeatureCollection;
 } & Pick<
@@ -30,6 +31,7 @@ export function BarangayBoundaryLayer({
   | "onSelectBarangay"
   | "publicMode"
   | "forecastOverlay"
+  | "floodOverlay"
 >) {
   const ref = useRef<LeafletGeoJSON>(null);
   const current = useRef({
@@ -38,6 +40,7 @@ export function BarangayBoundaryLayer({
     onSelectBarangay,
     publicMode,
     forecastOverlay,
+    floodOverlay,
   });
   current.current = {
     activeMetric,
@@ -45,6 +48,7 @@ export function BarangayBoundaryLayer({
     onSelectBarangay,
     publicMode,
     forecastOverlay,
+    floodOverlay,
   };
   function style(feature?: Feature): PathOptions {
     const b = BARANGAYS_BY_PSGC.get(String(feature?.properties?.adm4_psgc));
@@ -53,10 +57,12 @@ export function BarangayBoundaryLayer({
       selectedBarangayPsgc: selected,
       publicMode: isPublic,
       forecastOverlay: overlay,
+      floodOverlay: flood,
     } = current.current;
     const isSelected = b?.psgc === selected;
     const record = overlay && b ? overlay.records.get(b.psgc) : undefined;
     const hasClinicImpact = Boolean(record && record.serviceFraction > 0);
+    const hasFloodImpact = Boolean(b && flood?.barangayIds.has(b.psgc));
     return {
       fillColor:
         isSelected && !overlay
@@ -77,10 +83,17 @@ export function BarangayBoundaryLayer({
           : hasClinicImpact
             ? 0.72
             : 0.62,
-      color: isSelected ? "#102c43" : hasClinicImpact ? "#f17d8b" : "#64748b",
-      weight: isSelected ? 3.5 : hasClinicImpact ? 1.15 : 0.7,
-      opacity: isSelected ? 1 : hasClinicImpact ? 0.9 : 0.85,
-      className: `barangay-boundary${isSelected ? " is-selected" : ""}${hasClinicImpact ? " has-clinic-impact" : ""}`,
+      color: isSelected
+        ? "#102c43"
+        : hasFloodImpact
+          ? "#0369a1"
+          : hasClinicImpact
+            ? "#f17d8b"
+            : "#64748b",
+      weight: isSelected ? 3.5 : hasFloodImpact ? 2.2 : hasClinicImpact ? 1.15 : 0.7,
+      opacity: isSelected ? 1 : hasFloodImpact ? 1 : hasClinicImpact ? 0.9 : 0.85,
+      dashArray: hasFloodImpact ? "5 3" : undefined,
+      className: `barangay-boundary${isSelected ? " is-selected" : ""}${hasClinicImpact ? " has-clinic-impact" : ""}${hasFloodImpact ? " has-flood-impact" : ""}`,
     };
   }
   useEffect(() => {
@@ -95,10 +108,14 @@ export function BarangayBoundaryLayer({
       const record = current.current.forecastOverlay?.records.get(
         b?.psgc ?? "",
       );
+      const hasFloodImpact = Boolean(
+        b && current.current.floodOverlay?.barangayIds.has(b.psgc),
+      );
       element?.classList.toggle(
         "has-clinic-impact",
         Boolean(record && record.serviceFraction > 0),
       );
+      element?.classList.toggle("has-flood-impact", hasFloodImpact);
       if (b?.psgc === selectedBarangayPsgc) path.bringToFront();
       element?.classList.toggle(
         "is-selected",
@@ -109,7 +126,7 @@ export function BarangayBoundaryLayer({
         String(b?.psgc === selectedBarangayPsgc),
       );
     });
-  }, [activeMetric, selectedBarangayPsgc, publicMode, forecastOverlay]);
+  }, [activeMetric, selectedBarangayPsgc, publicMode, forecastOverlay, floodOverlay]);
   return (
     <GeoJSON
       ref={ref}
@@ -143,6 +160,8 @@ export function BarangayBoundaryLayer({
             label.textContent = `${b.name}, ${b.municipality} · ${barangayMetricLabel(metric)}: ${value === null ? "Information unavailable" : `${value.toLocaleString()}${metric === "density" ? "/km²" : metric === "morbidity" ? " / 1,000" : "/100"}`}`;
             if (metric === "score")
               label.textContent += ` · Healthcare need rank #${b.needRank} of 681${b.needProvisional ? " · Some data missing" : ""}`;
+            if (current.current.floodOverlay?.barangayIds.has(b.psgc))
+              label.textContent += ` · Flagged by ${current.current.floodOverlay.returnPeriodYears}-year flood screen`;
             return label;
           },
           { sticky: true, className: "laguna-map-tooltip" },

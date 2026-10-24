@@ -7,6 +7,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useForecastStore } from "../../../store/useForecastStore";
+import type { FloodMapOverlay } from "./mapTypes";
 import {
   getMetricColor,
   getSimulationNeedColor,
@@ -66,8 +67,10 @@ function LegendKey({
 /** Shared legend layout for public schedules, baseline data and forecasts. */
 export function MapLegend({
   clinicSnapshot,
+  floodOverlay,
 }: {
   clinicSnapshot?: ClinicSnapshotProvenance | null;
+  floodOverlay?: FloodMapOverlay | null;
 }) {
   const {
     activeMetric: metric,
@@ -114,6 +117,8 @@ export function MapLegend({
       ? forecast.metric === "hni"
         ? "After clinic service · baseline shown in details"
         : "Score / 100 · sample estimate"
+      : floodOverlay && panel === "optimization"
+        ? `${floodOverlay.returnPeriodYears}-year flood layer · ${floodOverlay.barangayIds.size} barangays outlined`
       : metric === "density"
         ? "People per square kilometre"
         : metric === "morbidity"
@@ -423,6 +428,8 @@ export function MapLegend({
               "Risk applies to one reference point; a low score does not establish safety."}{" "}
             {simulation &&
               "Lighter red shows lower scenario HNI. A soft coral outline marks barangays receiving modeled service; circles show the 3 km reach."}
+            {floodOverlay && panel === "optimization" &&
+              " Blue outlines mark barangays flagged by the selected return-period screen; they are not measured flood depths."}
           </p>
         )}
         {!simulation && (
@@ -448,6 +455,13 @@ export function MapLegend({
                 <LegendKey
                   symbol={<i className="boundary-key barangay-key" />}
                   label="Barangay"
+                />
+              )}
+              {!isPublic && floodOverlay && panel === "optimization" && (
+                <LegendKey
+                  symbol={<i className="boundary-key flood-affected-key" />}
+                  label={`${floodOverlay.returnPeriodYears}-year flood screen`}
+                  description={`${floodOverlay.barangayIds.size} mapped barangays flagged`}
                 />
               )}
               <LegendKey

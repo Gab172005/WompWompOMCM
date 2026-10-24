@@ -108,7 +108,8 @@ export function OptimizationPanel() {
           <p className="workspace-note">
             Flood inputs use the supplied 25- and 100-year return-period
             layers. The dataset does not provide measured flood depths in
-            meters.
+            meters. Generate recommendations to outline affected barangays on
+            the map.
           </p>
           <RoadExclusions
             roads={roads}
