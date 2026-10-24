@@ -10,7 +10,7 @@ export function HealthcareNeedMethod() {
         of 80 does not mean 80% of residents are sick.
       </p>
       <p>
-        Seven factors contribute to the score. The percentages below show how
+        Six factors use the agreed Balanced profile. The percentages below show how
         much each factor counts when all information is available.
       </p>
       {Object.values(HEALTHCARE_NEED_FACTORS).map((factor) => (
@@ -25,8 +25,8 @@ export function HealthcareNeedMethod() {
         available. Missing data never means zero need.
       </p>
       <p>
-        Illness rates are sample data, not reported cases. Disaster risk
-        coverage has not been verified. Clinic mapping may be incomplete.
+        Illness rates are sample data, not reported cases. Disaster risk is
+        separate map context and does not contribute to HNI. Clinic mapping may be incomplete.
         Distances are straight lines, not actual travel distances. Use local
         knowledge to review these estimates before making a deployment decision.
       </p>
@@ -41,8 +41,7 @@ export function HealthcareNeedMethod() {
         <p>
           Morbidity, population density and hospital distance are percentile
           scores from 0 to 100 across all 681 barangays. Equal values share the
-          average of their tied percentile. Disaster risk uses the supplied
-          0–100 index directly, not a percentile.
+          average of their tied percentile.
         </p>
         <p>
           Municipality income class is a resource proxy shared by its barangays,
@@ -109,8 +108,9 @@ export function HealthcareNeedMethod() {
           This baseline estimate supports planning; it is not a validated
           measure of clinical need. Municipality summaries are
           population-weighted means of these barangay scores. Municipal
-          allocation estimates and simulation results use their separately
-          displayed formula.
+          allocation estimates use their separately displayed formula. The 30-day
+          HNI simulation uses these same Balanced weights with changing sample
+          illness inputs.
         </p>
       </details>
     </details>

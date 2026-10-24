@@ -130,3 +130,12 @@ def test_conversation_preserves_tool_responses(client, monkeypatch, demo_data):
     response = client.post("/api/assistant", json={"contents": contents})
     assert response.status_code == 200
     assert seen == contents
+
+
+def test_assistant_policy_matches_agreed_hni_and_connected_allocation():
+    assert "morbidity 35%" in assistant.SYSTEM
+    assert "density 15%" in assistant.SYSTEM
+    assert "no HNI contribution" in assistant.SYSTEM
+    assert "CP-SAT" in assistant.SYSTEM
+    assert "earlier six-factor profile" not in assistant.SYSTEM
+    assert "morbidity 25%" not in assistant.SYSTEM

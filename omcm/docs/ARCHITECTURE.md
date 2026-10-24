@@ -40,9 +40,10 @@ The province-wide barangay layer joins all 681 demographic/hazard records to
 PSGC geometry. [The importer](../frontend/scripts/import-laguna-datasets.py)
 embeds a validated offline clinic snapshot; [the clinic importer](../frontend/scripts/import-osm-clinics.py)
 refreshes it explicitly, not at browser runtime. [The shared scorer](../frontend/src/services/healthcareNeed.ts)
-calculates seven-factor baseline need with weights 25% morbidity, 30% hospital
-distance, 15% disaster risk, 10% density, 10% municipal income class, 5% clinic
-distance and 5% clinic provision deficit. Urban/rural is demographic context only.
+calculates six-factor Balanced HNI with weights 35% morbidity, 30% hospital
+distance, 15% density, 10% municipal income class, 5% clinic distance and 5%
+clinic provision deficit. Disaster risk and urban/rural are context only.
+The 30-day HNI projection reads this same shared weight definition.
 Both map engines, barangay details and ranking consume the same records from
 [providedData](../frontend/src/services/providedData.ts). Missing factors use
 available-weight rescaling; scores are rounded to one decimal before competition
@@ -59,7 +60,7 @@ The municipality workspace retains testing's 30-municipality illustrative data
 and browser priority heuristic (`services/lagunaData.ts`). Its four-factor allocation score
 and example route waypoints are separate from the server pilot. The allocation
 score is explicitly labeled as a separate heuristic in municipality details,
-optimization and assistant explanations; it is not the seven-factor map HNI.
+optimization and assistant explanations; it is not the six-factor Balanced map HNI.
 
 The server-backed fleet pilot retains main's 20 Los Baños–Bay barangay inputs,
 eight staging candidates, directed OSRM route fixtures, five-factor risk score,

@@ -93,6 +93,8 @@ try {
     .click();
   await page.getByRole("button", { name: "Use demo sign-in details" }).click();
   await page.getByRole("button", { name: "Sign in to Admin View" }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+  const workspaceUrl = page.url();
   await page
     .getByRole("button", { name: "Planning help", exact: true })
     .click();
@@ -144,8 +146,11 @@ try {
   ).toContainText("Los Baños");
   await ask("Show its need score");
   await expect(log).toContainText(`${score}/100`);
+  await ask("Explain the need score");
+  await expect(log).toContainText("Illness rate (sample data): 35%");
+  await expect(log).toContainText("same Balanced weights");
   await ask("Open clinic planning with four clinics");
-  await expect(page).toHaveURL(/\/optimization$/);
+  await expect(page).toHaveURL(workspaceUrl);
   await expect(
     page.getByRole("complementary", {
       name: "Plan clinic locations",
@@ -154,7 +159,7 @@ try {
   ).toBeVisible();
   await expect(log).toContainText("4 clinics");
   await ask("Open the 30-day simulation");
-  await expect(page).toHaveURL(/\/simulator$/);
+  await expect(page).toHaveURL(workspaceUrl);
   await expect(
     page.getByRole("complementary", { name: "Try a 30-day clinic plan" }),
   ).toBeVisible();
@@ -166,7 +171,7 @@ try {
     page.getByRole("button", { name: "Apply these clinic locations" }),
   ).toBeVisible();
   await ask("Show public schedules for tomorrow");
-  await expect(page).toHaveURL(/\/public$/);
+  await expect(page).toHaveURL(workspaceUrl);
   await expect(widget).toBeVisible();
   await expect(log).toContainText("Los Baños");
   expect(providerRequests, "Common commands must not wait for Gemini").toBe(0);
@@ -179,7 +184,7 @@ try {
     providerRequests,
     "Gemini-selected screen actions need only one provider call",
   ).toBe(1);
-  await expect(page).toHaveURL(/\/simulator$/);
+  await expect(page).toHaveURL(workspaceUrl);
   await ask("Why are these planning tools useful?");
   expect(providerRequests).toBe(2);
   await expect(log).toContainText("explain the tradeoffs");

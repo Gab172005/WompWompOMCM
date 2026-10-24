@@ -53,6 +53,25 @@ community IDs, daily appointment counts and modeled road minutes. Metrics
 include served/high-priority/weighted demand, unserved demand, mean travel,
 utilization and accessibility relative to synthetic hazard exclusions.
 
+Optimization first uses bundled `illness-forecast-v2` to predict next-day case
+rates from dated synthetic case/weather histories ending on the Manila issue
+date. Tomorrow's rolling burden feeds the unchanged six-factor pilot priority
+and original `appointment-demand-v1` appointment model. CP-SAT selects sites and
+assignments. Both models are trained exclusively on fictional observations;
+neither provides clinically validated disease forecasts.
+Both allocation strategies use the same estimated demand. Version, artifact hash,
+synthetic evaluation and scope are returned through the existing `notes` and
+`metadata.disease` fields. The request/response schemas and SQLite tables are
+unchanged. Missing or mismatched model artifacts return 503, without a draft or
+fallback allocation. See [dated model provenance and limitations](TEMPORAL_FORECAST.md)
+and [the original allocation review](OPTIMIZATION_ALLOCATION.md).
+
+Forest-land exclusions apply to candidate eligibility on the server as well as
+the map. `flood_safe_accessibility_pct` measures estimated demand with a safe
+modeled route to an opened clinic before capacity limits; `demand_served_pct`
+measures appointments allocated after capacity limits. Neither is verified hazard
+safety or a claim of entire-population coverage.
+
 `POST /api/simulate` takes `{ "original": PlacementRequest, "scenario": PlacementRequest }`
 and returns before/after plans plus gained/lost appointments and travel/utilization
 deltas. No plan is automatically published.
@@ -69,7 +88,9 @@ deltas. No plan is automatically published.
 }
 ```
 
-The date must be tomorrow or later in Manila. Existing dates return 409.
+The date must be tomorrow or later in Manila. For dated forecast drafts, it must
+also match the saved `Forecast target date: YYYY-MM-DD` note; a mismatch returns
+422 and requires a fresh plan. Existing dates return 409.
 Emergency override also takes `notice` (10–500 characters) and `confirmed: true`;
 it can revise today or a future date, never the past. An unknown draft returns
 404; unauthenticated requests return 401, disabled demo auth 503, invalid inputs
@@ -78,6 +99,11 @@ and returns schedule timestamps. Drafts and simulations never appear in public
 responses. There is no GPS upload endpoint.
 
 ## Frontend-only contract
+
+The map's Optimize panel and approval flow use `backendApi` and always require
+FastAPI, even in explicit browser demo mode. Connected sign-in and public schedule
+loading also use the backend. The legacy demo-capable transport below remains
+available for the separate browser rehearsal features.
 
 `services/api.ts` selects browser demo only during initialization or explicit
 configuration. `demoApi.ts` implements equivalent read, score, optimize,
@@ -124,8 +150,9 @@ population minus residents allocated a daily appointment, floored at zero.
 This is a synthetic daily estimate, not an estimate of unmet clinical need.
 `unserved_demand` continues to mean unfilled daily appointment demand. Older
 persisted allocations may omit `unserved_population` (response default: null).
-`flood_safe_accessibility_pct` is now served daily demand divided by total daily
-demand, times 100, using only scenario-safe sites/routes; zero demand returns 0.
+`flood_safe_accessibility_pct` is reachable daily demand divided by total daily
+demand before capacity limits, times 100, using only scenario-safe sites/routes;
+zero demand returns 0. `demand_served_pct` includes capacity limits.
 This is modeled accessibility, not verified real-world flood safety.
 
 The existing clinic `reason` includes suggested preventive services, reused

@@ -1,5 +1,9 @@
 # OSM clinic implementation handoff
 
+Current policy update: [the agreed Balanced HNI](BALANCED_HNI.md) supersedes
+historical v3/seven-factor weights in this record. Active HNI uses six factors
+with no disaster-risk contribution; the earlier audit details below are history.
+
 ## Objective
 Implement Laguna-only exact OSM clinic tags, seven-factor per-barangay healthcare need, fixed clinic layers independent from mobile simulations, docs/tests/sensitivity. Preserve all 681 barangay IDs/demographics/hazards, 66 hospital records (61 located), separate municipal and server pilot scoring/publication/auth/simulation behavior.
 

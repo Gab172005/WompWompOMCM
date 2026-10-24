@@ -16,6 +16,7 @@
     "test:e2e:upstream": "node ../tests/frontend/map-first.mjs",
     "test:simulation": "node scripts/simulation-browser.mjs",
     "test:hni": "node scripts/hospital-hni-browser.mjs",
+    "test:optimization": "node scripts/optimization-browser.mjs",
     "test:assistant": "node scripts/assistant-browser.mjs"
   },
   "dependencies": {

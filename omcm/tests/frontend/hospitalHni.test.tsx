@@ -123,7 +123,7 @@ describe("Municipality summaries of the barangay HNI heatmap", () => {
         population;
       expect(summary.needScore).toBe(Math.round(expected * 10) / 10);
       expect(summary.provisionalBarangays).toBe(
-        rows.filter((b) => b.disasterRisk === null).length,
+        rows.filter((b) => b.needProvisional).length,
       );
       const total = Object.values(summary.needContributions).reduce<number>(
         (sum, value) => sum + (value ?? 0),
@@ -139,7 +139,7 @@ describe("Municipality summaries of the barangay HNI heatmap", () => {
     }
   });
 
-  it("shows the canonical rollup and flags municipalities with unresolved barangay inputs", () => {
+  it("shows the canonical rollup without treating missing hazard context as missing HNI", () => {
     const municipality = computeLagunaMunicipalities().find(
       (m) => m.name === "Pangil",
     )!;
@@ -152,7 +152,8 @@ describe("Municipality summaries of the barangay HNI heatmap", () => {
     expect(detail).toHaveTextContent(
       `Municipality rank #${summary.needRank} of 30`,
     );
-    expect(detail).toHaveTextContent("Some data is missing in 2 barangays");
+    expect(summary.provisionalBarangays).toBe(0);
+    expect(detail).not.toHaveTextContent("Some data is missing");
     for (const factor of Object.values(HEALTHCARE_NEED_FACTORS))
       expect(detail).toHaveTextContent(factor.label);
     expect(

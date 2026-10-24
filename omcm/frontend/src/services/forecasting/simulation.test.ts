@@ -2,11 +2,13 @@ import { readFileSync } from "node:fs";
 import { containsLagunaPoint, parseLagunaGeometry } from "../maps";
 import { beforeEach, describe, expect, it } from "vitest";
 import { LAGUNA_BARANGAYS } from "../providedData";
+import { defaultNeedWeights, HEALTHCARE_NEED_VERSION, type NeedFactor } from "../healthcareNeed";
 import {
   forecastDay,
   forecastMonth,
   operationalPeriod,
-  V2_WEIGHTS,
+  SIMULATION_WEIGHTS,
+  SIMULATION_MODEL,
 } from "./forecast";
 import {
   buildCoverage,
@@ -47,7 +49,9 @@ describe("deterministic 30-day forecast", () => {
       10,
     );
     expect(JSON.stringify(LAGUNA_BARANGAYS)).toBe(original);
-    expect(Object.values(V2_WEIGHTS).reduce((a, b) => a + b, 0)).toBeCloseTo(1);
+    expect(Object.values(SIMULATION_WEIGHTS).reduce((a, b) => a + b, 0)).toBeCloseTo(1);
+    expect(SIMULATION_WEIGHTS).toEqual(defaultNeedWeights());
+    expect(SIMULATION_MODEL).toBe(HEALTHCARE_NEED_VERSION);
     expect([1, 8, 15, 22].map((day) => operationalPeriod(day).end)).toEqual([
       7, 14, 21, 30,
     ]);
@@ -57,17 +61,29 @@ describe("deterministic 30-day forecast", () => {
       useForecastStore.getState().runs.manual.snapshots.map((s) => s.timestamp),
     );
   });
-  it("preserves missing values and normalization while common environmental changes affect HNI", () => {
+  it("preserves missing values and normalization while illness changes affect the agreed HNI", () => {
     for (const b of forecasts[0]) {
       const base = LAGUNA_BARANGAYS.find((v) => v.psgc === b.psgc)!;
       expect(b.factors.density).toBe(base.needFactors.density);
       expect(b.factors.hospitalAccess).toBe(base.needFactors.hospitalAccess);
-      if (base.disasterRisk === null) {
-        expect(b.factors.disasterRisk).toBeNull();
-        expect(b.provisional).toBe(true);
+      expect(b.factors.clinicDistance).toBe(base.needFactors.clinicDistance);
+      expect(b.factors.clinicProvision).toBe(base.needFactors.clinicProvision);
+      expect(b.factors).not.toHaveProperty("disasterRisk");
+      expect(b.factors).not.toHaveProperty("urbanRural");
+      expect(b.provisional).toBe(base.needProvisional);
+      let weighted = 0, available = 0;
+      for (const key of Object.keys(SIMULATION_WEIGHTS) as NeedFactor[]) {
+        if (b.factors[key] !== null) {
+          weighted += b.factors[key]! * SIMULATION_WEIGHTS[key];
+          available += SIMULATION_WEIGHTS[key];
+        }
       }
+      expect(b.hni).toBeCloseTo(weighted / available, 10);
     }
     const target = forecasts[0][0];
+    expect(forecastDay(1, {
+      ...conditions, floodOverrides: { [target.municipalityPsgc]: "severe" },
+    })).toEqual(forecasts[0]);
     const changed = forecastDay(1, {
       ...conditions,
       morbiditySpikes: { [target.municipalityPsgc]: 2 },

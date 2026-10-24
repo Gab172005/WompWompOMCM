@@ -4,20 +4,20 @@ Simulation Mode now forecasts all 681 barangays for 30 consecutive daily timesta
 
 ## Forecast and intervention algorithms
 
-The current production `healthcareNeed.ts` uses seven-factor v3. To satisfy the requested six-factor v2 simulation without changing existing application scores, the simulator reuses its baseline normalized factors and restores the historical v2 profile from revision `c8ffdd6`:
+The simulator and map share the agreed `barangay-healthcare-need-v4-balanced` profile from `healthcareNeed.ts`. The historical v2 disaster/urban-rural profile is no longer used:
 
 | Factor | Weight |
 | --- | ---: |
-| Morbidity | 28% |
-| Disaster risk | 20% |
-| Density | 16% |
-| Hospital access | 16% |
+| Morbidity | 35% |
+| Density | 15% |
+| Hospital distance | 30% |
 | Income class | 10% |
-| Urban/rural | 10% |
+| Clinic distance | 5% |
+| Clinic provision deficit | 5% |
 
-Baseline percentiles and income normalization remain fixed throughout the month. Missing factors remain null; available weights are renormalized, and incomplete scores stay provisional. No CSV, generated dataset, boundary file, or production scoring service changed.
+Baseline percentiles and income normalization remain fixed throughout the month. Missing factors remain null; available weights are renormalized, and incomplete scores stay provisional. No CSV, generated dataset or boundary file changes are required. Disaster risk and urban/rural remain context and never alter HNI coverage or rank.
 
-The synthetic experiment starts on October 24, 2026, at midnight Manila time. A fixed seed (42) and municipality PSGC determine shared morbidity phases and disaster pulses. Existing flood and morbidity controls affect these common conditions. All three strategies use exactly the same forecast records. Clinic deployments never change HNI.
+The synthetic experiment starts on October 24, 2026, at midnight Manila time. A fixed seed (42) and municipality PSGC determine shared morbidity phases. Morbidity controls affect these common illness inputs. Flood controls do not add HNI points; connected backend planning retains its operational flood/site/route exclusions. The browser rehearsal still uses straight-line catchments. All three strategies use exactly the same forecast records. Clinic deployments never change HNI.
 
 Daily untreated demand is `min(100, HNI + 0.15 × previous UHNI)`. A clinic supplies up to 35% modeled service within a 3 km straight-line catchment, tapering to 17.5% at its edge. Overlapping clinics use the maximum service fraction rather than adding fractions. UHNI is untreated demand multiplied by the remaining fraction. The same equations apply to manual and optimizer deployments; identical allocations produce identical outcomes.
 

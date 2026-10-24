@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, CalendarCheck, Check, Globe } from "lucide-react";
-import type { ClinicPlan } from "../../types/clinic";
+import type { Plan, Schedule } from "../../types";
+import { backendApi } from "../../services/api";
+import { publicSchedules } from "../../services/optimization";
 import {
   DEFAULT_CLINIC_SERVICES,
   addIsoDays,
@@ -10,20 +12,17 @@ import {
 } from "../../store/useAppStore";
 import { Button } from "../../components/ui/Button";
 
-export function DeploymentApproval({ plan }: { plan: ClinicPlan }) {
-  const {
-    approvedPlan,
-    adminUser,
-    publishedSchedules,
-    publishSchedule,
-    requestAdminView,
-    setViewMode,
-  } = useAppStore();
+export function DeploymentApproval({ plan }: { plan: Plan }) {
+  const { adminUser, publishedSchedules, requestAdminView, setViewMode } =
+    useAppStore();
   const navigate = useNavigate();
   const today = getManilaToday();
   const tomorrow = addIsoDays(today, 1);
 
-  const [date, setDate] = useState(tomorrow);
+  const forecastTarget = plan.notes
+    .find((note) => note.startsWith("Forecast target date: "))
+    ?.slice("Forecast target date: ".length);
+  const [date, setDate] = useState(forecastTarget ?? tomorrow);
   const [startTime, setStartTime] = useState("08:00");
   const [endTime, setEndTime] = useState("17:00");
   const [services, setServices] = useState<string[]>([
@@ -33,16 +32,11 @@ export function DeploymentApproval({ plan }: { plan: ClinicPlan }) {
   const [emergencyNotice, setEmergencyNotice] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [publishedMessage, setPublishedMessage] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const [error, setError] = useState("");
 
   const activeSchedule = publishedSchedules[date];
-  const matches =
-    approvedPlan &&
-    activeSchedule &&
-    JSON.stringify(activeSchedule.plan) === JSON.stringify(plan) &&
-    activeSchedule.startTime === startTime &&
-    activeSchedule.endTime === endTime &&
-    JSON.stringify(activeSchedule.services) === JSON.stringify(services) &&
-    (activeSchedule.status === "Emergency Override") === emergency;
+  const matches = Boolean(publishedMessage);
 
   function toggleService(service: string, checked: boolean) {
     setServices((prev) =>
@@ -51,26 +45,58 @@ export function DeploymentApproval({ plan }: { plan: ClinicPlan }) {
     setPublishedMessage("");
   }
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!adminUser) {
       requestAdminView("optimization");
       return;
     }
-    if (!plan.clinics.length || !services.length) return;
+    if (
+      !plan.plan_id ||
+      !plan.optimized.clinics.length ||
+      !services.length ||
+      publishing
+    )
+      return;
     if (emergency && (!confirmed || emergencyNotice.trim().length < 10)) return;
 
-    const result = publishSchedule(plan, {
-      date,
-      startTime,
-      endTime,
-      services,
-      emergency,
-      emergencyNotice,
-    });
-    setPublishedMessage(
-      `Published ${result.status.toLowerCase()} schedule for ${result.date} (${result.plan.clinics.length} clinics). Public View now displays this deployment.`,
-    );
+    setPublishing(true);
+    setError("");
+    try {
+      const result = await backendApi<Schedule>(
+        emergency ? "/schedules/emergency-override" : "/schedules/approve",
+        {
+          plan_id: plan.plan_id,
+          deployment_date: date,
+          start_time: startTime,
+          end_time: endTime,
+          services,
+          ...(emergency ? { notice: emergencyNotice, confirmed } : {}),
+        },
+        AbortSignal.timeout(15000),
+      );
+      const schedules = publicSchedules({
+        schedules: [result],
+        notices: [],
+        today,
+        synthetic: true,
+      });
+      if (emergency)
+        schedules[result.date].emergencyNotice = emergencyNotice.trim();
+      useAppStore.setState((state) => ({
+        selectedScheduleDate: result.date,
+        publishedSchedules: { ...state.publishedSchedules, ...schedules },
+      }));
+      setPublishedMessage(
+        `Published ${result.status.toLowerCase()} schedule for ${result.date} (${result.clinics.length} clinics). Public View now displays this deployment.`,
+      );
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Schedule publication failed.",
+      );
+    } finally {
+      setPublishing(false);
+    }
   }
 
   return (
@@ -87,145 +113,166 @@ export function DeploymentApproval({ plan }: { plan: ClinicPlan }) {
         services visible to residents in Public View. Unapproved drafts and
         simulations remain private.
       </p>
-
-      <label className="workspace-field">
-        Deployment date
-        <input
-          type="date"
-          aria-label="Deployment date"
-          required
-          min={emergency ? today : tomorrow}
-          value={date}
-          onChange={(e) => {
-            setDate(e.target.value);
-            setPublishedMessage("");
-          }}
-        />
-      </label>
-
-      <div className="approval-time-grid">
-        <label className="workspace-field">
-          Opening time
-          <input
-            type="time"
-            aria-label="Opening time"
-            required
-            value={startTime}
-            onChange={(e) => {
-              setStartTime(e.target.value);
-              setPublishedMessage("");
-            }}
-          />
-        </label>
-        <label className="workspace-field">
-          Closing time
-          <input
-            type="time"
-            aria-label="Closing time"
-            required
-            value={endTime}
-            onChange={(e) => {
-              setEndTime(e.target.value);
-              setPublishedMessage("");
-            }}
-          />
-        </label>
-      </div>
-
-      <fieldset className="approval-services-fieldset">
-        <legend>Services offered</legend>
-        <div className="approval-services-grid">
-          {DEFAULT_CLINIC_SERVICES.map((service) => (
-            <label key={service} className="approval-checkbox">
-              <input
-                type="checkbox"
-                checked={services.includes(service)}
-                onChange={(e) => toggleService(service, e.target.checked)}
-              />
-              <span>{service}</span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-
-      <label className="approval-checkbox emergency-toggle">
-        <input
-          type="checkbox"
-          checked={emergency}
-          onChange={(e) => {
-            const next = e.target.checked;
-            setEmergency(next);
-            setConfirmed(false);
-            if (next && date !== today) setDate(today);
-            if (!next && date < tomorrow) setDate(tomorrow);
-            setPublishedMessage("");
-          }}
-        />
-        <span>Replace a published schedule for an emergency</span>
-      </label>
-
-      {emergency && (
-        <div className="workspace-subcard emergency-override-box">
-          <p className="workspace-note">
-            <AlertTriangle size={15} aria-hidden="true" /> Replaces the
-            published schedule for {date} and displays an emergency alert banner
-            in Public View.
-          </p>
-          <label className="workspace-field">
-            Public emergency notice
-            <textarea
-              aria-label="Public emergency notice"
-              required
-              minLength={10}
-              maxLength={400}
-              rows={3}
-              value={emergencyNotice}
-              onChange={(e) => setEmergencyNotice(e.target.value)}
-              placeholder="Describe the revised clinic locations or weather disruption for residents (min 10 characters)."
-            />
-          </label>
-          <label className="approval-checkbox">
-            <input
-              type="checkbox"
-              required
-              checked={confirmed}
-              onChange={(e) => setConfirmed(e.target.checked)}
-            />
-            <span>I confirm this emergency revision and public notice.</span>
-          </label>
+      {error && (
+        <div className="workspace-alert error" role="alert">
+          {error}
         </div>
       )}
+      <fieldset className="optimizer-approval-fields" disabled={publishing}>
+        <label className="workspace-field">
+          Deployment date
+          <input
+            type="date"
+            aria-label="Deployment date"
+            required
+            min={emergency ? today : tomorrow}
+            max={emergency ? undefined : forecastTarget}
+            value={date}
+            onChange={(e) => {
+              setDate(e.target.value);
+              setPublishedMessage("");
+            }}
+          />
+          {forecastTarget && (
+            <p className="workspace-note">
+              This saved forecast is for {forecastTarget}. Generate a new plan
+              for a different forecast date.
+            </p>
+          )}
+        </label>
 
-      <div className="workspace-button-row">
-        <Button
-          type="submit"
-          disabled={
-            Boolean(matches) ||
-            !plan.clinics.length ||
-            !services.length ||
-            (emergency && (!confirmed || emergencyNotice.trim().length < 10))
-          }
-        >
-          <Check size={16} aria-hidden="true" />
-          {matches
-            ? "Schedule published"
-            : emergency
-              ? "Confirm emergency schedule change"
-              : "Approve & publish schedule"}
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => {
-            setViewMode("public");
-            useAppStore.setState({ sidePanelOpen: true });
-            navigate("/public");
-          }}
-        >
-          <Globe size={15} aria-hidden="true" /> Preview Public View
-        </Button>
-      </div>
+        <div className="approval-time-grid">
+          <label className="workspace-field">
+            Opening time
+            <input
+              type="time"
+              aria-label="Opening time"
+              required
+              value={startTime}
+              onChange={(e) => {
+                setStartTime(e.target.value);
+                setPublishedMessage("");
+              }}
+            />
+          </label>
+          <label className="workspace-field">
+            Closing time
+            <input
+              type="time"
+              aria-label="Closing time"
+              required
+              value={endTime}
+              onChange={(e) => {
+                setEndTime(e.target.value);
+                setPublishedMessage("");
+              }}
+            />
+          </label>
+        </div>
 
+        <fieldset className="approval-services-fieldset">
+          <legend>Services offered</legend>
+          <div className="approval-services-grid">
+            {DEFAULT_CLINIC_SERVICES.map((service) => (
+              <label key={service} className="approval-checkbox">
+                <input
+                  type="checkbox"
+                  checked={services.includes(service)}
+                  onChange={(e) => toggleService(service, e.target.checked)}
+                />
+                <span>{service}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <label className="approval-checkbox emergency-toggle">
+          <input
+            type="checkbox"
+            checked={emergency}
+            onChange={(e) => {
+              const next = e.target.checked;
+              setEmergency(next);
+              setConfirmed(false);
+              if (next && date !== today) setDate(today);
+              if (!next && date < tomorrow) setDate(tomorrow);
+              setPublishedMessage("");
+            }}
+          />
+          <span>Emergency schedule override (same-day / public alert)</span>
+        </label>
+
+        {emergency && (
+          <div className="workspace-subcard emergency-override-box">
+            <p className="workspace-note">
+              <AlertTriangle size={15} aria-hidden="true" /> Replaces the
+              published schedule for {date} and displays an emergency alert
+              banner in Public View.
+            </p>
+            <label className="workspace-field">
+              Public emergency notice
+              <textarea
+                aria-label="Public emergency notice"
+                required
+                minLength={10}
+                maxLength={400}
+                rows={3}
+                value={emergencyNotice}
+                onChange={(e) => {
+                  setEmergencyNotice(e.target.value);
+                  setPublishedMessage("");
+                }}
+                placeholder="Describe the revised clinic locations or weather disruption for residents (min 10 characters)."
+              />
+            </label>
+            <label className="approval-checkbox">
+              <input
+                type="checkbox"
+                required
+                checked={confirmed}
+                onChange={(e) => {
+                  setConfirmed(e.target.checked);
+                  setPublishedMessage("");
+                }}
+              />
+              <span>I confirm this emergency revision and public notice.</span>
+            </label>
+          </div>
+        )}
+
+        <div className="workspace-button-row">
+          <Button
+            type="submit"
+            disabled={
+              Boolean(matches) ||
+              publishing ||
+              !plan.optimized.clinics.length ||
+              !services.length ||
+              (emergency && (!confirmed || emergencyNotice.trim().length < 10))
+            }
+          >
+            <Check size={16} aria-hidden="true" />
+            {publishing
+              ? "Publishing…"
+              : matches
+                ? "Schedule published"
+                : emergency
+                  ? "Confirm emergency override"
+                  : "Approve & publish schedule"}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setViewMode("public");
+              useAppStore.setState({ sidePanelOpen: true });
+              navigate("/public");
+            }}
+          >
+            <Globe size={15} aria-hidden="true" /> Preview Public View
+          </Button>
+        </div>
+      </fieldset>
       <p className="workspace-note" role="status">
         {publishedMessage ||
           (activeSchedule

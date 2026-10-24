@@ -48,6 +48,25 @@ Keep `OMCM_DATASET=pilot` for the server-backed Los Baños–Bay fleet pilot.
 API mutations require the configured demo administrator; public schedules are
 read-only. SQLite stores connected drafts, approved schedules and audit events.
 
+The map's Optimize panel now calls FastAPI using the configured backend sign-in.
+Choose fleet size, appointment capacity, road-time limit and optional exclusions,
+then select **Generate recommendations**. XGBoost estimates synthetic appointment
+demand and CP-SAT chooses capacity-constrained placements. No recommendation is
+generated automatically or substituted locally if the backend fails. Approval
+publishes the stored server draft; fresh public sessions read its approved schedule.
+This allocation remains scoped to the Los Baños–Bay road pilot, while the map's
+province-wide HNI retains its existing formula. See the
+[optimization implementation and exact change inventory](docs/OPTIMIZATION_ALLOCATION.md).
+
+The separate [dated illness forecast](docs/TEMPORAL_FORECAST.md) now uses fictional
+case/weather histories to supply next-day illness inputs while preserving the
+existing appointment model and factor coefficients. These are synthetic planning
+demonstrations, not clinically validated forecasts. In Public View, the
+[approved-visits summary](docs/PUBLIC_VISITS.md) shows today and the next published
+clinic day, with actual service areas and automatically refreshed schedules.
+The latter document includes the exact public file inventory and combined-branch
+push/PR instructions.
+
 ## Project structure
 
 ```text
@@ -210,10 +229,11 @@ and [architecture](docs/ARCHITECTURE.md).
 ### Barangay healthcare need and fixed clinics
 
 The default heatmap and searchable ranking use separate scores for all 681
-barangays. Production policy weights are morbidity **25%**, hospital distance
-**30%**, disaster risk **15%**, population density **10%**, municipality income
-class **10%**, OSM clinic distance **5%**, and clinic provision deficit **5%**.
-Urban/rural remains visible context but has no scoring weight. Missing factors
+barangays. The agreed Balanced policy weights are morbidity **35%**, hospital
+distance **30%**, population density **15%**, municipality income class **10%**,
+OSM clinic distance **5%**, and clinic provision deficit **5%**. The 30-day HNI
+projection shares this definition. Disaster risk and urban/rural remain visible
+context with no HNI weight. Missing factors
 are excluded with available-weight rescaling and provisional scores/ranks.
 
 Fixed **OSM clinics**, **Hospitals**, and simulated **Mobile clinics** have
@@ -236,6 +256,7 @@ npm test
 npm run build
 $env:OMCM_BROWSER_CHANNEL = "msedge"  # Windows; defaults to Chrome elsewhere
 npm run test:hni
+npm run test:optimization
 python scripts/import-osm-clinics.py --check
 python scripts/import-laguna-datasets.py --check
 node --experimental-strip-types scripts/clinic-sensitivity.mjs --check

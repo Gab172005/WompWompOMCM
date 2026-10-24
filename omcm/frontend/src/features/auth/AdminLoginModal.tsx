@@ -6,6 +6,7 @@ import { Button } from "../../components/ui/Button";
 import { useAppStore } from "../../store/useAppStore";
 import {
   api,
+  BackendApiError,
   clearCredentials,
   isBrowserDemo,
   setCredentials,
@@ -32,6 +33,7 @@ export function AdminLoginModal() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const browserDemo = isBrowserDemo();
 
   if (!loginModalOpen) return null;
 
@@ -55,6 +57,7 @@ export function AdminLoginModal() {
     setError("");
     try {
       if (
+        browserDemo &&
         trimmedUser === DEMO_ADMIN_USERNAME &&
         password === DEMO_ADMIN_PASSWORD
       ) {
@@ -67,7 +70,7 @@ export function AdminLoginModal() {
         return;
       }
 
-      if (!isBrowserDemo()) {
+      if (!browserDemo) {
         setCredentials(trimmedUser, password);
         const me = await api<{ username: string }>(
           "/auth/me",
@@ -86,10 +89,12 @@ export function AdminLoginModal() {
       setError(
         "We could not sign you in. Check the username and password and try again.",
       );
-    } catch {
+    } catch (error) {
       clearCredentials();
       setError(
-        "We could not sign you in. Check the username and password and try again.",
+        error instanceof BackendApiError && error.status === 401
+          ? "The username or password is incorrect for this workspace. Check your configured administrator account and try again."
+          : "Administrator sign-in is unavailable. Check the server connection and try again.",
       );
     } finally {
       setBusy(false);
@@ -106,24 +111,35 @@ export function AdminLoginModal() {
           Sign in to review healthcare needs, plan mobile clinic locations, try
           practice scenarios, and publish approved schedules for residents.
         </p>
-        <div className="workspace-subcard admin-demo-hint">
-          <strong>Demo sign-in details</strong>
-          <p>
-            Username: <code>{DEMO_ADMIN_USERNAME}</code> · Password:{" "}
-            <code>{DEMO_ADMIN_PASSWORD}</code>
-          </p>
-          <button
-            type="button"
-            className="workspace-text-button"
-            onClick={() => {
-              setUsername(DEMO_ADMIN_USERNAME);
-              setPassword(DEMO_ADMIN_PASSWORD);
-              setError("");
-            }}
-          >
-            Use demo sign-in details
-          </button>
-        </div>
+        {browserDemo ? (
+          <div className="workspace-subcard admin-demo-hint">
+            <strong>Demo sign-in details</strong>
+            <p>
+              Username: <code>{DEMO_ADMIN_USERNAME}</code> · Password:{" "}
+              <code>{DEMO_ADMIN_PASSWORD}</code>
+            </p>
+            <button
+              type="button"
+              className="workspace-text-button"
+              onClick={() => {
+                setUsername(DEMO_ADMIN_USERNAME);
+                setPassword(DEMO_ADMIN_PASSWORD);
+                setError("");
+              }}
+            >
+              Use demo sign-in details
+            </button>
+          </div>
+        ) : (
+          <div className="workspace-subcard admin-connected-hint">
+            <strong>Connected administrator sign-in</strong>
+            <p>
+              Use the administrator account configured for this workspace.
+              Browser demo credentials cannot sign in to the connected
+              workspace.
+            </p>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="admin-login-form">
           <label className="workspace-field">
             Administrator username

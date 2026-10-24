@@ -321,9 +321,9 @@ export function SimulationPanel() {
       <details>
         <summary>How are these estimates calculated?</summary>
         <p>
-          All scenarios use the same sample changes in illness and disaster
-          risk. This simulation uses the earlier six-factor score, which differs
-          from the seven-factor score on the main map. Missing factors remain
+          All scenarios use the same sample changes in illness and the agreed
+          six-factor Balanced HNI weights shared with the main map. Disaster
+          risk does not contribute to HNI. Missing factors remain
           unavailable. Scores with missing factors are estimates based on the
           available data.
         </p>
@@ -339,7 +339,8 @@ export function SimulationPanel() {
           weight to places with more residents. They account for overlapping
           reach and favor shorter moves. Coverage is based on straight-line
           distance. Marked road closures are for reference and do not change
-          estimated reach. These are planning estimates, not patient counts or
+          estimated reach. Flood settings do not add HNI points; operational
+          flood exclusions are evaluated in the connected planner. These are planning estimates, not patient counts or
           guaranteed real-world results.
         </p>
       </details>
