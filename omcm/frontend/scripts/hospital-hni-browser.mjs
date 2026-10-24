@@ -530,7 +530,7 @@ try {
     exact: true,
   });
   await expect(planner).toBeVisible();
-  await expect(planner).toContainText("Los Baños–Bay · 20-barangay pilot");
+  await expect(planner).toContainText("All Laguna · 681 barangays · 30 LGUs");
   await expect(
     planner.getByRole("region", { name: "Backend allocation results" }),
   ).toHaveCount(0);

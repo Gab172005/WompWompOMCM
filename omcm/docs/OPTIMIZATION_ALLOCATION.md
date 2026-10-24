@@ -116,16 +116,30 @@ and [model serialization guidance](https://xgboost.readthedocs.io/en/stable/tuto
 
 ## Scoring, geographic scope and compatibility
 
-Keep `OMCM_DATASET=pilot`: the backend uses the existing 20-barangay Los Baños–Bay
-pilot, eight illustrative staging sites and 168 directed modeled routes. The
-province-wide map does not imply province-wide optimization road evidence. The
-approximate Paete exclusion is shared from the existing committed frontend
-geometry and enforced server-side, including direct manual API requests; it
-remains a user-configured planning exclusion, not official land classification.
+Keep `OMCM_DATASET=pilot` for the legacy `/api/clinics` and `/api/optimize`
+workflow: it uses the existing 20-barangay Los Baños–Bay pilot, eight
+illustrative staging sites and 168 directed modeled routes. The map's **Plan
+clinics** workflow now uses `/api/planning/clinics` and
+`/api/planning/optimize` across all 681 barangays in 30 LGUs. It packages the
+shared province data and Balanced HNI inputs into a generated planning dataset,
+uses dated synthetic XGBoost illness and appointment-demand estimates, and
+solves capacity-aware placements with CP-SAT.
 
-The seven-factor provincial HNI and Step A hospital evidence remain unchanged.
-The solver uses the transparent six-factor pilot priority index. XGBoost predicts
-appointment demand, not HNI. Optimization notes explicitly distinguish these.
+The province-wide planning candidates are barangay centroid points, not
+verified clinics. Their travel links are adjacency-based straight-line
+estimates; no complete road network or actual journey times are available.
+Flood options remove candidate points and links using the available synthetic
+hazard screening, which does not certify safety. The approximate Paete exclusion
+is shared from the existing committed frontend geometry and enforced
+server-side, including direct manual API requests; it remains a planning
+exclusion, not official land classification.
+
+The agreed six-factor Balanced HNI remains unchanged: morbidity 35%, hospital
+distance 30%, density 15%, municipal income class 10%, clinic distance 5%, and
+clinic provision 5%. The provincial solver uses the XGBoost illness forecast to
+update morbidity before computing that HNI; its original XGBoost demand model
+estimates appointments for the capacity-aware allocation. Disaster risk does
+not enter HNI. Optimization notes distinguish these inputs and limitations.
 `flood_safe_accessibility_pct` now measures demand with a safe modeled route to
 an opened site before capacity limits; `demand_served_pct` includes capacity limits.
 The legacy `unserved_population` field remains for compatibility, but the new UI

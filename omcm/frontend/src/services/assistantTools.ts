@@ -394,7 +394,7 @@ export function executeAssistantTool(
                 busy,
                 error,
                 note: result
-                  ? "Saved FastAPI draft: dated synthetic XGBoost forecasts and capacity-aware CP-SAT for the Los Baños–Bay road pilot. This is not a published schedule."
+                  ? "Saved FastAPI draft: dated synthetic XGBoost forecasts and capacity-aware CP-SAT for all 681 Laguna barangays, using the agreed Balanced HNI and modeled adjacency travel. This is not a published schedule."
                   : "No backend allocation has been generated. Open Plan clinics and select Generate recommendations; no browser allocation substitutes for the server.",
               },
             };

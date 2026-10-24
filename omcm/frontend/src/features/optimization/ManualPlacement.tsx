@@ -1,6 +1,7 @@
 import { useOptimizationStore } from "../../store/useOptimizationStore";
 import { isDeploymentRestricted } from "../../services/mapLandmarks";
 import type { Clinic } from "../../types";
+import { useState } from "react";
 
 export function ManualPlacement({
   clinic,
@@ -10,7 +11,20 @@ export function ManualPlacement({
   clinics: Clinic[];
 }) {
   const { sites, busy, generate } = useOptimizationStore();
+  const [query, setQuery] = useState("");
   return (
+    <div>
+      <label className="workspace-field">
+        Find a planning point
+        <input
+          type="search"
+          aria-label={"Find planning point for " + clinic.id}
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Barangay or municipality"
+          disabled={busy}
+        />
+      </label>
     <label className="workspace-field">
       Replan site {clinic.id}
       <select
@@ -25,7 +39,7 @@ export function ManualPlacement({
           )
         }
       >
-        {sites.map((site) => {
+        {sites.filter((site) => site.id === clinic.id || site.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).map((site) => {
           const unavailable = !site.eligible || isDeploymentRestricted(site);
           return (
             <option
@@ -45,5 +59,6 @@ export function ManualPlacement({
         })}
       </select>
     </label>
+    </div>
   );
 }

@@ -81,7 +81,7 @@ export function requestFeedback(
     return "We could not use these settings. Check your selections and available locations, then try again.";
   if (path === "/simulate")
     return "We could not calculate this practice scenario. Please try again. If the problem continues, contact your system administrator.";
-  if (path === "/optimize")
+  if (path === "/optimize" || path === "/planning/optimize")
     return "We could not calculate clinic suggestions. Please try again. If the problem continues, contact your system administrator.";
   if (path === "/chat")
     return "Planning help is unavailable right now. Please try again.";

@@ -41,7 +41,7 @@ def load_model():
         raise ModelUnavailable("XGBoost illness forecast unavailable. Install backend requirements and regenerate the documented artifact.") from error
 
 
-@lru_cache(maxsize=256)
+@lru_cache(maxsize=2048)
 def dated_history(identity, base_rate, flood, issue):
     return history(identity, base_rate, flood, issue)
 
@@ -110,9 +110,10 @@ def estimate_demands(barangays, request, context=None):
             request.outbreak_multiplier if barangay["id"] in request.outbreak_barangays else 1,
         )
         multipliers.append(multiplier)
+        auxiliary = context.get("demand_factors", {}).get(barangay["id"], barangay["factors"])
         features.append([barangay["disease_per_1000"] / multiplier,
                          barangay["vulnerable_residents"] / barangay["population"] * 100,
-                         barangay["factors"]["poverty"], barangay["factors"]["flood"],
+                         auxiliary["poverty"], auxiliary["flood"],
                          barangay["hospital_minutes"] if barangay["hospital_minutes"] is not None else 120])
     rates = booster.predict(xgb.DMatrix(np.asarray(features), feature_names=DEMAND_FEATURES, nthread=1))
     if not np.isfinite(rates).all():
