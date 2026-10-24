@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 
@@ -6,7 +7,16 @@ from models.clinic import PlacementRequest
 from services.clinic_optimizer import optimize, solve
 from services.data import load_data
 from services.demand_model import MODEL_DIR, MODEL_NAME, ModelUnavailable, estimate_demands, load_model
-from services.deployment_rules import deployment_restricted
+from services.deployment_rules import EXCLUSION_PATH, deployment_restricted
+
+
+def test_backend_restriction_asset_is_bundled_and_matches_map():
+    project_root = Path(__file__).resolve().parents[2]
+    backend_asset = project_root / "backend/data/paete-forest-land.json"
+    frontend_asset = project_root / "frontend/src/data/paete-forest-land.json"
+
+    assert EXCLUSION_PATH == backend_asset
+    assert json.loads(backend_asset.read_text()) == json.loads(frontend_asset.read_text())
 
 
 def test_native_model_artifact_and_independent_holdout_evidence():
