@@ -1,7 +1,6 @@
 """Fleet data, schedule publication, authentication status and audit."""
-import os
-from fastapi import APIRouter, Depends, HTTPException
-from config import today, require_admin
+from fastapi import APIRouter, Depends, HTTPException, Response
+from config import today, require_admin, admin_configuration
 from models.clinic import ApproveRequest, EmergencyRequest
 from models.results import SchedulesResult, ScheduleResult
 from services.data import load_data
@@ -70,10 +69,12 @@ def audit(actor=Depends(require_admin)):
 
 
 @router.get("/api/health")
-def health():
-    return dict(status="ok", synthetic=True, today=today().isoformat(), demo_auth=True,
+def health(response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    configuration = admin_configuration()
+    return dict(status="ok", synthetic=True, today=today().isoformat(), demo_auth=configuration["demo_auth_enabled"],
                 storage=repo.storage_info(),
-                admin_configured=os.getenv("OMCM_DEMO_AUTH", "false").lower() == "true" and bool(os.getenv("OMCM_ADMIN_USERNAME")) and len(os.getenv("OMCM_ADMIN_PASSWORD", "")) >= 12)
+                admin_configured=configuration["configured"], admin_configuration=configuration)
 
 
 @router.get("/api/auth/me")

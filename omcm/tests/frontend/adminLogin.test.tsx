@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -10,6 +11,7 @@ import { MemoryRouter } from "react-router-dom";
 import { AdminLoginModal } from "../../frontend/src/features/auth/AdminLoginModal";
 import {
   BackendApiError,
+  clearCredentials,
   hasCredentials,
 } from "../../frontend/src/services/api";
 import { useAppStore } from "../../frontend/src/store/useAppStore";
@@ -30,7 +32,12 @@ beforeEach(() => {
     pendingAdminPanel: null,
   });
 });
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  clearCredentials();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 function open() {
   render(
@@ -94,23 +101,70 @@ describe("administrator sign-in mode", () => {
     expect(hasCredentials()).toBe(false);
   });
 
-  it.each([
-    new Error("Network unavailable"),
-    new BackendApiError(503, "Administrator access disabled"),
-  ])(
-    "reports unavailable verification separately from an incorrect password (%s)",
-    async (error) => {
-      transport.verify.mockRejectedValue(error);
-      open();
-      submit();
-      await screen.findByText(/sign-in is unavailable/);
-      expect(
-        screen.queryByText(/username or password is incorrect/),
-      ).toBeNull();
-      expect(useAppStore.getState().adminUser).toBeNull();
-      expect(hasCredentials()).toBe(false);
-    },
-  );
+  it("reports a network failure without rejecting the password", async () => {
+    transport.verify.mockRejectedValue(new Error("Network unavailable"));
+    open();
+    submit();
+    await screen.findByText(/Check the server connection/);
+    expect(screen.queryByText(/username or password is incorrect/)).toBeNull();
+    expect(useAppStore.getState().adminUser).toBeNull();
+    expect(hasCredentials()).toBe(false);
+  });
+
+  it("explains that a reachable server needs its sign-in settings checked", async () => {
+    transport.verify.mockRejectedValue(
+      new BackendApiError(503, "Administrator access disabled"),
+    );
+    open();
+    submit();
+    await screen.findByText(
+      /Contact the workspace administrator to check the sign-in settings/,
+    );
+    expect(screen.queryByText(/Check the server connection/)).toBeNull();
+    expect(screen.queryByText(/username or password is incorrect/)).toBeNull();
+    expect(useAppStore.getState().adminUser).toBeNull();
+    expect(hasCredentials()).toBe(false);
+  });
+
+  it("explains a sign-in timeout and leaves the user signed out", async () => {
+    transport.verify.mockRejectedValue(
+      new DOMException("Request timed out", "TimeoutError"),
+    );
+    open();
+    submit();
+    await screen.findByText(/sign-in server took too long/);
+    expect(useAppStore.getState().adminUser).toBeNull();
+    expect(hasCredentials()).toBe(false);
+  });
+
+  it("allows server startup to take longer than three seconds", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) => {
+      const controller = new AbortController();
+      setTimeout(
+        () => controller.abort(new DOMException("Timed out", "TimeoutError")),
+        milliseconds,
+      );
+      return controller.signal;
+    });
+    transport.verify.mockImplementation(
+      (_path: string, _body: unknown, signal: AbortSignal) =>
+        new Promise((resolve, reject) => {
+          signal.addEventListener("abort", () => reject(signal.reason), {
+            once: true,
+          });
+          setTimeout(() => resolve({ username: "verified-admin" }), 4000);
+        }),
+    );
+    open();
+    submit();
+    await act(() => vi.advanceTimersByTimeAsync(3500));
+    expect(screen.getByRole("button", { name: "Verifying…" })).toBeDisabled();
+    expect(useAppStore.getState().adminUser).toBeNull();
+    await act(() => vi.advanceTimersByTimeAsync(500));
+    expect(useAppStore.getState().adminUser).toBe("verified-admin");
+    expect(useAppStore.getState().loginModalOpen).toBe(false);
+  });
 
   it("signs in using the verified server identity", async () => {
     transport.verify.mockResolvedValue({ username: "verified-admin" });

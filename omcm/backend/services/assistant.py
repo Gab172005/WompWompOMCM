@@ -13,15 +13,20 @@ class AssistantUnavailable(Exception):
         self.status = status
 
 
+DEFAULT_MODEL = "gemini-3.8-flash"
+
+
 def settings():
     key = (os.getenv("OMCM_CHAT_API_KEY") or os.getenv("GEMINI_API_KEY")
            or os.getenv("GOOGLE_API_KEY") or "").strip()
-    model = (os.getenv("OMCM_CHAT_MODEL") or "gemini-2.5-flash").strip()
+    model = (os.getenv("OMCM_CHAT_MODEL") or "").strip() or DEFAULT_MODEL
     model = model.removeprefix("models/")
     if re.sub(r"[-_\s]", "", model.lower()) == "gemini2.5flash":
         model = "gemini-2.5-flash"
+    elif re.sub(r"[-_\s]", "", model.lower()) == "gemini3.8flash":
+        model = DEFAULT_MODEL
     if not re.fullmatch(r"gemini-[a-zA-Z0-9.\-]+", model):
-        raise AssistantUnavailable("Set OMCM_CHAT_MODEL to gemini-2.5-flash on the server.")
+        raise AssistantUnavailable(f"Set OMCM_CHAT_MODEL to {DEFAULT_MODEL} on the server.")
     return key, model
 
 
@@ -142,7 +147,7 @@ def generate(contents, context):
         if error.code in (400, 401, 403):
             raise AssistantUnavailable("Gemini rejected the request. Check the server API key, API access and model configuration.", 502) from None
         if error.code == 404:
-            raise AssistantUnavailable("The configured Gemini model is unavailable. Check OMCM_CHAT_MODEL on the server.", 502) from None
+            raise AssistantUnavailable(f"The configured Gemini model ({model}) is unavailable. Set OMCM_CHAT_MODEL to {DEFAULT_MODEL} in the backend project's environment settings and redeploy.", 502) from None
         raise AssistantUnavailable("Gemini is temporarily unavailable. Please try again.", 502) from None
     except TimeoutError:
         raise AssistantUnavailable("Gemini took too long to reply. Please try again in a moment.", 504) from None
