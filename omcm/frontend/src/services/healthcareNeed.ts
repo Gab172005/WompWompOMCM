@@ -39,12 +39,11 @@ export function isLocatedClinic<
   );
 }
 
-export const HEALTHCARE_NEED_VERSION = "barangay-healthcare-need-v3";
+export const HEALTHCARE_NEED_VERSION = "barangay-healthcare-need-v4-balanced";
 export const HEALTHCARE_NEED_FACTORS = {
-  morbidity: { label: "Illness rate (sample data)", weight: 0.25 },
+  morbidity: { label: "Illness rate (sample data)", weight: 0.35 },
   hospitalAccess: { label: "Distance to a hospital", weight: 0.3 },
-  disasterRisk: { label: "Disaster risk level", weight: 0.15 },
-  density: { label: "People per square kilometre", weight: 0.1 },
+  density: { label: "People per square kilometre", weight: 0.15 },
   incomeClass: { label: "Municipal resources (income class)", weight: 0.1 },
   clinicDistance: { label: "Distance to a mapped clinic", weight: 0.05 },
   clinicProvision: { label: "Fewer mapped clinics per resident", weight: 0.05 },
@@ -58,7 +57,6 @@ type NeedInput = {
   lng: number;
   morbidity: number;
   density: number;
-  disasterRisk: number | null;
   incomeClass: string | null;
   urbanRural: string | null;
   population?: number | null;
@@ -364,6 +362,8 @@ export function clinicAccessByBarangay<
 function resolveWeights(
   weights?: Record<NeedFactor, number>,
 ): Record<NeedFactor, number> {
+  if (weights && Object.keys(weights).some((key) => !(key in HEALTHCARE_NEED_FACTORS)))
+    throw new Error("Unknown healthcare need factor in custom weights");
   const factorWeights: Record<NeedFactor, number> = {
     ...defaultNeedWeights(),
     ...(weights ?? {}),
@@ -414,15 +414,8 @@ export function computeBarangayHealthcareNeed<T extends NeedInput>(
   const factorKeys = Object.keys(HEALTHCARE_NEED_FACTORS) as NeedFactor[];
   const scored = barangays.map((b, index) => {
     const clinics = clinicAccess.get(b.psgc)!;
-    const disasterRisk =
-      isFiniteNumber(b.disasterRisk) &&
-      b.disasterRisk >= 0 &&
-      b.disasterRisk <= 100
-        ? b.disasterRisk
-        : null;
     const factors = {
       morbidity: morbidity[index],
-      disasterRisk,
       density: density[index],
       hospitalAccess: access[index],
       incomeClass:
@@ -435,7 +428,7 @@ export function computeBarangayHealthcareNeed<T extends NeedInput>(
       clinicDistance: clinics.distancePercentile,
       clinicProvision: clinics.provisionDeficit,
     };
-    // urbanRural is deliberately absent: it is context, never a scored factor.
+    // Hazard and urban/rural data remain context, outside the agreed HNI factors.
     const coverage = factorKeys.reduce(
       (sum, key) => sum + (factors[key] === null ? 0 : factorWeights[key]),
       0,

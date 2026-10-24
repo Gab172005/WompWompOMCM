@@ -21,7 +21,7 @@ export function ChatbotPanel() {
       answer =
         selected && selectedNeed
           ? `${selected.name}: estimated Healthcare Need Score ${selectedNeed.needScore.toFixed(1)}/100, municipality rank ${selectedNeed.needRank}. This is the population-weighted barangay score shown in community details. ${selectedNeed.provisionalBarangays ? "Some barangay inputs are missing, so the estimate is provisional. " : ""}Clinic suggestions use the separate Los Baños–Bay pilot priority score and sample appointment demand.`
-          : "The Healthcare Need Score compares estimated planning priorities, not numbers of sick residents. Higher scores suggest greater need. Sample illness rates, hospital and clinic access, disaster risk, population concentration and municipal resources contribute. Missing factors are left out. Clinic suggestions use separate pilot priority scores and estimated appointment demand.";
+          : "The Healthcare Need Score uses the agreed Balanced profile: illness rate 35%, hospital distance 30%, population density 15%, municipal income class 10%, clinic distance 5% and clinic provision 5%. Disaster risk is separate context. Missing factors are left out and available weights are rescaled. Clinic suggestions use separate pilot priority scores and estimated appointment demand.";
     else if (/clinic|recommend|placement/.test(lower))
       answer = plan.clinics.length
         ? `The current saved draft suggests ${plan.clinics.length} clinics: ${plan.clinics.map((c) => c.clinicId + " at " + c.siteName).join("; ")}. Total capacity: ${plan.metrics.totalCapacity} appointments/day. These demonstration estimates cover the Los Baños–Bay road pilot and do not confirm service delivery.`

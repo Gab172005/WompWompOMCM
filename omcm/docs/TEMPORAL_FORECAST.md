@@ -24,17 +24,17 @@ without rewriting historical baseline inputs. This is not disease-specific diagn
 
 Tomorrow's rolling burden combines 29 known synthetic daily rates and one
 prediction. Corresponding case counts replace morbidity in a copied scoring
-frame, preserving bundled datasets. Existing six-factor coefficients remain.
+frame, preserving bundled datasets. The backend pilot-priority coefficients remain unchanged.
 Original `appointment-demand-v1` then estimates appointments using that burden
 and the existing other inputs. Its artifact, fitted parameters and constraints
 are unchanged. Explicit outbreak multipliers and demand bounds remain.
 
-The province-wide baseline HNI remains separate and unchanged. The user's
-Balanced-profile image shows morbidity 35%, density 15%, hospital distance 30%,
-income 10%, clinic distance 5%, clinic provision 5%. Current main instead has
-morbidity 25%, density 10% and disaster 15%, with the other percentages unchanged.
-**No coefficient file was edited to resolve this existing policy discrepancy.**
-Changing the active profile requires a separate group decision.
+Follow-up: the user confirmed the group-agreed Balanced profile. The provincial
+HNI and 30-day HNI projection now share morbidity 35%, density 15%, hospital
+distance 30%, income 10%, clinic distance 5% and clinic provision 5%. Disaster
+risk contributes no HNI weight. See [the alignment record](BALANCED_HNI.md).
+The existing backend pilot-priority index remains separately labeled; its inputs
+and trained XGBoost parameters were not remapped to different concepts.
 
 ## Model evidence
 
@@ -83,8 +83,8 @@ today/future schedules with a notice. Older undated drafts retain existing rules
 Published locations, assignments, hours and services flow to public schedules;
 draft notes and raw forecast features do not. See PUBLIC_VISITS.md for the public
 consumer update. Authentication and configured credentials remain unchanged.
-Automatic nightly scheduling, unification of the separate 30-day browser
-simulation/HNI engines, and the broader endpoint/privacy audit remain pending.
+Automatic nightly scheduling, capacity/route unification of the separate 30-day browser
+simulation and connected planner, and the broader endpoint/privacy audit remain pending.
 
 ## Exact file and logic inventory
 

@@ -1,5 +1,9 @@
 # Optimization allocation review and implementation
 
+Current policy update: [the agreed Balanced HNI](BALANCED_HNI.md) supersedes
+historical v3/seven-factor weights in this record. Active HNI uses six factors
+with no disaster-risk contribution; the earlier audit details below are history.
+
 Current extension: [dated illness forecasting](TEMPORAL_FORECAST.md), on
 `feat/temporal-forecast-public-clinics`. The original appointment model remains
 active and unchanged; a separate temporal model supplies forecast illness inputs.

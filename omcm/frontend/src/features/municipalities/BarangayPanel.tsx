@@ -91,12 +91,12 @@ export function BarangayPanel() {
               change when more data is available.
             </p>
           ) : (
-            <p>All seven planning factors are available for this barangay.</p>
+            <p>All six Balanced HNI factors are available for this barangay.</p>
           )}
         </NeedScoreCard>
         <p className="place-evidence-note">
-          Illness rates are sample data, not reported cases. Disaster risk
-          coverage has not been verified.
+          Illness rates are sample data, not reported cases. Disaster risk is
+          separate map context and does not contribute to this HNI.
         </p>
         <PlaceStats
           items={[
@@ -150,7 +150,7 @@ export function BarangayPanel() {
                       ? "Unavailable · excluded"
                       : key === "incomeClass"
                         ? `${b.incomeClass} municipality class · ${score.toFixed(1)} / 100 resource proxy`
-                        : `${score.toFixed(1)} / 100 ${key === "disasterRisk" ? "supplied index" : key === "clinicProvision" ? "deficit (100 − tied percentile of clinics per 10,000)" : key === "clinicDistance" ? "distance percentile (higher = farther)" : "percentile"}`}
+                        : `${score.toFixed(1)} / 100 ${key === "clinicProvision" ? "deficit (100 − tied percentile of clinics per 10,000)" : key === "clinicDistance" ? "distance percentile (higher = farther)" : "percentile"}`}
                   </small>
                   {metric && <small>{metric}</small>}
                 </span>

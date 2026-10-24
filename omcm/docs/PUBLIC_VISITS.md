@@ -1,6 +1,6 @@
 # Approved visits and branch handoff
 
-Branch: `feat/temporal-forecast-public-clinics`. Reviewed 2026-10-24.
+Branch: `fix/agreed-balanced-hni-weights`. Reviewed 2026-10-24.
 
 ## Public behavior
 
@@ -71,14 +71,15 @@ updates the earlier browser check to the new polygon interaction.
 
 This branch includes the earlier connected XGBoost allocation, administrator
 sign-in clarification, both main integrations, dated forecast and public visit
-improvements. The older allocation/sign-in branches are checkpoints, not separate
+improvements, plus the agreed Balanced HNI alignment documented in BALANCED_HNI.md.
+The older allocation/sign-in/temporal branches are checkpoints, not separate
 PRs to merge in sequence. Step A was already integrated into main through the
 earlier refinement PR.
 
 Push this branch yourself, then open one PR with base `main`:
 
 ```sh
-git push -u origin feat/temporal-forecast-public-clinics
+git push -u origin fix/agreed-balanced-hni-weights
 ```
 
 Suggested PR title: **Connect clinic allocation, dated forecasts and public visits**
@@ -89,7 +90,8 @@ Suggested description:
 > and capacity/travel-constrained CP-SAT, with persisted draft approval and no
 > browser-generated fallback allocations. Add a separate next-day illness model
 > using dated synthetic histories and chronological evaluation, retaining the
-> original appointment model, factor coefficients and configured credentials.
+> original appointment model and configured credentials. Align provincial HNI
+> and 30-day HNI projection with the agreed six-factor Balanced percentages.
 >
 > Replace the public date picker with today/next-published visits, actual service
 > areas and automatic approved-schedule refresh with outage retention. Preserve

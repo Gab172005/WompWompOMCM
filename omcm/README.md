@@ -229,10 +229,11 @@ and [architecture](docs/ARCHITECTURE.md).
 ### Barangay healthcare need and fixed clinics
 
 The default heatmap and searchable ranking use separate scores for all 681
-barangays. Production policy weights are morbidity **25%**, hospital distance
-**30%**, disaster risk **15%**, population density **10%**, municipality income
-class **10%**, OSM clinic distance **5%**, and clinic provision deficit **5%**.
-Urban/rural remains visible context but has no scoring weight. Missing factors
+barangays. The agreed Balanced policy weights are morbidity **35%**, hospital
+distance **30%**, population density **15%**, municipality income class **10%**,
+OSM clinic distance **5%**, and clinic provision deficit **5%**. The 30-day HNI
+projection shares this definition. Disaster risk and urban/rural remain visible
+context with no HNI weight. Missing factors
 are excluded with available-weight rescaling and provisional scores/ranks.
 
 Fixed **OSM clinics**, **Hospitals**, and simulated **Mobile clinics** have

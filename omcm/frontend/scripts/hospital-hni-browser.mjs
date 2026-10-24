@@ -356,7 +356,8 @@ try {
     exact: true,
   });
   await expect(summary).toBeVisible();
-  await expect(summary).toContainText("Some data is missing in 2 barangays");
+  await expect(summary).not.toContainText("Some data is missing");
+  await expect(summary).toContainText("does not contribute to this HNI");
   const expected = await page.evaluate(async () => {
     const data = await import("/src/services/providedData.ts");
     const barangay = data.LAGUNA_BARANGAYS.find(
@@ -414,7 +415,8 @@ try {
       exact: true,
     }),
   ).toHaveAttribute("value", String(expected.barangay.needScore));
-  await expect(detail).toContainText("Share of score factors available85%");
+  await expect(detail).toContainText("Share of score factors available100%");
+  await expect(detail).toContainText("All six Balanced HNI factors are available");
   await expect(detail).toContainText(expected.barangay.nearestHospital.name);
   await expect(detail).toContainText(
     `${expected.barangay.nearestHospital.distanceKm.toFixed(2)} km straight-line distance`,
