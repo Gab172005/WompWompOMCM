@@ -2,7 +2,7 @@ import { HEALTHCARE_NEED_FACTORS } from "../../services/healthcareNeed";
 
 export function HealthcareNeedMethod() {
   return (
-    <details className="healthcare-need-method">
+    <details className="healthcare-need-method place-disclosure">
       <summary>How healthcare need is calculated</summary>
       <p>
         A relative planning index from 0 to 100 across the 681 barangays of

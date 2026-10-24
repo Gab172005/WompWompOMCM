@@ -127,15 +127,20 @@ describe("Barangay healthcare need ranking interface", () => {
     expect(detail).not.toHaveTextContent("largest deficit");
   });
   it("explains the OSM snapshot and lists assigned clinic records separately from hospitals", () => {
-    const withClinic = LAGUNA_BARANGAYS.find((item) =>
-      (OSM_CLINICS_BY_BARANGAY.get(item.psgc) ?? []).length,
+    const withClinic = LAGUNA_BARANGAYS.find(
+      (item) => (OSM_CLINICS_BY_BARANGAY.get(item.psgc) ?? []).length,
     )!;
-    useAppStore.getState().selectBarangay(withClinic.psgc, withClinic.municipalityPsgc);
+    useAppStore
+      .getState()
+      .selectBarangay(withClinic.psgc, withClinic.municipalityPsgc);
     render(<BarangayPanel />);
     const detail = screen.getByRole("region", {
       name: "Barangay healthcare need",
     });
     const clinics = OSM_CLINICS_BY_BARANGAY.get(withClinic.psgc)!;
+    fireEvent.click(
+      within(detail).getByText("OSM clinic records and provenance"),
+    );
     expect(detail).toHaveTextContent(
       `Assigned active OSM clinic records (${clinics.length})`,
     );
@@ -151,12 +156,14 @@ describe("Barangay healthcare need ranking interface", () => {
     expect(detail).toHaveTextContent(
       OSM_CLINIC_SNAPSHOT.retrievedAt ?? "Unrecorded",
     );
-    expect(detail).toHaveTextContent(
-      OSM_CLINIC_SNAPSHOT.attribution,
-    );
+    expect(detail).toHaveTextContent(OSM_CLINIC_SNAPSHOT.attribution);
     expect(detail).toHaveTextContent("incomplete mapping observation");
-    expect(screen.getByText("Nearby verified hospital records")).toBeInTheDocument();
-    expect(screen.getByText(/Hospitals across Laguna are eligible/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Nearby care" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Nearby verified hospitals" }),
+    ).toHaveTextContent("not travel times");
   });
   it("states that zero OSM records are unverified rather than absent", () => {
     const empty = LAGUNA_BARANGAYS.find(

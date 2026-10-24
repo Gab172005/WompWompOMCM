@@ -35,7 +35,7 @@ export function MapSelectionStatus() {
       <div className="map-selection-heading">
         <MapPin size={18} aria-hidden="true" />
         <strong title={label}>{label}</strong>
-        <span>{barangay ? "Barangay" : "Municipality"}</span>
+        <span>{barangay ? "Barangay" : municipality.level === "City" ? "City" : "Municipality"}</span>
         <button
           type="button"
           aria-label="Open selected place details"

@@ -4,6 +4,7 @@ import { MunicipalityMetrics } from "./MunicipalityMetrics";
 import { MunicipalityRanking } from "./MunicipalityRanking";
 import { Button } from "../../components/ui/Button";
 import { BarangayRanking } from "./BarangayRanking";
+import { PlaceHeader } from "./PlaceDetails";
 import {
   LAGUNA_BARANGAYS,
   PROVIDED_HOSPITALS,
@@ -14,16 +15,25 @@ export function MunicipalityPanel() {
   const selected = municipalities.find((m) => m.psgc === selectedPsgc);
   return (
     <>
-      <div className="eyebrow">LAGUNA PLANNING WORKSPACE</div>
-      <h1>{selected?.name ?? "Healthcare where it matters."}</h1>
+      <PlaceHeader
+        title={selected?.name ?? "Explore Laguna"}
+        kind={
+          selected?.level === "City"
+            ? "City"
+            : selected
+              ? "Municipality"
+              : "Province overview"
+        }
+        subtitle={
+          selected
+            ? `Laguna Province · ${selected.barangayCount} barangays`
+            : "Understand community need. Plan care with context."
+        }
+        onBack={selected ? () => selectMunicipality(null) : undefined}
+        backLabel="Province overview"
+      />
       {selected ? (
         <>
-          <button
-            className="workspace-text-button"
-            onClick={() => selectMunicipality(null)}
-          >
-            ← Province overview
-          </button>
           <MunicipalityMetrics municipality={selected} />
         </>
       ) : (
@@ -65,7 +75,7 @@ export function MunicipalityPanel() {
           Test scenario
         </Button>
       </div>
-      <details>
+      <details className="place-disclosure">
         <summary>Municipality HNI ranking</summary>
         <MunicipalityRanking municipalities={municipalities} />
       </details>

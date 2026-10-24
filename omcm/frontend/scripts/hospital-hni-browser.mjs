@@ -59,6 +59,36 @@ try {
   await expect(page.getByRole("region", { name: "Map legend" })).toContainText(
     "Verified hospital",
   );
+  await mkdir(`${frontend}/test-results`, { recursive: true });
+  const publicSearch = page.getByRole("combobox", {
+    name: "Find municipality or barangay",
+  });
+  await publicSearch.fill("Pangil");
+  await expect(
+    page.getByRole("option", { name: /^Pangil Municipality/ }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: `${frontend}/test-results/place-search-dropdown.png`,
+  });
+  await page.getByRole("option", { name: /^Pangil Municipality/ }).click();
+  const publicCare = page.getByRole("complementary", {
+    name: "Community care and schedules",
+  });
+  await expect(
+    publicCare.getByRole("heading", { name: "Pangil", exact: true, level: 1 }),
+  ).toBeVisible();
+  await expect(
+    publicCare.getByRole("region", { name: "Nearby verified hospitals" }),
+  ).toBeVisible();
+  await expect(
+    publicCare.getByRole("meter", { name: "Healthcare need out of 100" }),
+  ).toHaveCount(0);
+  await expect(
+    publicCare.getByRole("region", { name: "Top need contributors" }),
+  ).toHaveCount(0);
+  await page.screenshot({
+    path: `${frontend}/test-results/place-public-details.png`,
+  });
 
   await page
     .getByRole("button", { name: "Admin View", exact: true })
@@ -158,14 +188,39 @@ try {
     name: "Barangay healthcare need",
     exact: true,
   });
-  await expect(detail).toContainText(
-    `${expected.barangay.needScore.toFixed(1)} / 100`,
-  );
+  await expect(
+    detail.getByRole("meter", {
+      name: "Healthcare need out of 100",
+      exact: true,
+    }),
+  ).toHaveAttribute("value", String(expected.barangay.needScore));
   await expect(detail).toContainText("85% of input weight available");
   await expect(detail).toContainText(expected.barangay.nearestHospital.name);
   await expect(detail).toContainText(
     `${expected.barangay.nearestHospital.distanceKm.toFixed(2)} km straight-line distance`,
   );
+  await expect(
+    detail
+      .getByRole("region", { name: "Top need contributors" })
+      .getByRole("meter"),
+  ).toHaveCount(3);
+  const factorDisclosure = detail.locator("details").filter({
+    has: page.locator("summary", { hasText: /^All seven factor inputs/ }),
+  });
+  await expect(factorDisclosure).not.toHaveAttribute("open");
+  await factorDisclosure.locator("summary").click();
+  await expect(factorDisclosure).toHaveAttribute("open");
+  await expect(factorDisclosure).toContainText("Hospital distance");
+  await factorDisclosure.locator("summary").click();
+  await page
+    .getByRole("complementary", { name: "Barangay intelligence" })
+    .locator(".workspace-panel-body")
+    .evaluate((element) => {
+      element.scrollTop = 0;
+    });
+  await page.screenshot({
+    path: `${frontend}/test-results/place-barangay-details.png`,
+  });
   await expect(selection).toContainText("Dambo, Pangil");
   await expect(selection).toContainText("Nearest: 4.56 km straight line");
   await page.getByRole("button", { name: "Close intelligence panel" }).click();
@@ -178,9 +233,7 @@ try {
 
   // Retained historical records are inspectable without appearing as care locations.
   await search.fill("City of Calamba");
-  await page
-    .getByRole("option", { name: /^City of Calamba Municipality/ })
-    .click();
+  await page.getByRole("option", { name: /^City of Calamba City/ }).click();
   await page
     .getByRole("region", { name: "Barangay healthcare need ranking" })
     .getByRole("button", { name: /^Rank \d+:/ })
@@ -232,8 +285,21 @@ try {
   await page.screenshot({
     path: `${frontend}/test-results/hospital-hni-mobile.png`,
   });
+  await page.getByRole("button", { name: "Expand place details" }).click();
+  const expandedPanel = await page
+    .getByRole("complementary", { name: "Municipality intelligence" })
+    .boundingBox();
+  expect(expandedPanel.height).toBeGreaterThan(mobilePanel.height);
+  await expect(selection).not.toBeVisible();
+  await page.screenshot({
+    path: `${frontend}/test-results/place-details-mobile-expanded.png`,
+  });
+  await page.getByRole("button", { name: "Collapse place details" }).click();
+  await expect(selection).toBeVisible();
   await page.getByRole("button", { name: "Simulate", exact: true }).click();
-  await expect(page.getByRole("complementary", { name: "Healthcare simulation" })).toBeVisible();
+  await expect(
+    page.getByRole("complementary", { name: "Healthcare simulation" }),
+  ).toBeVisible();
   await expect(selection).not.toBeVisible();
   expect(errors).toEqual([]);
   console.log(
