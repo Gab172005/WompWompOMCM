@@ -18,7 +18,8 @@ export function useSimulationMap(): SimulationOverlay | undefined {
     const run = s.runs[s.strategy],
       snapshot = run.snapshots[run.day - 1];
     const byId = new Map(snapshot.records.map((b) => [b.psgc, b]));
-    const canPreviewDraft = canEditAllocation(s.strategy, run);
+    const canPreviewDraft = canEditAllocation(s.strategy, run) &&
+      (s.strategy !== "optimizer" || Boolean(s.proposal));
     const currentSites = new Map(
       snapshot.allocation.map((assignment) => [
         assignment.clinicId,
@@ -47,7 +48,7 @@ export function useSimulationMap(): SimulationOverlay | undefined {
           })
         : [],
       select: (psgc: string) => {
-        if (canEditAllocation(s.strategy, run))
+        if (canPreviewDraft)
           s.setDraft(s.editingClinic, psgc);
       },
     };

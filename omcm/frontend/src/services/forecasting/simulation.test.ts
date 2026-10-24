@@ -229,6 +229,21 @@ describe("interventions and synchronized scenario history", () => {
     clearCredentials();
     useAppStore.setState({ adminUser: null });
   });
+  it("rejects fleet sizes beyond the backend limit without erasing a run", () => {
+    const s = useForecastStore.getState();
+    const runs = s.runs;
+    s.setK(11);
+    expect(useForecastStore.getState().k).toBe(s.k);
+    expect(useForecastStore.getState().runs).toBe(runs);
+    expect(useForecastStore.getState().error).toContain("1 and 10");
+  });
+  it("cannot present manually entered locations as an optimized allocation", () => {
+    const s = useForecastStore.getState();
+    [...s.coverage.keys()].slice(0, s.k).forEach((psgc, index) => s.setDraft(index, psgc));
+    s.apply();
+    expect(useForecastStore.getState().runs.optimizer.history).toEqual({});
+    expect(useForecastStore.getState().error).toContain("connected plan");
+  });
   it("requires a real backend draft and explicit confirmation before deploying", async () => {
     const s = useForecastStore.getState();
     await s.recommend();

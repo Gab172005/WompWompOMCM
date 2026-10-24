@@ -28,6 +28,7 @@ export const STRATEGIES: Record<Strategy, string> = {
   manual: "Manual clinic allocation",
   optimizer: "Optimized clinic allocation",
 };
+export const MAX_SIMULATION_CLINICS = 10;
 export interface RunState {
   day: number;
   reached: number;
@@ -155,9 +156,10 @@ export const useForecastStore = create<ForecastState>((set, get) => ({
     });
   },
   setK: (k) => {
-    if (!Number.isInteger(k) || k < 1 || k > get().coverage.size) {
+    const maximum = Math.min(MAX_SIMULATION_CLINICS, get().coverage.size);
+    if (!Number.isInteger(k) || k < 1 || k > maximum) {
       set({
-        error: `Enter between 1 and ${get().coverage.size} mobile clinics. Each clinic needs an available location.`,
+        error: `Enter between 1 and ${maximum} mobile clinics. Each clinic needs an available location.`,
       });
       return;
     }
@@ -280,6 +282,8 @@ export const useForecastStore = create<ForecastState>((set, get) => ({
         clinicId: `MC-${i + 1}`,
       }));
       validateAllocation(allocation, s.k, s.coverage);
+      if (s.strategy === "optimizer" && !s.proposal)
+        throw new Error("Generate and review a connected plan before applying optimized locations.");
       const history = { ...run.history, [run.day]: allocation };
       const updated = {
         ...run,
