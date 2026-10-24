@@ -4,7 +4,7 @@ import json
 import math
 from pathlib import Path
 
-EXCLUSION_PATH = Path(__file__).resolve().parents[2] / "frontend/src/data/paete-forest-land.json"
+EXCLUSION_PATH = Path(__file__).resolve().parents[1] / "data/paete-forest-land.json"
 
 
 @lru_cache(maxsize=1)
