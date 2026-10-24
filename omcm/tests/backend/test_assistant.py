@@ -12,6 +12,36 @@ def isolated_key(monkeypatch):
     monkeypatch.setenv("OMCM_CHAT_MODEL", "gemini-3.8-flash")
 
 
+@pytest.mark.parametrize("value", [None, "", "   "])
+def test_model_defaults_to_selected_supported_version(monkeypatch, value):
+    if value is None:
+        monkeypatch.delenv("OMCM_CHAT_MODEL", raising=False)
+    else:
+        monkeypatch.setenv("OMCM_CHAT_MODEL", value)
+    assert assistant.settings()[1] == "gemini-3.8-flash"
+
+
+@pytest.mark.parametrize("value", ["models/gemini-3.8-flash", "gemini3.8flash", "Gemini 3.8 Flash"])
+def test_selected_model_aliases(monkeypatch, value):
+    monkeypatch.setenv("OMCM_CHAT_MODEL", value)
+    assert assistant.settings()[1] == "gemini-3.8-flash"
+
+
+def test_explicit_model_settings_are_preserved(monkeypatch):
+    monkeypatch.setenv("OMCM_CHAT_MODEL", "gemini-2.5-flash")
+    assert assistant.settings()[1] == "gemini-2.5-flash"
+
+
+def test_unavailable_model_error_identifies_server_setting(monkeypatch):
+    monkeypatch.setenv("OMCM_CHAT_MODEL", "gemini-2.5-flash")
+    fake_provider(monkeypatch, error=HTTPError("https://example.invalid", 404, "unavailable", {}, io.BytesIO(b"")))
+    with pytest.raises(assistant.AssistantUnavailable) as exc:
+        assistant.generate([], {})
+    assert "gemini-2.5-flash" in str(exc.value)
+    assert "gemini-3.8-flash" in str(exc.value)
+    assert "redeploy" in str(exc.value)
+
+
 def test_root_env_fills_empty_backend_placeholder(tmp_path, monkeypatch):
     backend = tmp_path / "backend.env"
     project = tmp_path / "project.env"

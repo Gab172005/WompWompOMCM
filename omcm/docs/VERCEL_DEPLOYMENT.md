@@ -42,11 +42,54 @@ OMCM_CORS_ORIGINS=https://omcm-two.vercel.app
 OMCM_CHAT_MODEL=gemini-3.8-flash
 OMCM_CHAT_API_KEY=<your Gemini key, stored only in the backend project>
 OMCM_DATASET=pilot
+OMCM_DEMO_AUTH=true
+OMCM_ADMIN_USERNAME=<choose your administrator username>
+OMCM_ADMIN_PASSWORD=<choose a password with at least 12 characters>
 ```
 
-Keep existing demo administrator settings if using authenticated pilot actions.
+Sign in using the same administrator username and password configured on the
+backend. These are backend-only settings; never expose the real administrator
+password in a `VITE_` environment variable. The built-in browser demonstration
+credentials do not configure or enable server-side administrator access.
 Do not copy the `/admin` path into the CORS value: CORS uses the frontend origin.
 Local `.env` files are ignored by Git and do not configure the hosted project.
+
+The assistant now defaults to `gemini-3.8-flash` if `OMCM_CHAT_MODEL` is absent
+or blank. An explicitly configured model still overrides that default. The live
+backend was observed reporting `configured: true, model: "gemini-2.5-flash"`
+after the database startup fix, which explains its model-unavailable error.
+Replace any old `OMCM_CHAT_MODEL` value in the **backend project's Production
+environment** with `gemini-3.8-flash` and redeploy that project. Setting the model
+only on the frontend project or changing only a local `.env` does not update the
+hosted backend. Verify the resulting model using `/api/assistant/status`.
+
+If sign-in says it is unavailable, check `/api/health`: `admin_configured: false`
+means at least one requirement is missing. `OMCM_DEMO_AUTH` must be `true`, the
+username must be nonempty, and the password must contain at least 12 characters.
+With incomplete settings, `/api/auth/me` deliberately returns HTTP 503. With
+proper settings but no/incorrect credentials it returns HTTP 401. Set all three
+values for the backend project's Production environment and redeploy before
+trying the same credentials in the frontend.
+
+The updated health endpoint includes `admin_configuration` with boolean checks
+and an `issues` list naming the failed requirements. It never returns the
+username, password or exact password length. The `demo_auth` flag now reflects
+the actual server setting; older builds always returned `true` there, even when
+authentication was disabled. Authorization and health use the same validation.
+Whitespace around the flag and username is normalized; password characters are
+preserved exactly. In the Vercel editor, enter `true` without wrapping quotes.
+
+If configuration remains false after editing the settings:
+
+1. Confirm the variables are on the backend project associated with
+   `womp-womp-omcm.vercel.app`, not the frontend project.
+2. Select the Production environment for each variable.
+3. Redeploy the backend after saving. Existing deployments retain their previous
+   environment values.
+4. Read the new `admin_configuration.issues` at `/api/health` and correct only
+   those fields. If the field is absent, the latest health diagnostics have not
+   been deployed yet. Share only that safe status object when troubleshooting;
+   keep credential values in the backend environment editor.
 
 Redeploy the backend, then open:
 
