@@ -1,131 +1,123 @@
-import { distanceKm } from "../healthcareNeed";
-import type { ForecastRecord } from "./forecast";
-import { operationalPeriod } from "./forecast";
-import {
-  type Assignment,
-  type CoverageMatrix,
-  type DailySnapshot,
-  serviceFractions,
-  simulateDay,
-  validateAllocation,
-} from "./interventions";
+import { defaultConfig } from "../defaults";
+import { LAGUNA_BARANGAYS } from "../providedData";
+import type { Config, Plan } from "../../types";
+import type { SimulationScenario } from "../../types/simulation";
+import type { Assignment } from "./interventions";
 export interface Recommendation extends Assignment {
   name: string;
   municipality: string;
   lat: number;
   lng: number;
-  expectedCoverage: number;
   coveredBarangays: number;
   reason: string;
+  servedAppointments: number;
+  dailyCapacity: number;
+  assignedBarangays: string[];
 }
 export interface AllocationProposal {
   day: number;
   k: number;
   recommendations: Recommendation[];
-  expectedCoveredPriority: number;
-  improvementOverExisting: number;
-  periodDemand: number;
+  planId: string;
+  solverStatus: string;
+  optimal: boolean;
+  demandServedPercent: number;
+  capacityUtilization: number;
+  averageTravelMinutes: number;
+  totalAppointments: number;
+  servedAppointments: number;
+  notes: string[];
 }
-export class InfeasibleAllocationError extends Error {}
-/** Greedy population-weighted marginal coverage with a small per-km relocation penalty. */
-export function optimizeWeek(
-  k: number,
-  day: number,
-  forecasts: ForecastRecord[][],
-  previous: DailySnapshot | undefined,
-  existing: Assignment[],
-  coverage: CoverageMatrix,
-): AllocationProposal {
-  const period = operationalPeriod(day);
-  if (period.start !== day)
-    throw new Error(
-      "Choose clinic locations on Day 1, 8, 15 or 22. Locations stay in place until the next decision day.",
-    );
-  if (!Number.isInteger(k) || k < 1)
-    throw new Error("Enter a whole number of mobile clinics, starting at 1.");
-  const records = forecasts[day - 1];
-  const byId = new Map(records.map((b) => [b.psgc, b]));
-  const candidates = [...coverage.keys()].filter((id) => byId.has(id)).sort();
-  if (candidates.length < k)
-    throw new InfeasibleAllocationError(
-      `There are only ${candidates.length} available locations for ${k} mobile clinics. Choose fewer clinics or review the available locations.`,
-    );
-  const priority = new Map<string, number>();
-  let projected = previous;
-  for (let d = day; d <= period.end; d++) {
-    projected = simulateDay(d, "", forecasts[d - 1], projected, [], coverage);
-    for (const b of projected.records)
-      priority.set(
-        b.psgc,
-        (priority.get(b.psgc) ?? 0) + b.population * b.demand,
-      );
-  }
-  const periodDemand = [...priority.values()].reduce((s, n) => s + n, 0);
-  const served = new Map<string, number>();
-  const remaining = new Set(Array.from({ length: k }, (_, i) => `MC-${i + 1}`));
-  const selected = new Set<string>();
-  const recommendations: Recommendation[] = [];
-  for (let slot = 0; slot < k; slot++) {
-    let best:
-      | {
-          id: string;
-          clinicId: string;
-          gain: number;
-          score: number;
-          km: number;
-        }
-      | undefined;
-    for (const id of candidates) {
-      if (selected.has(id)) continue;
-      let gain = 0;
-      for (const [target, fraction] of coverage.get(id)!)
-        gain +=
-          (priority.get(target) ?? 0) *
-          Math.max(0, fraction - (served.get(target) ?? 0));
-      // Keep a clinic at its present site when possible; otherwise choose the least travel.
-      for (const clinicId of remaining) {
-        const old = byId.get(
-          existing.find((a) => a.clinicId === clinicId)?.psgc ?? "",
-        );
-        const km = old ? distanceKm(old, byId.get(id)!) : 0;
-        const score = gain - periodDemand * 0.00002 * km;
-        if (!best || score > best.score + 1e-8)
-          best = { id, clinicId, gain, score, km };
-      }
-    }
-    const choice = best!;
-    selected.add(choice.id);
-    remaining.delete(choice.clinicId);
-    for (const [id, fraction] of coverage.get(choice.id)!)
-      served.set(id, Math.max(served.get(id) ?? 0, fraction));
-    const b = byId.get(choice.id)!;
-    recommendations.push({
-      clinicId: choice.clinicId,
-      psgc: b.psgc,
-      name: b.name,
-      municipality: b.municipality,
-      lat: b.lat,
-      lng: b.lng,
-      expectedCoverage: choice.gain,
-      coveredBarangays: coverage.get(choice.id)!.size,
-      reason: `Could help reach ${coverage.get(choice.id)!.size} barangays with estimated healthcare needs during Days ${day}–${period.end}. The estimate accounts for areas already reached by other suggested clinics and favors shorter moves. ${existing.some((a) => a.clinicId === choice.clinicId) ? `Estimated move: ${choice.km.toFixed(1)} km in a straight line.` : "This is a first placement; travel from a starting depot is not estimated."}`,
-    });
-  }
-  validateAllocation(recommendations, k, coverage);
-  const covered = [...served].reduce(
-    (s, [id, fraction]) => s + (priority.get(id) ?? 0) * fraction,
-    0,
+export function buildSimulationPlacementRequest(
+  clinicCount: number,
+  conditions: SimulationScenario,
+): Config {
+  const municipalityByPsgc = new Map(
+    LAGUNA_BARANGAYS.map((barangay) => [
+      barangay.municipalityPsgc,
+      barangay.municipality,
+    ]),
   );
-  const existingCovered = [...serviceFractions(existing, coverage)].reduce(
-    (s, [id, fraction]) => s + (priority.get(id) ?? 0) * fraction,
-    0,
+  const municipalityOutbreakMultipliers = Object.fromEntries(
+    Object.entries(conditions.morbiditySpikes).flatMap(([psgc, multiplier]) => {
+      const name = municipalityByPsgc.get(psgc);
+      return name ? [[name, multiplier]] : [];
+    }),
+  );
+  const municipalityFloodLevels = Object.fromEntries(
+    Object.entries(conditions.floodOverrides).flatMap(([psgc, level]) => {
+      const name = municipalityByPsgc.get(psgc);
+      return name && (level === "moderate" || level === "severe")
+        ? [[name, level]]
+        : [];
+    }),
   );
   return {
+    ...defaultConfig,
+    // The province endpoint enforces its Balanced HNI policy independently;
+    // this legacy field is required by the shared pilot request schema.
+    weights: { ...defaultConfig.weights },
+    clinic_count: clinicCount,
+    capacity: 180,
+    max_travel_minutes: 25,
+    eligible_sites: null,
+    flooded_sites: [],
+    closed_roads: [],
+    outbreak_barangays: [],
+    outbreak_multiplier: 1,
+    municipality_outbreak_multipliers: municipalityOutbreakMultipliers,
+    municipality_flood_levels: municipalityFloodLevels,
+    manual_sites: null,
+    flood_level: "none",
+  };
+}
+export function proposalFromBackendPlan(
+  plan: Plan,
+  day: number,
+  clinicCount: number,
+): AllocationProposal {
+  if (
+    !plan.plan_id ||
+    !plan.notes.some((note) => note.includes("XGBoost")) ||
+    !plan.notes.some((note) => note.includes("Agreed Balanced HNI")) ||
+    plan.optimized.clinics.length !== clinicCount
+  )
+    throw new Error(
+      "The planning service did not return a complete XGBoost and CP-SAT allocation. Please retry or contact your system administrator.",
+    );
+  const barangays = new Map(LAGUNA_BARANGAYS.map((barangay) => [barangay.psgc, barangay]));
+  const recommendations = plan.optimized.clinics.map((clinic, index) => {
+    const barangay = barangays.get(clinic.barangay_id);
+    if (!barangay)
+      throw new Error(
+        "The planning service returned a location outside the Laguna barangay dataset.",
+      );
+    return {
+      clinicId: `MC-${index + 1}`,
+      psgc: clinic.barangay_id,
+      name: barangay.name,
+      municipality: barangay.municipality,
+      lat: clinic.lat,
+      lng: clinic.lng,
+      coveredBarangays: clinic.assignments.length,
+      reason: clinic.reason,
+      servedAppointments: clinic.served,
+      dailyCapacity: clinic.daily_capacity,
+      assignedBarangays: clinic.assignments.map((assignment) => assignment.name),
+    };
+  });
+  return {
     day,
-    k,
+    k: clinicCount,
     recommendations,
-    expectedCoveredPriority: covered,
-    improvementOverExisting: covered - existingCovered,
-    periodDemand,
+    planId: plan.plan_id,
+    solverStatus: plan.optimized.solver_status,
+    optimal: plan.optimized.optimal,
+    demandServedPercent: plan.optimized.metrics.demand_served_pct,
+    capacityUtilization: plan.optimized.metrics.capacity_utilization,
+    averageTravelMinutes: plan.optimized.metrics.average_travel_minutes,
+    totalAppointments: plan.optimized.metrics.total_demand,
+    servedAppointments: plan.optimized.metrics.residents_served,
+    notes: plan.notes,
   };
 }

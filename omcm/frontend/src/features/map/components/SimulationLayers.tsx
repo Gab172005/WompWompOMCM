@@ -24,7 +24,10 @@ export function SimulationLayers({ overlay }: { overlay: SimulationOverlay }) {
             title={`${kind === "active" ? "Active clinic" : "Recommendation (not deployed)"}: ${a.clinicId}`}
             icon={divIcon({
               className: "clinic-staging-marker",
-              html: mobileClinicSvg(undefined, kind),
+              html: mobileClinicSvg(
+                Number(a.clinicId.match(/\d+$/)?.[0] ?? 0) || undefined,
+                kind,
+              ),
               iconSize: [20, 18],
               iconAnchor: [8.5, 9.5],
             })}

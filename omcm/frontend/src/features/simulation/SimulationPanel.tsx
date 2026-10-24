@@ -34,18 +34,18 @@ export function SimulationPanel() {
         Practice plan · 30 days · Sample-data estimates, not guaranteed outcomes
       </div>
       <p>
-        Compare where mobile clinics could help across {LAGUNA_BARANGAYS.length}{" "}
-        barangays. Each day, the map estimates healthcare needs and how much may
-        remain uncovered after clinic service. Clinics help cover needs; they do
-        not change the underlying need score.
+        Compare three scenarios across {LAGUNA_BARANGAYS.length} barangays. The
+        same synthetic daily HNI trend drives each run. Deployed clinics lower
+        scenario HNI only in their host barangay and nearby communities within
+        modeled service reach.
       </p>
       <details className="place-disclosure">
         <summary>How to try a clinic plan</summary>
         <ol>
           <li>Choose a scenario and the number of available clinics.</li>
           <li>
-            On Days 1, 8, 15 and 22, choose locations yourself or review the
-            recommendations, then apply your choices.
+            On Days 1, 8, 15 and 22, choose locations yourself or request
+            province-wide XGBoost/CP-SAT locations, then apply your choices.
           </li>
           <li>
             Use Next day or Play below the map to see estimated changes.
@@ -89,13 +89,14 @@ export function SimulationPanel() {
       </label>
       <p className="workspace-note">
         {s.strategy === "none"
-          ? "No mobile clinics: see what may happen without mobile clinic service."
+          ? "No intervention: every barangay follows the rising baseline HNI trend, with no clinic markers or service deductions."
           : s.strategy === "manual"
-            ? "Choose locations yourself: test your own placement choices."
-            : "Use recommended locations: review suggestions that aim to reach more people in areas with high estimated need."}
+            ? "Manual allocation: clinic service lowers HNI at each host and nearby barangays only; all other areas continue to rise."
+            : "Optimized allocation: request real province-wide XGBoost/CP-SAT placements, then apply them to show simultaneous host and neighbor impact."}
       </p>
       <p className="workspace-note">
-        Changing clinic count or conditions restarts all three runs. Default: 3
+        Changing clinic count or conditions restarts all three runs. Optimized
+        locations are requested explicitly at each decision day. Default: 3
         clinics. Reset keeps these settings.
       </p>
       <label className="workspace-field">
@@ -108,7 +109,7 @@ export function SimulationPanel() {
             })
           }
         >
-          <option value="hni">Expected healthcare need</option>
+          <option value="hni">Scenario HNI after clinic service</option>
           <option value="uhni">Healthcare needs not yet covered</option>
         </select>
       </label>
@@ -135,109 +136,74 @@ export function SimulationPanel() {
       {s.strategy === "optimizer" && (
         <button
           className="primary"
-          disabled={!canAllocate}
-          onClick={s.recommend}
+          disabled={!canAllocate || s.recommendBusy}
+          onClick={() => void s.recommend()}
         >
-          Suggest clinic locations for this period
+          {s.recommendBusy
+            ? "Requesting XGBoost / CP-SAT locations…"
+            : "Generate optimized locations"}
         </button>
+      )}
+      {s.recommendBusy && (
+        <p role="status">Waiting for the connected Laguna planning service…</p>
       )}
       {s.proposal && (
         <div className="workspace-subcard" aria-live="polite">
-          <h3>{s.proposal.recommendations.length} recommended locations</h3>
+          <h3>
+            {s.proposal.recommendations.length} optimized locations ·{" "}
+            {s.proposal.solverStatus}
+          </h3>
           <p>
-            These locations could cover{" "}
-            {(
-              (100 * s.proposal.expectedCoveredPriority) /
-              (s.proposal.periodDemand || 1)
-            ).toFixed(1)}
-            % of estimated planning need across Laguna during Days{" "}
-            {period.start}–{period.end}. This is a share of need weighted by
-            population, not a percentage of residents treated.
+            The backend estimated {s.proposal.demandServedPercent?.toFixed(1)}%
+            of daily appointment demand served, with{" "}
+            {s.proposal.capacityUtilization?.toFixed(1)}% capacity use. This is
+            not a percentage of residents treated or a prediction of the HNI
+            reduction.
           </p>
           <p className="workspace-note">
-            Compared with the current locations:{" "}
-            {s.proposal.improvementOverExisting >= 0 ? "+" : ""}
-            {(
-              (100 * s.proposal.improvementOverExisting) /
-              (s.proposal.periodDemand || 1)
-            ).toFixed(1)}{" "}
-            percentage points of estimated need covered. Estimates use this
-            period’s needs before clinic service. Edit or apply the locations to
-            see daily results.
+            Generated with the connected XGBoost and capacity-aware CP-SAT
+            planner for all Laguna. Travel is estimated on barangay adjacency
+            links. Review the saved draft, edit locations if needed, then apply
+            it to this simulation. Applying never publishes a schedule.
           </p>
+          <p className="workspace-note">Backend draft: {s.proposal.planId}</p>
           <ol>
             {s.proposal.recommendations.map((r) => {
               const host = s.forecasts[run.day - 1].find(
                 (b) => b.psgc === r.psgc,
               )!;
-              const old = run.snapshots[run.day - 1].allocation.find(
-                (a) => a.clinicId === r.clinicId,
-              );
-              const communities = [...(s.coverage.get(r.psgc)?.keys() ?? [])]
-                .filter((id) => id !== r.psgc)
-                .map((id) =>
-                  s.forecasts[run.day - 1].find((b) => b.psgc === id),
-                )
-                .filter((b) => b !== undefined);
               return (
                 <li key={r.clinicId} className="workspace-subcard">
                   <strong>
                     {r.clinicId}: {r.name}, {r.municipality}
                   </strong>
                   <p>
-                    {needLevel(host.hni)} · {host.hni.toFixed(1)}/100
+                    {needLevel(host.hni)} baseline HNI · {host.hni.toFixed(1)}/100
                     {host.provisional ? " · Some data missing" : ""}
                   </p>
-                  <p>
-                    <strong>
-                      {!old
-                        ? "Place clinic here"
-                        : old.psgc === r.psgc
-                          ? "Keep clinic here"
-                          : "Move clinic here"}
-                    </strong>
-                  </p>
                   <p>{r.reason}</p>
-                  <p>
-                    Could add{" "}
-                    {(
-                      (100 * r.expectedCoverage) /
-                      (s.proposal!.periodDemand || 1)
-                    ).toFixed(1)}{" "}
-                    percentage points to Laguna’s estimated need covered, beyond
-                    locations selected earlier in this recommendation.
-                  </p>
                   <details>
                     <summary>
-                      Communities this clinic may reach ({r.coveredBarangays},
-                      including the host barangay)
+                      Backend appointment assignments ({r.assignedBarangays?.length ?? 0})
                     </summary>
-                    <p>
-                      Within 3 km in a straight line. Road access and actual
-                      service delivery need local review.
-                    </p>
                     <ul>
-                      {communities.map((b) => (
-                        <li key={b.psgc}>
-                          {b.name}, {b.municipality}
-                        </li>
+                      {r.assignedBarangays?.map((name) => (
+                        <li key={name}>{name}</li>
                       ))}
                     </ul>
-                    {!communities.length && (
-                      <p>
-                        Only the host barangay is within the estimated reach.
-                      </p>
-                    )}
                   </details>
                 </li>
               );
             })}
           </ol>
-          <button onClick={s.reject}>Discard these suggestions</button>
+          <button onClick={s.reject}>Discard this backend draft</button>
         </div>
       )}
       {s.strategy !== "none" && (
-        <fieldset className="simulation-allocation" disabled={!canAllocate}>
+        <fieldset
+          className="simulation-allocation"
+          disabled={!canAllocate || s.recommendBusy}
+        >
           <legend>
             {s.strategy === "manual"
               ? "Choose your clinic locations"
@@ -291,7 +257,7 @@ export function SimulationPanel() {
           ))}
           <button
             className="primary"
-            disabled={s.draft.some((v) => !v)}
+            disabled={s.recommendBusy || s.draft.some((v) => !v)}
             onClick={s.apply}
           >
             {s.strategy === "optimizer"
@@ -328,20 +294,23 @@ export function SimulationPanel() {
           available data.
         </p>
         <p>
-          A clinic covers up to 35% of estimated need within 3 km, with less
-          service farther away. If clinics overlap, only the strongest service
-          estimate counts. Fifteen percent of yesterday’s uncovered score
-          carries into today’s demand, up to 100. The expected need score itself
-          stays independent of clinic placement.
+          The no-intervention baseline increases morbidity by a small
+          deterministic amount each day. The agreed factor weights never
+          change. For the map's scenario HNI, modeled service reduces the
+          completed Balanced score by up to 35% at the host and tapers to 17.5%
+          at the 3 km edge. Nearby communities receive the same distance-based
+          adjustment; outside the catchment, HNI continues along the baseline
+          trend. Overlapping clinics use the strongest single service estimate.
+          Fifteen percent of yesterday’s uncovered score carries into today’s
+          unmet demand, up to 100.
         </p>
         <p>
-          Recommendations compare needs across the placement period, giving more
-          weight to places with more residents. They account for overlapping
-          reach and favor shorter moves. Coverage is based on straight-line
-          distance. Marked road closures are for reference and do not change
-          estimated reach. Flood settings do not add HNI points; operational
-          flood exclusions are evaluated in the connected planner. These are planning estimates, not patient counts or
-          guaranteed real-world results.
+          Optimized locations come from the connected province-wide XGBoost and
+          CP-SAT planner, using modeled adjacency travel and the same Balanced
+          policy. Its XGBoost forecast is for the next real planning day; it is
+          not a clinical forecast for each future simulator date. Flood settings
+          do not add HNI points. These are planning estimates, not patient
+          counts or guaranteed real-world results.
         </p>
       </details>
     </>

@@ -7,7 +7,10 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useForecastStore } from "../../../store/useForecastStore";
-import { getMetricColor } from "../../../services/lagunaData";
+import {
+  getMetricColor,
+  getSimulationNeedColor,
+} from "../../../services/lagunaData";
 import { useAppStore } from "../../../store/useAppStore";
 import { metricLabels } from "../../filters/HeatmapSelector";
 import {
@@ -101,14 +104,16 @@ export function MapLegend({
   const title = isPublic
     ? "Approved Care Locations"
     : simulation
-      ? `Day ${forecast.runs[forecast.strategy].day} · ${forecast.metric === "hni" ? "Expected need" : "Uncovered need"}`
+      ? `Day ${forecast.runs[forecast.strategy].day} · ${forecast.metric === "hni" ? "Scenario HNI" : "Uncovered need"}`
       : metricLabels[metric];
   const subtitle = isPublic
     ? schedule
       ? `${schedule.date} · ${schedule.startTime}–${schedule.endTime} PH Time`
       : `${selectedScheduleDate} · No schedule published`
     : simulation
-      ? "Score / 100 · sample estimate"
+      ? forecast.metric === "hni"
+        ? "After clinic service · baseline shown in details"
+        : "Score / 100 · sample estimate"
       : metric === "density"
         ? "People per square kilometre"
         : metric === "morbidity"
@@ -360,7 +365,13 @@ export function MapLegend({
               scaleMetric === "disasterRisk" ? Math.round(value) : value;
             return (
               <div key={value}>
-                <i style={{ background: getMetricColor(scaleMetric, value) }} />
+                <i
+                  style={{
+                    background: simulation
+                      ? getSimulationNeedColor(value)
+                      : getMetricColor(scaleMetric, value),
+                  }}
+                />
                 <small>
                   {displayValue}
                   {scaleMetric === "disasterRisk" ? "" : "+"}
@@ -373,13 +384,17 @@ export function MapLegend({
       {!isPublic && (
         <small className="legend-color-note">
           Darker ={" "}
-          {scaleMetric === "density"
-            ? "more people/km²"
-            : scaleMetric === "morbidity"
-              ? "more sample illness"
-              : scaleMetric === "disasterRisk"
-                ? "higher risk"
-                : "more need"}{" "}
+          {simulation
+            ? forecast.metric === "hni"
+              ? "higher HNI after service"
+              : "more uncovered need"
+            : scaleMetric === "density"
+              ? "more people/km²"
+              : scaleMetric === "morbidity"
+                ? "more sample illness"
+                : scaleMetric === "disasterRisk"
+                  ? "higher risk"
+                  : "more need"}{" "}
           · Gray = unavailable
         </small>
       )}
@@ -406,7 +421,7 @@ export function MapLegend({
               !simulation &&
               "Risk applies to one reference point; a low score does not establish safety."}{" "}
             {simulation &&
-              "Clinic circles show estimated reach within 3 km in a straight line, not confirmed road access."}
+              "Lighter red shows lower scenario HNI after estimated clinic service. Clinic circles show modeled reach within 3 km in a straight line."}
           </p>
         )}
         {!simulation && (
@@ -486,7 +501,7 @@ export function MapLegend({
                   }
                   label={
                     simulation
-                      ? "Active clinic"
+                      ? "Deployed mobile clinic (numbered)"
                       : isPublic
                         ? "Approved mobile clinic"
                         : "Mobile clinic (numbered)"

@@ -48,8 +48,8 @@ export function forecastDay(
 ): ForecastRecord[] {
   operationalPeriod(day);
   return LAGUNA_BARANGAYS.map((b) => {
-    const phase = hash(`${seed}:${b.municipalityPsgc}`) % 19;
-    const morbidityPressure = 5 + 0.45 * day + 9 * Math.sin((day + phase) / 5);
+    const dailyIncrease = 0.35 + (hash(`${seed}:${b.municipalityPsgc}`) % 11) * 0.02;
+    const morbidityPressure = dailyIncrease * (day - 1);
     const baseline = b.needFactors;
     const factors: ForecastRecord["factors"] = {
       morbidity:

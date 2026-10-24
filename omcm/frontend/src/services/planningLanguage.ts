@@ -17,7 +17,7 @@ export function ordinal(value: number): string {
 }
 
 export const simulationMetricLabels = {
-  hni: "Expected healthcare need",
+  hni: "Scenario HNI after clinic service",
   uhni: "Healthcare needs not yet covered",
 };
 

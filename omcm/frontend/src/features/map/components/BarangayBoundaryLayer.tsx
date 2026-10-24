@@ -9,7 +9,10 @@ import {
   barangayMetric,
   barangayMetricLabel,
 } from "../../../services/providedData";
-import { getMetricColor } from "../../../services/lagunaData";
+import {
+  getMetricColor,
+  getSimulationNeedColor,
+} from "../../../services/lagunaData";
 
 export function BarangayBoundaryLayer({
   data,
@@ -53,17 +56,19 @@ export function BarangayBoundaryLayer({
     } = current.current;
     const isSelected = b?.psgc === selected;
     return {
-      fillColor: isSelected
+      fillColor: isSelected && !overlay
         ? "#facc15"
         : isPublic
           ? "#f8fafc"
+          : overlay && b
+            ? getSimulationNeedColor(
+                overlay.metric === "hni"
+                  ? (overlay.records.get(b.psgc)?.scenarioHni ?? null)
+                  : (overlay.records.get(b.psgc)?.uhni ?? null),
+              )
           : getMetricColor(
-              overlay ? "score" : metric,
-              overlay && b
-                ? (overlay.records.get(b.psgc)?.[overlay.metric] ?? null)
-                : b
-                  ? barangayMetric(b, metric)
-                  : null,
+              metric,
+              b ? barangayMetric(b, metric) : null,
             ),
       fillOpacity: isSelected ? 0.7 : isPublic ? 0.45 : 0.62,
       color: isSelected ? "#102c43" : "#64748b",
@@ -111,7 +116,11 @@ export function BarangayBoundaryLayer({
             const overlay = current.current.forecastOverlay;
             if (overlay) {
               const record = overlay.records.get(b.psgc);
-              label.textContent = `${b.name}, ${b.municipality} · Day ${overlay.day} · ${simulationMetricLabels[overlay.metric]}: ${record?.[overlay.metric].toFixed(1)}/100 · Estimate${record?.provisional ? " · Some data missing" : ""}`;
+              const value =
+                overlay.metric === "hni"
+                  ? record?.scenarioHni
+                  : record?.uhni;
+              label.textContent = `${b.name}, ${b.municipality} · Day ${overlay.day} · ${simulationMetricLabels[overlay.metric]}: ${value?.toFixed(1) ?? "Unavailable"}/100${overlay.metric === "hni" && record ? ` · Baseline ${record.hni.toFixed(1)}` : ""} · Estimate${record?.provisional ? " · Some data missing" : ""}`;
               return label;
             }
             if (current.current.publicMode) {
