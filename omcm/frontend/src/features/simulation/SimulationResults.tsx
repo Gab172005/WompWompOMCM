@@ -6,212 +6,406 @@ import {
   YAxis,
   Tooltip,
   Legend,
+  CartesianGrid,
 } from "recharts";
+import { ArrowDownRight, ArrowUpRight, MapPin } from "lucide-react";
 import {
   STRATEGIES,
   useForecastStore,
+  type RunState,
   type Strategy,
 } from "../../store/useForecastStore";
 import { BARANGAYS_BY_PSGC } from "../../services/providedData";
+
 const strategies = Object.keys(STRATEGIES) as Strategy[];
 const colors = { none: "#b91c1c", manual: "#2563eb", optimizer: "#047857" };
+
+function activityRows(run: RunState, strategy: Strategy) {
+  return run.snapshots
+    .slice(0, run.day)
+    .map((snapshot, index) => {
+      const previous = index > 0 ? run.snapshots[index - 1] : undefined;
+      const baselineChange = previous
+        ? snapshot.metrics.baselineHni - previous.metrics.baselineHni
+        : 0;
+      const impact = Math.max(
+        0,
+        snapshot.metrics.baselineHni - snapshot.metrics.hni,
+      );
+      const deployments = run.history[snapshot.day] ?? [];
+      const affected = snapshot.records.filter(
+        (record) => record.serviceFraction > 0,
+      ).length;
+
+      let title: string;
+      let tone: "baseline" | "deployment" | "service";
+      if (strategy === "none") {
+        title =
+          index === 0
+            ? "Baseline recorded"
+            : `Healthcare need ${baselineChange >= 0 ? "increased" : "decreased"} ${Math.abs(baselineChange).toFixed(1)} points`;
+        tone = "baseline";
+      } else if (deployments.length > 0) {
+        title = `${deployments.length} clinic${deployments.length === 1 ? "" : "s"} placed`;
+        tone = "deployment";
+      } else if (affected > 0) {
+        title = "Clinic service impact updated";
+        tone = "service";
+      } else {
+        title = "No clinic service yet";
+        tone = "baseline";
+      }
+
+      const places = deployments.map((deployment) => {
+        const barangay = BARANGAYS_BY_PSGC.get(deployment.psgc);
+        return `${deployment.clinicId} · ${barangay ? `${barangay.name}, ${barangay.municipality}` : "Location unavailable"}`;
+      });
+
+      return {
+        day: snapshot.day,
+        title,
+        tone,
+        places,
+        baseline: snapshot.metrics.baselineHni,
+        hni: snapshot.metrics.hni,
+        impact,
+        affected,
+      };
+    })
+    .reverse();
+}
+
+function ScenarioActivity({
+  run,
+  strategy,
+}: {
+  run: RunState;
+  strategy: Strategy;
+}) {
+  const rows = activityRows(run, strategy);
+  const visible = rows.slice(0, 5);
+  const earlier = rows.slice(5);
+
+  return (
+    <section
+      className="simulation-activity"
+      aria-label="Simulation activity log"
+      aria-live="polite"
+    >
+      <div className="simulation-section-heading">
+        <div>
+          <h3>Scenario activity</h3>
+          <span>Updates through Day {run.day}</span>
+        </div>
+        <span className="simulation-log-count">
+          {rows.length} {rows.length === 1 ? "update" : "updates"}
+        </span>
+      </div>
+      <ol className="simulation-activity-list">
+        {visible.map((row) => (
+          <li
+            className={`simulation-activity-item is-${row.tone}`}
+            key={row.day}
+          >
+            <span className="simulation-activity-marker" aria-hidden="true">
+              {row.tone === "baseline" ? (
+                <ArrowUpRight size={14} />
+              ) : row.tone === "deployment" ? (
+                <MapPin size={13} />
+              ) : (
+                <ArrowDownRight size={14} />
+              )}
+            </span>
+            <div className="simulation-activity-copy">
+              <div className="simulation-activity-title">
+                <strong>{row.title}</strong>
+                <span>Day {row.day}</span>
+              </div>
+              {row.places.length > 0 && (
+                <p className="simulation-activity-places">
+                  {row.places.join(" · ")}
+                </p>
+              )}
+              <p>
+                Baseline <strong>{row.baseline.toFixed(1)}</strong>
+                <span aria-hidden="true"> · </span>
+                Scenario HNI <strong>{row.hni.toFixed(1)}</strong>
+                {strategy !== "none" && row.impact > 0 && (
+                  <span> · {row.impact.toFixed(1)} below baseline</span>
+                )}
+                {strategy === "none" && row.day > 1 && (
+                  <span>
+                    {" "}
+                    ·{" "}
+                    {row.baseline >=
+                    (run.snapshots[row.day - 2]?.metrics.baselineHni ?? 0)
+                      ? "+"
+                      : "−"}
+                    {Math.abs(
+                      row.baseline -
+                        (run.snapshots[row.day - 2]?.metrics.baselineHni ??
+                          row.baseline),
+                    ).toFixed(1)}{" "}
+                    vs previous day
+                  </span>
+                )}
+              </p>
+              {row.affected > 0 && strategy !== "none" && (
+                <span className="simulation-affected-count">
+                  {row.affected} barangays in modeled reach
+                </span>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+      {earlier.length > 0 && (
+        <details className="simulation-earlier-activity">
+          <summary>Show {earlier.length} earlier updates</summary>
+          <ol className="simulation-activity-list">
+            {earlier.map((row) => (
+              <li
+                className={`simulation-activity-item is-${row.tone}`}
+                key={row.day}
+              >
+                <span className="simulation-activity-marker" aria-hidden="true">
+                  {row.tone === "baseline" ? (
+                    <ArrowUpRight size={14} />
+                  ) : row.tone === "deployment" ? (
+                    <MapPin size={13} />
+                  ) : (
+                    <ArrowDownRight size={14} />
+                  )}
+                </span>
+                <div className="simulation-activity-copy">
+                  <div className="simulation-activity-title">
+                    <strong>{row.title}</strong>
+                    <span>Day {row.day}</span>
+                  </div>
+                  {row.places.length > 0 && (
+                    <p className="simulation-activity-places">
+                      {row.places.join(" · ")}
+                    </p>
+                  )}
+                  <p>
+                    Baseline <strong>{row.baseline.toFixed(1)}</strong> ·
+                    Scenario HNI <strong>{row.hni.toFixed(1)}</strong>
+                    {row.impact > 0 &&
+                      ` · ${row.impact.toFixed(1)} below baseline`}
+                  </p>
+                  {row.affected > 0 && strategy !== "none" && (
+                    <span className="simulation-affected-count">
+                      {row.affected} barangays in modeled reach
+                    </span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+    </section>
+  );
+}
+
 export function SimulationResults() {
-  const s = useForecastStore(),
-    run = s.runs[s.strategy],
-    snapshot = run.snapshots[run.day - 1],
-    m = snapshot.metrics;
-  const data = Array.from({ length: 30 }, (_, i) => ({
-    day: i + 1,
+  const s = useForecastStore();
+  const run = s.runs[s.strategy];
+  const snapshot = run.snapshots[run.day - 1];
+  const metrics = snapshot.metrics;
+  const improvement = Math.max(0, metrics.baselineHni - metrics.hni);
+  const data = Array.from({ length: 30 }, (_, index) => ({
+    day: index + 1,
     ...Object.fromEntries(
-      strategies.map((id) => [
-        id,
-        i < s.runs[id].reached ? s.runs[id].snapshots[i].metrics.hni : null,
+      strategies.map((strategy) => [
+        strategy,
+        index < s.runs[strategy].reached
+          ? s.runs[strategy].snapshots[index].metrics.hni
+          : null,
       ]),
     ),
   }));
+  const timeLabel = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+  }).format(new Date(snapshot.timestamp));
+
   return (
     <section
-      className="workspace-subcard simulation-results"
+      className="simulation-results"
       aria-label="Simulation results"
       aria-live="polite"
     >
-      <h3>Day {run.day} estimated results</h3>
-      <p>
-        {new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(
-          new Date(snapshot.timestamp),
-        )}{" "}
-        · {snapshot.records.length} barangays ·{" "}
-        {snapshot.records.filter((b) => b.provisional).length} scores with some
-        data missing
-      </p>
-      <dl className="simulation-statistics">
-        <dt>Baseline HNI before clinic service</dt>
-        <dd>{m.baselineHni.toFixed(1)}/100</dd>
-        <dt>Scenario HNI after clinic service</dt>
-        <dd>{m.hni.toFixed(1)}/100</dd>
-        <dt>Healthcare needs not yet covered</dt>
-        <dd>{m.uhni.toFixed(1)}/100</dd>
-        <dt>Barangays within estimated clinic reach</dt>
-        <dd>{m.servedBarangays}</dd>
-        <dt>Estimated planning need covered today</dt>
-        <dd>{m.coveredPercent.toFixed(1)}%</dd>
-        <dt>Total clinic moves so far</dt>
-        <dd>{m.relocations}</dd>
-      </dl>
-      <p className="workspace-note">
-        Scores are averages based on population. Lower uncovered need means more
-        estimated need is being met. Uncovered need includes some need carried
-        over from earlier days, so it can exceed today’s expected need score.
-        Coverage is the share of estimated need met, not the share of residents
-        treated. A barangay within reach may still have needs the clinics cannot
-        cover.
-      </p>
-      <h3>Compare scenario HNI after clinic service</h3>
-      <p className="workspace-note">
-        The no-intervention line rises with the shared baseline. Manual and
-        optimized allocations lower the line where clinics provide modeled
-        service. Each scenario records its own progress. Run all three through
-        Day 30 for a complete comparison. Blank results mean that scenario has
-        not reached that day yet.
-      </p>
-      <div style={{ width: "100%", height: 220 }}>
+      <div className="simulation-results-heading">
+        <div>
+          <span className="simulation-eyebrow">Day {run.day} snapshot</span>
+          <h3>{timeLabel}</h3>
+        </div>
+        <span className="simulation-data-count">
+          {snapshot.records.length} barangays
+        </span>
+      </div>
+      <div className="simulation-result-cards">
+        <div>
+          <span>Baseline HNI</span>
+          <strong>
+            {metrics.baselineHni.toFixed(1)}
+            <small>/100</small>
+          </strong>
+        </div>
+        <div>
+          <span>Scenario HNI</span>
+          <strong>
+            {metrics.hni.toFixed(1)}
+            <small>/100</small>
+          </strong>
+        </div>
+        <div className={improvement > 0 ? "has-improvement" : ""}>
+          <span>Below baseline</span>
+          <strong>
+            {improvement.toFixed(1)}
+            <small> pts</small>
+          </strong>
+        </div>
+        <div>
+          <span>Barangays in reach</span>
+          <strong>
+            {metrics.servedBarangays}
+            <small> / {snapshot.records.length}</small>
+          </strong>
+        </div>
+      </div>
+
+      <div className="simulation-trend-heading">
+        <div>
+          <h3>HNI over time</h3>
+          <p>Lower lines indicate lower estimated need for that scenario.</p>
+        </div>
+        <span>Score / 100</span>
+      </div>
+      <div
+        className="simulation-trend-chart"
+        role="img"
+        aria-label="Line chart comparing estimated HNI across the three scenarios over 30 days"
+      >
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
+          <LineChart
+            data={data}
+            margin={{ top: 8, right: 8, bottom: 0, left: -16 }}
+          >
+            <CartesianGrid stroke="#e7edf1" vertical={false} />
             <XAxis
               dataKey="day"
-              tickFormatter={(day: number) => `Day ${day}`}
+              tickFormatter={(day: number) => `${day}`}
+              tickLine={false}
+              axisLine={false}
             />
-            <YAxis domain={[0, 100]} />
+            <YAxis
+              domain={[0, 100]}
+              tickLine={false}
+              axisLine={false}
+              width={40}
+            />
             <Tooltip
               labelFormatter={(day) => `Day ${day}`}
-              formatter={(value) => `${Number(value).toFixed(1)}/100`}
+              formatter={(value, name) => [
+                `${Number(value).toFixed(1)}/100`,
+                STRATEGIES[name as Strategy],
+              ]}
             />
-            <Legend />
-            {strategies.map((id) => (
+            <Legend iconType="circle" />
+            {strategies.map((strategy) => (
               <Line
-                key={id}
+                key={strategy}
                 type="monotone"
-                dataKey={id}
-                name={STRATEGIES[id]}
-                stroke={colors[id]}
+                dataKey={strategy}
+                name={STRATEGIES[strategy]}
+                stroke={colors[strategy]}
+                strokeWidth={strategy === s.strategy ? 3 : 2}
                 dot={false}
                 isAnimationActive={false}
+                connectNulls={false}
               />
             ))}
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <div className="simulation-table-scroll">
-        <table>
-          <caption>
-            Estimated results on Day {run.day} · scores out of 100
-          </caption>
-          <thead>
-            <tr>
-              <th>Scenario</th>
-              <th>Baseline HNI</th>
-              <th>Scenario HNI</th>
-              <th>Need not yet covered</th>
-              <th>Barangays within reach</th>
-              <th>Need covered (%)</th>
-              <th>Total clinic moves</th>
-            </tr>
-          </thead>
-          <tbody>
-            {strategies.map((id) => {
-              const metrics =
-                s.runs[id].reached >= run.day
-                  ? s.runs[id].snapshots[run.day - 1].metrics
-                  : null;
-              return (
-                <tr key={id}>
-                  <th>{STRATEGIES[id]}</th>
-                  {metrics ? (
-                    <>
-                      <td>{metrics.baselineHni.toFixed(2)}</td>
-                      <td>{metrics.hni.toFixed(2)}</td>
-                      <td>{metrics.uhni.toFixed(2)}</td>
-                      <td>{metrics.servedBarangays}</td>
-                      <td>{metrics.coveredPercent.toFixed(2)}</td>
-                      <td>{metrics.relocations}</td>
-                    </>
-                  ) : (
-                    <td colSpan={6}>
-                      Run this scenario through Day {run.day} to compare
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <details className="place-disclosure">
-        <summary>Detailed planning totals</summary>
-        <p>
-          These totals multiply uncovered need scores by population. They help
-          compare plans and are not counts of sick people or missed
-          appointments. Lower totals mean less estimated need left uncovered.
+      <p className="simulation-chart-footnote">
+        Each scenario has its own timeline. Blank portions have not been run
+        yet.
+      </p>
+
+      <ScenarioActivity run={run} strategy={s.strategy} />
+
+      <details className="simulation-full-results">
+        <summary>Full scenario comparison and deployment history</summary>
+        <div className="simulation-table-scroll">
+          <table>
+            <caption>
+              Estimated results on Day {run.day} · scores out of 100
+            </caption>
+            <thead>
+              <tr>
+                <th>Scenario</th>
+                <th>Baseline HNI</th>
+                <th>Scenario HNI</th>
+                <th>Need not yet covered</th>
+                <th>Barangays in reach</th>
+                <th>Need covered (%)</th>
+                <th>Clinic moves</th>
+              </tr>
+            </thead>
+            <tbody>
+              {strategies.map((strategy) => {
+                const scenarioMetrics =
+                  s.runs[strategy].reached >= run.day
+                    ? s.runs[strategy].snapshots[run.day - 1].metrics
+                    : null;
+                return (
+                  <tr key={strategy}>
+                    <th>{STRATEGIES[strategy]}</th>
+                    {scenarioMetrics ? (
+                      <>
+                        <td>{scenarioMetrics.baselineHni.toFixed(2)}</td>
+                        <td>{scenarioMetrics.hni.toFixed(2)}</td>
+                        <td>{scenarioMetrics.uhni.toFixed(2)}</td>
+                        <td>{scenarioMetrics.servedBarangays}</td>
+                        <td>{scenarioMetrics.coveredPercent.toFixed(2)}</td>
+                        <td>{scenarioMetrics.relocations}</td>
+                      </>
+                    ) : (
+                      <td colSpan={6}>
+                        Run this scenario through Day {run.day} to compare
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="workspace-note">
+          Need covered is the estimated share of planning need met, not the
+          share of residents treated. Uncovered need includes carryover from
+          prior days and is not a patient count.
         </p>
-        <table>
-          <caption>
-            Population × uncovered score · through Day {run.day}
-          </caption>
-          <thead>
-            <tr>
-              <th>Scenario</th>
-              <th>Today’s total</th>
-              <th>Total across days so far</th>
-            </tr>
-          </thead>
-          <tbody>
-            {strategies.map((id) => {
-              const metrics =
-                s.runs[id].reached >= run.day
-                  ? s.runs[id].snapshots[run.day - 1].metrics
-                  : null;
-              return (
-                <tr key={id}>
-                  <th>{STRATEGIES[id]}</th>
-                  {metrics ? (
-                    <>
-                      <td>
-                        {Math.round(
-                          metrics.totalUnmetPriority,
-                        ).toLocaleString()}
-                      </td>
-                      <td>
-                        {Math.round(
-                          metrics.cumulativeUnmetPriority,
-                        ).toLocaleString()}
-                      </td>
-                    </>
-                  ) : (
-                    <td colSpan={2}>Run through Day {run.day} to compare</td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </details>
-      <details>
-        <summary>Weekly deployment history</summary>
-        {Object.entries(run.history).length ? (
-          Object.entries(run.history).map(([day, allocation]) => (
-            <p key={day}>
-              Day {day}:{" "}
-              {allocation
-                .map((a) => {
-                  const b = BARANGAYS_BY_PSGC.get(a.psgc);
-                  return `${a.clinicId} → ${b ? `${b.name}, ${b.municipality}` : "Location details unavailable"}`;
-                })
-                .join("; ")}
-            </p>
-          ))
-        ) : (
-          <p>No confirmed deployments.</p>
-        )}
+        <details>
+          <summary>Weekly deployment history</summary>
+          {Object.entries(run.history).length ? (
+            Object.entries(run.history).map(([day, allocation]) => (
+              <p key={day}>
+                Day {day}:{" "}
+                {allocation
+                  .map((assignment) => {
+                    const barangay = BARANGAYS_BY_PSGC.get(assignment.psgc);
+                    return `${assignment.clinicId} → ${barangay ? `${barangay.name}, ${barangay.municipality}` : "Location unavailable"}`;
+                  })
+                  .join("; ")}
+              </p>
+            ))
+          ) : (
+            <p>No confirmed deployments.</p>
+          )}
+        </details>
       </details>
     </section>
   );

@@ -55,26 +55,32 @@ export function BarangayBoundaryLayer({
       forecastOverlay: overlay,
     } = current.current;
     const isSelected = b?.psgc === selected;
+    const record = overlay && b ? overlay.records.get(b.psgc) : undefined;
+    const hasClinicImpact = Boolean(record && record.serviceFraction > 0);
     return {
-      fillColor: isSelected && !overlay
-        ? "#facc15"
+      fillColor:
+        isSelected && !overlay
+          ? "#facc15"
+          : isPublic
+            ? "#f8fafc"
+            : overlay && b
+              ? getSimulationNeedColor(
+                  overlay.metric === "hni"
+                    ? (overlay.records.get(b.psgc)?.scenarioHni ?? null)
+                    : (overlay.records.get(b.psgc)?.uhni ?? null),
+                )
+              : getMetricColor(metric, b ? barangayMetric(b, metric) : null),
+      fillOpacity: isSelected
+        ? 0.7
         : isPublic
-          ? "#f8fafc"
-          : overlay && b
-            ? getSimulationNeedColor(
-                overlay.metric === "hni"
-                  ? (overlay.records.get(b.psgc)?.scenarioHni ?? null)
-                  : (overlay.records.get(b.psgc)?.uhni ?? null),
-              )
-          : getMetricColor(
-              metric,
-              b ? barangayMetric(b, metric) : null,
-            ),
-      fillOpacity: isSelected ? 0.7 : isPublic ? 0.45 : 0.62,
-      color: isSelected ? "#102c43" : "#64748b",
-      weight: isSelected ? 3.5 : 0.7,
-      opacity: isSelected ? 1 : 0.85,
-      className: `barangay-boundary${isSelected ? " is-selected" : ""}`,
+          ? 0.45
+          : hasClinicImpact
+            ? 0.72
+            : 0.62,
+      color: isSelected ? "#102c43" : hasClinicImpact ? "#f17d8b" : "#64748b",
+      weight: isSelected ? 3.5 : hasClinicImpact ? 1.15 : 0.7,
+      opacity: isSelected ? 1 : hasClinicImpact ? 0.9 : 0.85,
+      className: `barangay-boundary${isSelected ? " is-selected" : ""}${hasClinicImpact ? " has-clinic-impact" : ""}`,
     };
   }
   useEffect(() => {
@@ -85,8 +91,15 @@ export function BarangayBoundaryLayer({
       const b = BARANGAYS_BY_PSGC.get(
         String(path.feature.properties?.adm4_psgc),
       );
-      if (b?.psgc === selectedBarangayPsgc) path.bringToFront();
       const element = path.getElement();
+      const record = current.current.forecastOverlay?.records.get(
+        b?.psgc ?? "",
+      );
+      element?.classList.toggle(
+        "has-clinic-impact",
+        Boolean(record && record.serviceFraction > 0),
+      );
+      if (b?.psgc === selectedBarangayPsgc) path.bringToFront();
       element?.classList.toggle(
         "is-selected",
         b?.psgc === selectedBarangayPsgc,
@@ -117,9 +130,7 @@ export function BarangayBoundaryLayer({
             if (overlay) {
               const record = overlay.records.get(b.psgc);
               const value =
-                overlay.metric === "hni"
-                  ? record?.scenarioHni
-                  : record?.uhni;
+                overlay.metric === "hni" ? record?.scenarioHni : record?.uhni;
               label.textContent = `${b.name}, ${b.municipality} · Day ${overlay.day} · ${simulationMetricLabels[overlay.metric]}: ${value?.toFixed(1) ?? "Unavailable"}/100${overlay.metric === "hni" && record ? ` · Baseline ${record.hni.toFixed(1)}` : ""} · Estimate${record?.provisional ? " · Some data missing" : ""}`;
               return label;
             }
