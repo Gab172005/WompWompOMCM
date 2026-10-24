@@ -1,4 +1,5 @@
 import { distanceKm } from "../healthcareNeed";
+import { isDeploymentRestricted } from "../mapLandmarks";
 import type { ForecastRecord } from "./forecast";
 export const COVERAGE_RADIUS_KM = 3;
 export const SERVICE_FRACTION = 0.35;
@@ -37,7 +38,8 @@ export function eligible(record: ForecastRecord) {
     record.lng >= -180 &&
     record.lng <= 180 &&
     Number.isFinite(record.population) &&
-    record.population > 0
+    record.population > 0 &&
+    !isDeploymentRestricted(record)
   );
 }
 export function buildCoverage(records: ForecastRecord[]): CoverageMatrix {

@@ -947,6 +947,43 @@
   font-size: 12px;
 }
 
+.forest-land-area {
+  cursor: not-allowed;
+}
+.workspace-restriction-key {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+}
+.workspace-restriction-key i {
+  width: 12px;
+  height: 10px;
+  background: #d1d5db;
+  border: 1px solid #9ca3af;
+}
+.forest-land-marker span {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #9ca3af;
+}
+.forest-land-label {
+  width: 145px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #6b7280;
+  font: 400 10px/1.35 sans-serif;
+  text-align: center;
+  white-space: normal;
+}
+.leaflet-tooltip.forest-land-label::before {
+  display: none;
+}
+
 .public-clinic-key {
   display: inline-block;
   width: 11px;

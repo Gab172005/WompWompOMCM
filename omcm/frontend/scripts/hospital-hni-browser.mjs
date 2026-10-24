@@ -56,6 +56,13 @@ try {
   await page.goto("http://127.0.0.1:5177", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".barangay-boundary")).toHaveCount(681);
   await expect(page.locator(".hospital-marker-custom")).toHaveCount(56);
+  await expect(page.locator(".hospital-marker-custom svg")).toHaveCount(56);
+  await expect(page.locator(".forest-land-area")).toHaveCount(1);
+  await expect(page.locator(".forest-land-area")).toHaveAttribute(
+    "fill",
+    "#d1d5db",
+  );
+  await expect(page.locator(".forest-land-marker")).toHaveCount(1);
   await expect(page.getByRole("region", { name: "Map legend" })).toContainText(
     "Verified hospital",
   );

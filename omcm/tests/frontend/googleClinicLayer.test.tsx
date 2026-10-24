@@ -1,11 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  waitFor,
-} from "@testing-library/react";
+import { act, cleanup, render, waitFor } from "@testing-library/react";
 import { LagunaGoogleMap } from "../../frontend/src/features/map/components/LagunaGoogleMap";
 import {
   LAGUNA_HOSPITALS,
@@ -14,6 +8,11 @@ import {
 import { MAPPED_OSM_CLINICS } from "../../frontend/src/services/providedData";
 import type { LocatedOsmClinic } from "../../frontend/src/types/osmClinic";
 import type { MapProps } from "../../frontend/src/features/map/components/mapTypes";
+import {
+  clinicMarkerSvg,
+  hospitalMarkerSvg,
+  svgDataUrl,
+} from "../../frontend/src/features/map/components/facilityIcons";
 
 type Handler = () => void;
 
@@ -65,14 +64,17 @@ class MockMarker {
   handlers: Handler[] = [];
   map: unknown = null;
   title: string | undefined;
+  icon: { url?: string } | undefined;
   position: { lat: number; lng: number };
   constructor(options: {
     map?: unknown;
     title?: string;
+    icon?: { url?: string };
     position: { lat: number; lng: number };
   }) {
     this.map = options.map ?? null;
     this.title = options.title;
+    this.icon = options.icon;
     this.position = options.position;
     instances.markers.push(this);
   }
@@ -114,6 +116,18 @@ function installGoogleMock() {
       Map: MockMap,
       Marker: MockMarker,
       InfoWindow: MockInfoWindow,
+      Size: class {
+        constructor(
+          public width: number,
+          public height: number,
+        ) {}
+      },
+      Point: class {
+        constructor(
+          public x: number,
+          public y: number,
+        ) {}
+      },
       LatLngBounds: class {
         extend = vi.fn();
       },
@@ -179,7 +193,14 @@ const props: MapProps = {
 };
 
 const osmMarkers = () =>
-  instances.markers.filter((marker) => marker.title?.startsWith("OSM clinic"));
+  instances.markers.filter(
+    (marker) => marker.icon?.url === svgDataUrl(clinicMarkerSvg),
+  );
+
+const hospitalMarkers = () =>
+  instances.markers.filter(
+    (marker) => marker.icon?.url === svgDataUrl(hospitalMarkerSvg),
+  );
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -266,7 +287,7 @@ describe("Google Maps fixed OSM clinic layer (mocked, no live key)", () => {
     const view = render(
       <LagunaGoogleMap {...props} showHospitals showOsmClinics={false} />,
     );
-    const active = instances.markers.filter((marker) => marker.map !== null);
+    const active = hospitalMarkers().filter((marker) => marker.map !== null);
     expect(active).toHaveLength(56);
     expect(active.map((marker) => marker.position)).toEqual(
       LAGUNA_HOSPITALS.map((hospital) => ({
@@ -303,10 +324,14 @@ describe("Google Maps fixed OSM clinic layer (mocked, no live key)", () => {
     render(<LagunaGoogleMap {...props} />);
     expect(osmMarkers()).toHaveLength(1);
     expect(osmMarkers()[0].position).toEqual({ lat: 14.2, lng: 121.2 });
-    // Both other independently hidden layers have no active markers.
-    expect(instances.markers.filter((m) => m.map !== null)).toEqual(
-      osmMarkers(),
+    expect(hospitalMarkers().filter((marker) => marker.map !== null)).toEqual(
+      [],
     );
+    expect(
+      instances.markers.filter(
+        (marker) => marker.map !== null && marker.title?.startsWith("MC-"),
+      ),
+    ).toEqual([]);
   });
 
   it("keeps fixed, hospital and mobile map layers independently switchable", () => {
@@ -324,14 +349,9 @@ describe("Google Maps fixed OSM clinic layer (mocked, no live key)", () => {
       />,
     );
     const activeOsm = () =>
-      instances.markers.filter(
-        (marker) =>
-          marker.map !== null && marker.title?.startsWith("OSM clinic"),
-      );
+      osmMarkers().filter((marker) => marker.map !== null);
     const activeHospitals = () =>
-      instances.markers.filter(
-        (marker) => marker.map !== null && marker.title?.includes("("),
-      );
+      hospitalMarkers().filter((marker) => marker.map !== null);
     const activeMobile = () =>
       instances.markers.filter(
         (marker) => marker.map !== null && marker.title?.startsWith("MC-"),
@@ -375,7 +395,7 @@ describe("Google Maps fixed OSM clinic layer (mocked, no live key)", () => {
       />,
     );
     expect(osmMarkers()).toHaveLength(1);
-    expect(osmMarkers()[0].title).toContain("node/9001");
+    expect(osmMarkers()[0].title).toBe(malicious.name);
   });
 
   it("renders popup text with DOM nodes so malicious tags stay inert text", async () => {
@@ -419,13 +439,16 @@ describe("Google Maps fixed OSM clinic layer (mocked, no live key)", () => {
     const info = instances.windows.at(-1)!;
     expect(info.map).not.toBeNull();
     const listenersBefore = instances.listeners.filter((l) => !l.removed);
-    expect(listenersBefore).toHaveLength(1);
+    expect(marker.handlers).toHaveLength(1);
     act(() => {
       view.rerender(<LagunaGoogleMap {...props} showOsmClinics={false} />);
     });
     expect(marker.map).toBeNull();
     expect(info.closed).toBe(true);
-    expect(instances.listeners.filter((l) => !l.removed)).toHaveLength(0);
+    expect(marker.handlers).toHaveLength(0);
+    expect(instances.listeners.filter((l) => !l.removed)).toHaveLength(
+      listenersBefore.length - 1,
+    );
   });
 
   it("replaces markers on data change without leaking the previous layer", () => {
@@ -448,7 +471,7 @@ describe("Google Maps fixed OSM clinic layer (mocked, no live key)", () => {
       osmMarkers()
         .filter((m) => m.map !== null)
         .map((m) => m.title),
-    ).toEqual(["OSM clinic way/123"]);
+    ).toEqual([replacement.name || "Clinic"]);
     expect(first.handlers).toHaveLength(0);
   });
 
@@ -468,14 +491,13 @@ describe("Google Maps fixed OSM clinic layer (mocked, no live key)", () => {
     expect((window as any).gm_authFailure).toBe(original);
   });
 
-  it("is inert but clean when the map is not ready or the layer is empty", () => {
+  it("accepts fixed clinic data after an empty layer without opening a popup", () => {
     const view = render(
       <LagunaGoogleMap {...props} osmClinics={[]} showOsmClinics />,
     );
     expect(osmMarkers()).toHaveLength(0);
     view.rerender(<LagunaGoogleMap {...props} osmClinics={[malicious]} />);
     expect(osmMarkers()).toHaveLength(1);
-    fireEvent(window, new Event("resize"));
-    expect(instances.windows.every((w) => w.closed)).toBe(true);
+    expect(instances.windows.every((w) => w.map === null)).toBe(true);
   });
 });

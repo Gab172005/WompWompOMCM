@@ -219,7 +219,7 @@ export function loadLagunaGeography(): Promise<Geography> {
 
 /** WGS84 point containment, including polygon holes and islands. */
 export function containsLagunaPoint(
-  data: LagunaGeometry,
+  data: FeatureCollection<Polygon | MultiPolygon>,
   lng: number,
   lat: number,
 ) {

@@ -2,6 +2,7 @@ import { divIcon } from "leaflet";
 import { Marker, Popup } from "react-leaflet";
 import type { MapProps } from "./mapTypes";
 import { interpolateRoutePosition } from "../../../services/lagunaData";
+import { mobileClinicSvg } from "./facilityIcons";
 export function ClinicMarkers({
   proposedClinics,
   simulationActive,
@@ -29,9 +30,12 @@ export function ClinicMarkers({
             : c;
         const icon = divIcon({
           className: "clinic-staging-marker",
-          html: `<span class="workspace-clinic-marker ${selectedClinicId === c.clinicId ? "selected" : ""}">${i + 1}</span>`,
-          iconSize: [30, 30],
-          iconAnchor: [15, 15],
+          html: mobileClinicSvg(
+            i + 1,
+            selectedClinicId === c.clinicId ? "selected" : "active",
+          ),
+          iconSize: [40, 36],
+          iconAnchor: [17, 19],
         });
         return (
           <Marker
@@ -43,7 +47,8 @@ export function ClinicMarkers({
             eventHandlers={{
               click: () => onSelectClinic(c.clinicId),
               keypress: (event) => {
-                if (event.originalEvent.key === "Enter") onSelectClinic(c.clinicId);
+                if (event.originalEvent.key === "Enter")
+                  onSelectClinic(c.clinicId);
               },
             }}
           >

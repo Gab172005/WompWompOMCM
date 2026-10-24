@@ -13,6 +13,7 @@ import { ClinicMarkers } from "./ClinicMarkers";
 import { OsmClinicMarkers } from "./OsmClinicMarkers";
 import { RouteLayer } from "./RouteLayer";
 import { BarangayBoundaryLayer } from "./BarangayBoundaryLayer";
+import { ForestLandMarker } from "./ForestLandMarker";
 function Interaction({
   data,
   selectedPsgc,
@@ -118,6 +119,7 @@ export function LagunaLeafletMap(props: MapProps) {
         {barangayData && (
           <BarangayBoundaryLayer data={barangayData} {...props} />
         )}
+        <ForestLandMarker />
         {props.showHospitals && <HospitalMarkers hospitals={props.hospitals} />}
         {props.forecastOverlay && props.showClinics && (
           <SimulationLayers overlay={props.forecastOverlay} />

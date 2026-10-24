@@ -36,4 +36,13 @@ Maintain CSV IDs, network references, official location coordinates and metadata
 
 ## Labels and interaction
 
+Paete's Sierra Madre uplands have a user-configured no-deployment overlay in
+`src/data/paete-forest-land.json`. It uses the largest contiguous remainder of
+the bundled Paete municipal polygon after subtracting its nine mapped barangay
+polygons. This is an approximate planning exclusion, not an official forest-land
+survey. Regenerate it with `python scripts/build-paete-forest-land.py` (Shapely
+required only for generation). Both map engines show it in neutral gray. The
+same geometry excludes staging sites and forecast deployment candidates while
+retaining the underlying barangay health records.
+
 The map has opaque fills, thin white borders, the five requested red shades, a gray no-data state, zoom/pan, boundary hover highlighting and clickable details. Barangay labels appear at zoom 12 and above; overlapping/off-screen labels are hidden. Full names remain available on hover and click. Municipality fallback labels are visible when space permits. Hospitals/clinic hubs remain available via the Facilities toggle; all existing public schedule and planning workflows are preserved.

@@ -10,6 +10,12 @@ import {
 
 import type { MapProps } from "./mapTypes";
 import {
+  clinicMarkerSvg,
+  hospitalMarkerSvg,
+  mobileClinicSvg,
+  svgDataUrl,
+} from "./facilityIcons";
+import {
   BARANGAYS_BY_PSGC,
   OSM_CLINIC_SNAPSHOT,
   barangayMetric,
@@ -17,6 +23,11 @@ import {
 } from "../../../services/providedData";
 import type { LocatedOsmClinic } from "../../../types/osmClinic";
 import { isEligibleHospital } from "../../../services/healthcareNeed";
+import {
+  FOREST_LAND_GEOMETRY,
+  FOREST_LAND_RESTRICTION,
+  PAETE_FOREST_LAND,
+} from "../../../services/mapLandmarks";
 import {
   osmClinicLink,
   osmClinicPopupText,
@@ -149,7 +160,10 @@ export function LagunaGoogleMap({
     )
       .then((collections) => ({
         type: "FeatureCollection",
-        features: collections.flatMap((c) => c.features),
+        features: [
+          ...collections.flatMap((c) => c.features),
+          ...FOREST_LAND_GEOMETRY.features,
+        ],
       }))
       .then((data) => {
         if (isMounted) setGeoJsonData(data);
@@ -314,6 +328,49 @@ export function LagunaGoogleMap({
     };
   }, []);
 
+  // Keep the forest landmark independent of health and facility layers.
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !window.google?.maps) return;
+    const { name, jurisdiction, position } = PAETE_FOREST_LAND;
+    const marker = new google.maps.Marker({
+      map,
+      position,
+      title: `${name} · Jurisdiction: ${jurisdiction}`,
+      icon: {
+        url: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="6" height="6"><circle cx="3" cy="3" r="3" fill="#9ca3af"/></svg>')}`,
+        scaledSize: new google.maps.Size(6, 6),
+        anchor: new google.maps.Point(3, 3),
+        labelOrigin: new google.maps.Point(3, -16),
+      },
+      label: {
+        text: name,
+        className: "forest-land-label",
+        color: "#6b7280",
+        fontSize: "10px",
+        fontWeight: "400",
+      },
+      zIndex: 12,
+    });
+    const content = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = name;
+    const detail = document.createElement("p");
+    detail.textContent = `Jurisdiction: ${jurisdiction}`;
+    const restriction = document.createElement("p");
+    restriction.textContent = FOREST_LAND_RESTRICTION;
+    content.append(title, detail, restriction);
+    const info = new google.maps.InfoWindow({ content });
+    const listener = marker.addListener("click", () => {
+      info.open({ map, anchor: marker });
+    });
+    return () => {
+      listener.remove();
+      info.close();
+      marker.setMap(null);
+    };
+  }, []);
+
   // Render municipality polygons into Google Maps Data Layer
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -327,6 +384,16 @@ export function LagunaGoogleMap({
 
     // Style data layer
     map.data.setStyle((feature) => {
+      if (feature.getProperty("restriction") === "no_mobile_clinic_deployment")
+        return {
+          fillColor: "#d1d5db",
+          fillOpacity: 0.9,
+          strokeColor: "#9ca3af",
+          strokeWeight: 0.7,
+          clickable: true,
+          cursor: "not-allowed",
+          zIndex: 3,
+        };
       const code = String(feature.getProperty("adm3_psgc") || "");
       const barangayCode = String(feature.getProperty("adm4_psgc") || "");
       const barangay = BARANGAYS_BY_PSGC.get(barangayCode);
@@ -383,6 +450,18 @@ export function LagunaGoogleMap({
     const mouseOverListener = map.data.addListener(
       "mouseover",
       (event: any) => {
+        if (
+          event.feature.getProperty("restriction") ===
+          "no_mobile_clinic_deployment"
+        ) {
+          setHoveredInfo({
+            name: PAETE_FOREST_LAND.name,
+            value: FOREST_LAND_RESTRICTION,
+            x: event.domEvent?.clientX || 200,
+            y: event.domEvent?.clientY || 200,
+          });
+          return;
+        }
         const barangay = BARANGAYS_BY_PSGC.get(
           String(event.feature.getProperty("adm4_psgc")),
         );
@@ -512,10 +591,9 @@ export function LagunaGoogleMap({
         map,
         title: `${h.name} (${h.municipality})`,
         icon: {
-          path: "M 0,-12 L 0,12 M -12,0 L 12,0",
-          strokeColor: "#ef4444",
-          strokeWeight: 4,
-          scale: 1,
+          url: svgDataUrl(hospitalMarkerSvg),
+          scaledSize: new google.maps.Size(32, 32),
+          anchor: new google.maps.Point(16, 16),
         },
         zIndex: 15,
       });
@@ -581,14 +659,11 @@ export function LagunaGoogleMap({
       const marker = new google.maps.Marker({
         position: { lat: clinic.lat, lng: clinic.lng },
         map,
-        title: `OSM clinic ${osmClinicReference(clinic)}`,
+        title: clinic.name || "Clinic",
         icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 6,
-          fillColor: "#7c3aed",
-          fillOpacity: 1,
-          strokeColor: "#ffffff",
-          strokeWeight: 1.5,
+          url: svgDataUrl(clinicMarkerSvg),
+          scaledSize: new google.maps.Size(30, 30),
+          anchor: new google.maps.Point(15, 15),
         },
         zIndex: 12,
       });
@@ -629,19 +704,10 @@ export function LagunaGoogleMap({
         position: { lat: c.lat, lng: c.lng },
         map,
         title: `${c.clinicId}: ${c.siteName}`,
-        label: {
-          text: String(i + 1),
-          color: "#ffffff",
-          fontWeight: "bold",
-          fontSize: "12px",
-        },
         icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 14,
-          fillColor: "#059669",
-          fillOpacity: 1,
-          strokeColor: "#ffffff",
-          strokeWeight: 2,
+          url: svgDataUrl(mobileClinicSvg(i + 1)),
+          scaledSize: new google.maps.Size(40, 36),
+          anchor: new google.maps.Point(17, 19),
         },
         zIndex: 20,
       });
@@ -672,16 +738,14 @@ export function LagunaGoogleMap({
             title: `${kind === "active" ? "Active clinic" : "Recommendation (not deployed)"}: ${a.clinicId} · ${a.name} · PSGC ${a.psgc}`,
             label: {
               text: a.clinicId,
-              color: kind === "active" ? "#ffffff" : "#6d28d9",
+              color: kind === "active" ? "#047857" : "#6d28d9",
               fontSize: "10px",
             },
             icon: {
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: kind === "active" ? 15 : 22,
-              fillColor: kind === "active" ? "#059669" : "#ede9fe",
-              fillOpacity: kind === "active" ? 1 : 0.4,
-              strokeColor: kind === "active" ? "#047857" : "#7c3aed",
-              strokeWeight: 2,
+              url: svgDataUrl(mobileClinicSvg(undefined, kind)),
+              scaledSize: new google.maps.Size(40, 36),
+              anchor: new google.maps.Point(17, 19),
+              labelOrigin: new google.maps.Point(17, 43),
             },
             zIndex: kind === "active" ? 40 : 39,
           }),
@@ -776,19 +840,12 @@ export function LagunaGoogleMap({
         position: { lat: pos.lat, lng: pos.lng },
         map,
         title: `${clinic.clinicId} (${clinic.municipality} Deployment)`,
-        label: {
-          text: `✚ ${idx + 1}`,
-          color: "#ffffff",
-          fontWeight: "bold",
-          fontSize: "11px",
-        },
         icon: {
-          path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-          scale: isSelected ? 8 : 6,
-          fillColor: isSelected ? "#38bdf8" : "#2563eb",
-          fillOpacity: 1,
-          strokeColor: "#ffffff",
-          strokeWeight: 2,
+          url: svgDataUrl(
+            mobileClinicSvg(idx + 1, isSelected ? "selected" : "active"),
+          ),
+          scaledSize: new google.maps.Size(40, 36),
+          anchor: new google.maps.Point(17, 19),
         },
         zIndex: 35,
       });
