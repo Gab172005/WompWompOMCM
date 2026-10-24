@@ -2,7 +2,9 @@
 
 Branch: `fix/agreed-balanced-hni-weights`. Reviewed 2026-10-24.
 This branch includes all previous connected allocation, dated forecast and public
-visit work through `c18c7ce`; push/open one combined PR from this latest branch.
+visit work through `c18c7ce`, plus main through `51fc711`. See
+[BALANCED_MAIN_INTEGRATION.md](BALANCED_MAIN_INTEGRATION.md) for assistant
+compatibility and resolved conflicts. Push/open one combined PR from this branch.
 
 ## Approved policy
 
@@ -87,9 +89,9 @@ All paths below are relative to `omcm/`. Existing files refine groupmates' work.
 
 ## Verification and review
 
-Passed frontend `npm run lint`, `npm test` (93 tests), `npm run build`; backend
-`.venv/bin/python -m pytest -q` (53 tests). Also passed `test:hni`,
-`test:optimization`, `test:simulation` and sensitivity regeneration/`--check`.
+Passed frontend `npm run lint`, `npm test` (127 tests), `npm run build`; backend
+`.venv/bin/python -m pytest -q` (65 tests). Also passed `test:hni`,
+`test:optimization`, `test:simulation`, `test:assistant` and sensitivity regeneration/`--check`.
 Existing bundle-size and Starlette/httpx deprecation advisories remain.
 
 Regression checks cover every barangay, independent contribution sums and ranks,

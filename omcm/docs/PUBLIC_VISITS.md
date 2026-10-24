@@ -45,7 +45,7 @@ Paths are relative to `omcm/`. Existing files refine the current public interfac
 
 ## Verification and review
 
-Passed frontend lint, 93 tests and build; backend 53 tests; HNI and connected
+Passed frontend lint, 127 tests and build; backend 65 tests; HNI and connected
 allocation browser suites. Both original demand and new illness training scripts
 reproduced their respective committed artifacts and metrics. Existing build-size
 and Starlette/httpx deprecation warnings remain.
@@ -64,8 +64,10 @@ day** to see the confirmed deployment. No draft appears publicly before approval
 
 ## What to push
 
-The latest checked remote main is `2f84fbf`. It is an ancestor of this branch;
-there are no outstanding merge conflicts with that fetched version. Integration
+The latest checked remote main is `51fc711`. It is an ancestor of this branch;
+there are no outstanding merge conflicts with that fetched version. The assistant
+update was reconciled with the agreed HNI and connected allocation; see
+[BALANCED_MAIN_INTEGRATION.md](BALANCED_MAIN_INTEGRATION.md). Earlier integration
 commit `12e35ad` preserves main's Sierra Madre/forest polygon hover behavior and
 updates the earlier browser check to the new polygon interaction.
 
@@ -97,7 +99,7 @@ Suggested description:
 > areas and automatic approved-schedule refresh with outage retention. Preserve
 > current main's forest interactions. No API/database schema migration.
 >
-> Validation: frontend lint, 93 tests, build; backend 53 tests; HNI and connected
+> Validation: frontend lint, 127 tests, build; backend 65 tests; HNI and connected
 > allocation/publication browser suites; exact reproduction of both native models.
 > Forecasts remain synthetic demonstrations, with Los Baños–Bay pilot scope.
 

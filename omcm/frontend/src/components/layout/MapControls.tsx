@@ -14,6 +14,7 @@ import { useAppStore } from "../../store/useAppStore";
 import { clearCredentials } from "../../services/api";
 import { MunicipalitySearch } from "../../features/municipalities/MunicipalitySearch";
 import { MapSelectionStatus } from "../../features/municipalities/MapSelectionStatus";
+import { useAssistantStore } from "../../store/useAssistantStore";
 
 export function MapControls() {
   const {
@@ -160,7 +161,11 @@ export function MapControls() {
                     ? "Compare clinic plans using estimated daily outcomes"
                     : "Get help understanding scores and clinic plans"
               }
-              onClick={() => openPanel(panel === id ? null : id)}
+              onClick={() =>
+                id === "chatbot"
+                  ? useAssistantStore.getState().setOpen(true)
+                  : openPanel(panel === id ? null : id)
+              }
             >
               <Icon size={18} aria-hidden="true" />
               {label}

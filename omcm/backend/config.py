@@ -3,11 +3,23 @@ import os
 import secrets
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
-load_dotenv(Path(__file__).resolve().parent / ".env", encoding="utf-8-sig")
+def load_environment(paths=None):
+    """Process settings win; nonempty backend settings precede project settings.
+
+    Empty placeholders in backend/.env must not hide the key in omcm/.env.
+    """
+    root = Path(__file__).resolve().parent
+    for path in paths or (root / ".env", root.parent / ".env"):
+        for key, value in dotenv_values(path, encoding="utf-8-sig").items():
+            if value and not os.getenv(key):
+                os.environ[key] = value
+
+
+load_environment()
 MANILA = timezone(timedelta(hours=8))
 security = HTTPBasic(auto_error=False)
 def today():
