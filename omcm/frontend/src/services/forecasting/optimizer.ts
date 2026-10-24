@@ -79,11 +79,14 @@ export function proposalFromBackendPlan(
   if (
     !plan.plan_id ||
     !plan.notes.some((note) => note.includes("XGBoost")) ||
-    !plan.notes.some((note) => note.includes("Agreed Balanced HNI")) ||
-    plan.optimized.clinics.length !== clinicCount
+    !plan.notes.some((note) => note.includes("Agreed Balanced HNI"))
   )
     throw new Error(
       "The planning service did not return a complete XGBoost and CP-SAT allocation. Please retry or contact your system administrator.",
+    );
+  if (plan.optimized.clinics.length !== clinicCount)
+    throw new Error(
+      `The service found ${plan.optimized.clinics.length} usable locations for ${clinicCount} clinics. Reduce the clinic count or relax the access constraints, then generate a fresh plan.`,
     );
   const barangays = new Map(LAGUNA_BARANGAYS.map((barangay) => [barangay.psgc, barangay]));
   const recommendations = plan.optimized.clinics.map((clinic, index) => {

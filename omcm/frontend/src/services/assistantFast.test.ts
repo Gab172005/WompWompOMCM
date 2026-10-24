@@ -40,6 +40,7 @@ describe("Fast, grounded assistant requests", () => {
     expect(execute).not.toHaveBeenCalled();
   });
   it("retrieves a real place and its nearest facilities in one local turn", () => {
+    useAppStore.getState().signInAdmin("test");
     const reply = run("Show Los Baños and the nearest hospitals");
     expect(reply?.text).toContain("Los Baños");
     expect(reply?.text).toContain("Healthcare Need Score:");
@@ -52,6 +53,7 @@ describe("Fast, grounded assistant requests", () => {
     ]);
   });
   it("ranks the dataset rather than giving a generic explanation", () => {
+    useAppStore.getState().signInAdmin("test");
     const reply = run("Show the 5 highest-need barangays");
     for (const b of RANKED_BARANGAYS.slice(0, 5))
       expect(reply?.text).toContain(

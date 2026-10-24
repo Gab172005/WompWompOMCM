@@ -7,6 +7,7 @@ import {
   STRATEGIES,
   useForecastStore,
   canEditAllocation,
+  MAX_SIMULATION_CLINICS,
   type Strategy,
 } from "../../store/useForecastStore";
 import { operationalPeriod } from "../../services/forecasting/forecast";
@@ -157,7 +158,7 @@ export function SimulationPanel() {
             aria-label="Available mobile clinics"
             type="number"
             min={1}
-            max={s.coverage.size}
+            max={Math.min(MAX_SIMULATION_CLINICS, s.coverage.size)}
             value={s.k}
             onChange={(e) => {
               const k = Number(e.target.value);
@@ -325,7 +326,7 @@ export function SimulationPanel() {
 
           <fieldset
             className="simulation-allocation"
-            disabled={!canAllocate || s.recommendBusy}
+            disabled={!canAllocate || s.recommendBusy || (s.strategy === "optimizer" && !s.proposal)}
           >
             <legend>
               {s.strategy === "manual"
@@ -337,7 +338,7 @@ export function SimulationPanel() {
                 ? "Choose a barangay below or click the map to place the selected clinic."
                 : s.proposal
                   ? "The map previews these locations. Adjust any site before applying the plan."
-                  : "Choose sites manually, or generate a connected plan for a starting point."}
+                  : "Generate optimized locations first. You can review the proposal before applying it."}
             </p>
             <label className="workspace-field">
               Click the map to place

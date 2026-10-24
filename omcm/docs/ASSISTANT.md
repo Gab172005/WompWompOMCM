@@ -1,5 +1,18 @@
 # Gemini app assistant
 
+## Current public/admin boundary
+
+Public place search/details return community identity and population, with facility
+and approved-schedule lookups available. HNI scores, rankings, contributions,
+simulation histories and draft planning state require Admin View. Assistant
+context omits private controls in Public View, including after an authenticated
+administrator previews that view. View/identity changes clear conversation history
+and abort pending requests. Tool navigation opens the existing map panels;
+legacy analytics/settings/driver commands resolve to the appropriate map tool.
+See [global audit](GLOBAL_AUDIT.md) for verification and the exact changed files.
+
+## Earlier implementation details
+
 Integration update: the assistant uses the agreed six-factor Balanced HNI shared
 by the map and 30-day HNI projection. It reads saved FastAPI drafts instead of
 constructing municipal allocations. Changing clinic count updates inputs and

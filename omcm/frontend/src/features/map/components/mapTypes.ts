@@ -10,6 +10,7 @@ import type { LocatedOsmClinic } from "../../../types/osmClinic";
 export interface MapProps {
   forecastOverlay?: SimulationOverlay;
   floodOverlay?: FloodMapOverlay | null;
+  planningImpact?: Map<string, DailyRecord>;
   municipalities: ComputedMunicipality[];
   selectedPsgc: string | null;
   selectedBarangayPsgc: string | null;

@@ -1,5 +1,12 @@
 # Optimization allocation review and implementation
 
+> **Current connected allocation — 2026-10-24:** [Global audit](GLOBAL_AUDIT.md) and
+> [current verification](VERIFICATION.md) supersede the historical branch names,
+> push commands, test counts and pilot-only limitations in older sections below.
+> The active admin UI stays on `/admin`; connected planning covers all 681
+> barangays and requires backend authentication. The agreed HNI percentages and
+> both trained XGBoost artifacts are preserved.
+
 Current policy update: [the agreed Balanced HNI](BALANCED_HNI.md) supersedes
 historical v3/seven-factor weights in this record. Active HNI uses six factors
 with no disaster-risk contribution; the earlier audit details below are history.
@@ -18,6 +25,24 @@ Date: 2026-10-24. Branch: `feat/optimization-xgboost-allocation`.
 Starting commit: `1cf68a2`, including the hospital/HNI refinements and main's
 Paete forest-land overlay/facility icons. Remote main had not incorporated that
 refinement branch when this work started.
+
+## Active map workflow after the global audit
+
+The current Plan clinics panel calls `/api/planning/optimize`, with a protected
+province-wide catalog at `/api/planning/clinics`. No legacy browser allocation
+heuristic is called by the active map. A successful response previews host and
+nearby HNI service reductions using the same illustrative browser formula as
+Simulation Mode. This preview is separate from backend appointment coverage and
+never changes the agreed factor percentages or publishes a schedule.
+
+Maximum modeled travel minutes is an assignment feasibility cutoff, distinct
+from HNI weights. The 25-/100-year flood options exclude flagged point locations
+and touching model links. The UI outlines affected barangays after generation;
+those outlines do not claim exact inundation extent or measured depth.
+
+Both saved model checksums and the provincial snapshot were verified without
+retraining or changing source data. See [global audit](GLOBAL_AUDIT.md) for current
+limitations, including absence of a backend 30-day service-deduction contract.
 
 ## What the audit found
 

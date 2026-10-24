@@ -297,7 +297,11 @@ export function fastAssistant(
   if (selected) {
     const score = selected.needScore ?? selected.score,
       rank = selected.needRank ?? selected.rank;
-    let answer = `${nameOf(selected)}\nPopulation: ${selected.population.toLocaleString()}\nHealthcare Need Score: ${score}/100 · Rank #${rank}${selected.provisional ? " · Provisional" : ""}`;
+    let answer = `${nameOf(selected)}\nPopulation: ${selected.population.toLocaleString()}`;
+    if (typeof score === "number")
+      answer += `\nHealthcare Need Score: ${score}/100 · Rank #${rank}${selected.provisional ? " · Provisional" : ""}`;
+    else if (/(need score|healthcare need|rank)/.test(q))
+      answer += "\nSign in to Admin View to review healthcare need scores and rankings.";
     const kind = nearby?.[2] ?? nearQuestion?.[1];
     if (kind) {
       const result = call("find_facilities", {

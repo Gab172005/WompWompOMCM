@@ -1,5 +1,12 @@
 # Agreed Balanced HNI alignment
 
+> **Current policy review — 2026-10-24:** [Global audit](GLOBAL_AUDIT.md) and
+> [current verification](VERIFICATION.md) supersede the historical branch names,
+> push commands, test counts and pilot-only limitations in older sections below.
+> The active admin UI stays on `/admin`; connected planning covers all 681
+> barangays and requires backend authentication. The agreed HNI percentages and
+> both trained XGBoost artifacts are preserved.
+
 Branch: `fix/agreed-balanced-hni-weights`. Reviewed 2026-10-24.
 This branch includes all previous connected allocation, dated forecast and public
 visit work through `c18c7ce`, plus main through `51fc711`. See

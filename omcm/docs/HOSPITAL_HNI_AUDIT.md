@@ -1,5 +1,12 @@
 # Step A — hospital dataset and HNI map audit
 
+> **Current hospital/HNI evidence — 2026-10-24:** [Global audit](GLOBAL_AUDIT.md) and
+> [current verification](VERIFICATION.md) supersede the historical branch names,
+> push commands, test counts and pilot-only limitations in older sections below.
+> The active admin UI stays on `/admin`; connected planning covers all 681
+> barangays and requires backend authentication. The agreed HNI percentages and
+> both trained XGBoost artifacts are preserved.
+
 Current policy update: [the agreed Balanced HNI](BALANCED_HNI.md) supersedes
 historical v3/seven-factor weights in this record. Active HNI uses six factors
 with no disaster-risk contribution; the earlier audit details below are history.

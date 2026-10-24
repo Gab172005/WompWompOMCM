@@ -1,120 +1,96 @@
 # Architecture
 
-The application has a feature-organized React frontend and a FastAPI backend.
-The [README](../README.md) is the current directory and route reference.
+## One map shell
 
-## Frontend
+`frontend/src/main.tsx` renders `app/App.tsx` with the existing router and error
+boundary. The active UI is `components/layout/AppLayout.tsx` for Public View
+(`/`, `/public`) and Admin View (`/admin`). Legacy URLs redirect to this shell;
+no legacy dashboard/layout provider is mounted. Legacy modules remain in source.
+Internal tool changes update Zustand panel state and retain the map canvas.
 
-`main.tsx` renders `app/App.tsx`. `AppProviders` owns the router and error boundary;
-`routes.tsx` distinguishes workspace, supporting admin pages and public routes.
+`useAppStore` owns view, sign-in state, search selection, layer toggles and public
+schedule selection. Backend credentials stay in memory. Connected startup does
+not restore an administrator login or approved schedules from local storage.
+`useOptimizationStore` owns transient authenticated backend drafts, cancellation,
+constraints and candidate catalogs. `useForecastStore` owns the three independent
+simulation histories and shared viewing/reached day. `usePublicScheduleStore`
+fetches confirmed published visits, cancels stale requests and retains the last
+confirmed snapshot on outages. Assistant history is cleared on identity/view
+changes, and public tool results omit private planning fields.
 
-`components/layout/AppLayout.tsx` composes the full map canvas, top bar,
-municipality intelligence panel, map filters, legend and a mutually exclusive
-optimization, simulation or assistant panel. `styles/globals.css` preserves
-main's original design and appends responsive workspace rules.
+## Data and HNI
 
-Workspace state lives in Zustand (`store/useAppStore.ts`). The shared
-`features/optimization/usePlanningResults.ts` hook derives municipality scores,
-fleet recommendations and road disruptions. Transient selection, layers, panels,
-manual placements and playback remain in memory. Only the locally accepted
-proposal snapshot is persisted to localStorage. Plan input changes invalidate
-approval and reset playback. Closing simulation returns the map to baseline;
-the configured conditions remain available when simulation reopens.
+`providedData.ts` joins the bundled geography, hospital register and offline OSM
+clinic snapshot. `healthcareNeed.ts` defines the agreed six-factor Balanced
+35/30/15/10/5/5 policy. Missing factors rescale available weights and flag
+provisional scores; municipality summaries are population-weighted rollups.
+Hospital map markers and distance evidence use the same verified, finite,
+located records. Unknown clinic provision is distinct from verified zero.
+See [sources](../datasets/SOURCES.md) and [HNI policy](BALANCED_HNI.md).
 
-The Leaflet renderer composes municipality and barangay heatmap styling,
-hospital markers, fixed OSM clinic markers, simulated mobile-clinic markers,
-road disruptions and routes. The three facility layers have independent toggles.
-Fixed OSM facilities never enter mobile clinic selection or approved schedules. Geographic assets live in
-`public/assets/geo`. Map interaction and sizing are in `useMapInteraction`.
-Google Maps is an optional renderer; no configured key means Leaflet/OSM.
-`Modal` uses a native dialog for keyboard focus and Escape handling.
+`backend/data/laguna-planning.json` is an exported snapshot of the same 681
+barangays and HNI inputs across 30 LGUs. `prepare-laguna-planning.mjs --check`
+checks it without rewriting data. Backend and frontend have matching Paete
+restriction geometry; the server never reads a sibling frontend directory.
+`OMCM_DATASET=pilot` retains the separate 20-barangay Los Baños–Bay road fixture
+for legacy APIs. It does not restrict the provincial `/api/planning/*` workflow.
 
-Main's supporting pages remain in their relevant feature folders.
-`store/LegacyProvider.tsx` manages their existing API, credentials, drafts,
-boundary uploads and public schedules. This provider is mounted only for those
-routes; the municipality workspace does not need backend initialization.
+## Prediction, placement and simulation
 
-## Explicit planning datasets and scoring boundaries
+Authenticated planning loads validated native `illness-forecast-v2` and
+`appointment-demand-v1` XGBoost artifacts. Dated synthetic history ends on the
+Manila issue date. Tomorrow's illness input feeds the fixed provincial HNI and
+appointment model. CP-SAT maximizes priority-weighted appointments, then favors
+shorter modeled travel and fewer open sites, subject to capacity, fleet,
+travel, restricted land, flood and explicit link constraints. Results carry
+solver status, saved draft ID and model provenance. Failed inference never
+substitutes browser-generated placements. Search is bounded; FEASIBLE is not a
+claim of proven global optimality.
 
-The province-wide barangay layer joins all 681 demographic/hazard records to
-PSGC geometry. [The importer](../frontend/scripts/import-laguna-datasets.py)
-embeds a validated offline clinic snapshot; [the clinic importer](../frontend/scripts/import-osm-clinics.py)
-refreshes it explicitly, not at browser runtime. [The shared scorer](../frontend/src/services/healthcareNeed.ts)
-calculates six-factor Balanced HNI with weights 35% morbidity, 30% hospital
-distance, 15% density, 10% municipal income class, 5% clinic distance and 5%
-clinic provision deficit. Disaster risk and urban/rural are context only.
-The 30-day HNI projection reads this same shared weight definition.
-Both map engines, barangay details and ranking consume the same records from
-[providedData](../frontend/src/services/providedData.ts). Missing factors use
-available-weight rescaling; scores are rounded to one decimal before competition
-ranking. Clinic counts are mapped observations, not verified absence.
+The 30-day browser rehearsal has its own deterministic morbidity projection;
+it is not the next-day XGBoost forecast repeated thirty times. Manual and
+Optimized share a 3 km centroid catchment and service deduction formula, with
+35% maximum host reduction, 17.5% at the edge, and strongest-effect overlap.
+The optimized scenario requires a real backend proposal before Apply. The
+clinic count is capped at 10 to match the API. See [simulation](SIMULATION_MODE.md).
 
-Hospital markers, nearby lists and HNI share one verified/finite-WGS84 eligibility
-rule and raw-ID distance tie ordering. All source hospital records remain in the
-register, including unverified, reported closed and unlocated facilities.
-Municipality headline scores, contributions and rankings are population-weighted
-rollups of the same barangay HNI records; incomplete barangays remain provisional.
-These are derived display values, with no new dataset or API schema.
+The optimization map preview reuses the same illustrative service code after a
+real plan succeeds. It uses baseline map HNI for comparison; backend appointment
+and travel metrics remain independently labeled. No API or database schema was
+changed by this audit. Backend-authoritative 30-day deductions remain a gap;
+adding that contract requires data-model approval.
 
-The municipality workspace retains testing's 30-municipality illustrative data
-and browser priority heuristic (`services/lagunaData.ts`). Its four-factor allocation score
-and example route waypoints are separate from the server pilot. The allocation
-score is explicitly labeled as a separate heuristic in municipality details,
-optimization and assistant explanations; it is not the six-factor Balanced map HNI.
+## Map rendering and UI
 
-The server-backed fleet pilot retains main's 20 Los Baños–Bay barangay inputs,
-eight staging candidates, directed OSRM route fixtures, five-factor risk score,
-capacity constraints and Python allocation. Its fixtures are mirrored under
-`backend/data` and `frontend/public/assets/pilot` for standalone deployments.
-Do not translate a workspace proposal into an approved server schedule: the
-identifiers, inputs, routes and scoring contracts differ.
+Leaflet/OpenStreetMap is the default renderer; Google Maps is optional. Both
+render shared scores, selection, proposed clinics, facility layers and flood
+outlines. Only the simulation adds deployed/draft distinctions and 3 km circles.
+`map-workspace.css` owns shared map surfaces, buttons, chips, forms, responsive
+side sheets, legend and reduced-motion transitions; existing plain CSS and
+Lucide icons are reused. `Modal` uses native dialog focus management and unique
+accessible titles. The assistant remains a separate floating card.
 
-The map's connected **Plan clinics** workflow adds separate province-wide
-`/api/planning/*` endpoints. Those use all 681 barangay centroids and adjacency
-links derived from shared province data, the agreed Balanced HNI and XGBoost
-forecasts with CP-SAT allocation. Links are modeled estimates, not verified
-roads, and candidate points are not confirmed clinics. The legacy `/api/*`
-pilot endpoints and their route evidence remain available independently.
+## Backend and publication
 
-The new workspace's approval is labeled a local rehearsal. Server publication
-requires a server-generated draft and authenticated approval via the retained
-schedule workflow. Public routes read approved snapshots, never simulated
-positions. The assistant is local and rule-based; it does not call an AI API.
+`main.py` initializes FastAPI, SQLite and the pilot, then mounts routers for
+municipalities, optimization, simulation, clinics, integrations and assistant.
+`config.py` owns the existing Basic authentication and Manila date helpers.
+Read-only planning scores/analytics/catalogs now require authentication alongside
+all planning mutations. Public health, hospitals, geography and approved schedules
+remain available; public notices identify the office rather than a login name.
 
-## Backend
+`repository.py` persists drafts and approved schedules separately. Ordinary
+publication targets the forecast day; today's revisions require a confirmed
+emergency override. Publication is transactional. Neither a new draft nor a
+simulation mutates a public deployment. Vercel scratch SQLite enables startup
+but is temporary and not shared between instances. It is not durable storage.
 
-`main.py` creates the application, starts the repository and loads data, adds
-CORS/compression middleware, and mounts four routers:
+## Evidence boundaries
 
-| Router | Responsibility |
-| --- | --- |
-| municipalities | Risk calculations, community/hospital data, analytics, boundaries |
-| optimization | Authenticated draft generation |
-| simulation | Before/after scenario comparison |
-| clinics | Fleet data, auth/health status, schedules, publication and audit |
-
-`config.py` loads the environment and provides shared authentication/date
-dependencies. `models/municipality.py`, `clinic.py`, `scenario.py` and `results.py`
-contain the existing strict request/response contracts.
-
-Services own scoring, allocation, route graphs, flood selection, scenario
-comparison, fixture loading and SQLite persistence. The optimizer uses a fixed
-seed, one worker and a deterministic search-work budget for repeatable results.
-Directed road evidence excludes hazard-intersecting fixtures; it does not invent
-safe diversions. Simulations leave approved schedules unchanged. Publication
-retains authenticated, transactional draft review and audit behavior.
-
-## Tests and datasets
-
-All test sources are under `tests/frontend` and `tests/backend`. Vite and
-TypeScript resolve the external test directory using frontend dependencies.
-Pytest config supports running from either `omcm` or `omcm/backend`.
-Browser suites launch isolated servers and avoid the application's database.
-
-`datasets/` contains inspectable exports with the requested canonical filenames.
-`backend/export_datasets.py --check` verifies them against runtime fixtures.
-Source attribution and synthetic-data limitations are in
-[dataset documentation](../datasets/README.md) and [OSM clinic provenance](OSM_CLINICS.md).
-None of the example medical indicators or deployment recommendations is a live
-operational feed. OSM acquisition is reproducible offline from the committed
-raw snapshot; external refresh and live basemap tiles are separate dependencies.
+All clinical history and model evaluation is synthetic. Provincial travel uses
+adjacency estimates, while the legacy pilot retains its prepared OSRM legs.
+No live traffic, patient feed, weather feed, disease-specific validated model,
+nightly unattended job, or GPS tracking is claimed. Google Maps rendering has
+unit coverage but live key-dependent verification must be reported separately.
+Historical architecture/acceptance records describe older builds; the current
+[audit](GLOBAL_AUDIT.md) and [verification record](VERIFICATION.md) take precedence.

@@ -3,6 +3,25 @@
 Frontend: https://omcm-two.vercel.app
 Backend: https://womp-womp-omcm.vercel.app
 
+## Current branch deployment checklist
+
+The global audit preserves existing accounts and environment values. Deploy the
+backend and frontend from the same reviewed commit. The backend now requires
+authentication for `/api/barangays`, `/api/analytics`, `/api/clinics` and
+`/api/planning/clinics`; an unauthenticated 401 from these routes is expected.
+The frontend sends the existing in-memory Basic header after sign-in.
+
+The required Paete geometry is bundled at `backend/data/paete-forest-land.json`;
+`deployment_rules.py` reads it locally. A backend-root deployment no longer
+requires `frontend/src/data`. The matching-file regression protects this fix.
+A successful health check alone does not verify candidate loading or model
+inference: verify sign-in, authenticated catalog load, optimize, approval and a
+fresh public session. Local verification does not deploy the hosted project.
+
+Public schedules have no-store responses. Vercel `/tmp` SQLite is still temporary
+and unshared between instances. Durable shared schedules require persistent
+storage/hosting; this branch does not change the database model.
+
 ## Verified failure and code fix
 
 The backend returned HTTP 500 with `FUNCTION_INVOCATION_FAILED` at

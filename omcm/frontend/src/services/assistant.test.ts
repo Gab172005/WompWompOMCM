@@ -29,6 +29,17 @@ afterEach(() => {
 const signIn = () => useAppStore.getState().signInAdmin("test-admin");
 
 describe("Assistant app tools", () => {
+  it("keeps public search and details free of planning scores, including after an admin preview", () => {
+    signIn();
+    useAppStore.getState().setViewMode("public");
+    const detail = run("get_place_details", { psgc: LAGUNA_BARANGAYS[0].psgc });
+    expect(detail.ok).toBe(true);
+    expect(detail.data).toHaveProperty("population");
+    expect(detail.data).not.toHaveProperty("score");
+    expect(detail.data).not.toHaveProperty("contributions");
+    expect(run("rank_places", { metric: "score" }).ok).toBe(false);
+    expect(run("get_app_state", { section: "plan" }).ok).toBe(false);
+  });
   it("finds accented municipality names and reports repeated barangay candidates", () => {
     const result = run("search_places", {
       query: "Los Banos",
@@ -46,6 +57,7 @@ describe("Assistant app tools", () => {
     expect((repeated.data as { total: number }).total).toBeGreaterThan(1);
   });
   it("ranks using the real map scores and excludes missing hazard values", () => {
+    signIn();
     const result = run("rank_places", { metric: "score", limit: 3 });
     expect(
       (result.data as { places: { psgc: string }[] }).places.map((p) => p.psgc),

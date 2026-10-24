@@ -7,9 +7,9 @@ Pydantic schemas. The existing route names are retained.
 | --- | --- | --- |
 | GET `/api/health` | status, Manila date, demo-auth configuration state | Public |
 | GET `/api/auth/me` | Verify configured demo administrator | Basic auth |
-| GET `/api/barangays` | Scored default pilot, metadata/source labels | Public |
-| GET `/api/clinics` | Candidate sites and documented closure segments | Public |
-| GET `/api/planning/clinics` | Province-wide planning points and estimated adjacency links | Public |
+| GET `/api/barangays` | Scored default pilot, metadata/source labels | Basic auth |
+| GET `/api/clinics` | Candidate sites and documented closure segments | Basic auth |
+| GET `/api/planning/clinics` | Province-wide planning points and estimated adjacency links | Basic auth |
 | GET `/api/hospitals` | Explicitly illustrative care reference | Public |
 | POST `/api/risk/calculate` | Recalculate weighted scores | Basic auth |
 | POST `/api/optimize` | Compute and persist a draft, return comparison | Basic auth |
@@ -18,9 +18,33 @@ Pydantic schemas. The existing route names are retained.
 | GET `/api/schedules` | Published schedules, notices, current Manila day | Public |
 | POST `/api/schedules/approve` | Approve and publish stored next-day draft | Basic auth |
 | POST `/api/schedules/emergency-override` | Confirmed revision with public notice | Basic auth |
-| GET `/api/analytics` | Rankings and synthetic population/demand totals | Public |
+| GET `/api/analytics` | Rankings and synthetic population/demand totals | Basic auth |
 | GET/POST `/api/boundaries` | Read / validate uploaded boundaries | POST requires auth |
 | GET `/api/audit` | Persisted approval/emergency events | Basic auth |
+
+## Current map and public boundary (2026-10-24)
+
+The active map uses `/api/planning/clinics` and `/api/planning/optimize`.
+All score, analytics and candidate catalog reads require the existing backend
+Basic authentication. Hospital references and published schedules remain public.
+`GET /api/schedules` sends `Cache-Control: no-store`; notice `actor` is the public
+label `LGU administrator`, while the actual account stays in the private audit.
+Draft HNI, forecasts, model notes and flood screening lists are not public
+schedule fields. Bundled synthetic browser datasets are still inspectable demo
+assets; UI/API restrictions do not make those assets confidential.
+
+Provincial plan responses include `flood_affected_barangays` (PSGC strings),
+which drives the blue flood outlines after a successful generation. The wire
+values `moderate` and `severe` retain compatibility and select the supplied
+25-year and 100-year layers respectively. Positive point scores flag a barangay;
+flagged sites and touching adjacency links are excluded. No numeric water-depth
+contract or exact flood-extent polygons are present.
+
+The 30-day timeline is browser state. `/api/simulate` is the retained legacy
+before/after allocation API, not a backend endpoint for this timeline. The
+optimization map's service preview also uses browser impact calculations;
+backend appointment metrics are independent. See [simulation ownership and
+formulas](SIMULATION_MODE.md).
 
 ## PlacementRequest
 
@@ -42,7 +66,7 @@ Pydantic schemas. The existing route names are retained.
 
 `flood_level` is `none | moderate | severe`. Site IDs are `P01`–`P08`; road closure
 ID is `demo-closure-1`. Community IDs are the nine-digit PSGC strings from the
-bundled boundary snapshot. The UI supports 1–5 clinics; the retained API supports
+bundled boundary snapshot. Plan clinics supports 1–5 clinics; the simulator supports 1–10. The API supports
 0–10 to evaluate infeasibility and legacy experiments. Capacity is 1–5000, travel
 0–120 minutes and surge 1–5×. Unknown fields, duplicates and unknown references
 are rejected by the connected backend. An all-zero weight vector is invalid.
@@ -63,8 +87,7 @@ assignments. Both models are trained exclusively on fictional observations;
 neither provides clinically validated disease forecasts.
 Both allocation strategies use the same estimated demand. Version, artifact hash,
 synthetic evaluation and scope are returned through the existing `notes` and
-`metadata.disease` fields. The request/response schemas and SQLite tables are
-unchanged. Missing or mismatched model artifacts return 503, without a draft or
+`metadata.disease` fields. This audit preserves the existing request/response schemas and SQLite tables. Missing or mismatched model artifacts return 503, without a draft or
 fallback allocation. See [dated model provenance and limitations](TEMPORAL_FORECAST.md)
 and [the original allocation review](OPTIMIZATION_ALLOCATION.md).
 
@@ -125,6 +148,11 @@ simulation, analytics and local approval contracts with `local-` plan IDs and
 the isolated `omcm-browser-demo-v1` storage key. It rejects unsupported actions
 such as boundary uploads. It never turns backend 401/422 errors into successful
 local publication. Browser-only records are not shared with the server.
+
+## Historical implementation notes
+
+The following build records describe earlier pilot screens/contracts. Current
+map routes, fixed HNI and access requirements above take precedence.
 
 ### Build Step 1 need index
 

@@ -1,45 +1,28 @@
-import { Routes, Route, Outlet, Link } from "react-router-dom";
+import { Routes, Route, Navigate, Link } from "react-router-dom";
 import { AppLayout } from "../components/layout/AppLayout";
-import { LegacyLayout } from "../components/layout/LegacyLayout";
-import { Provider } from "../store/LegacyProvider";
-import { AdminDashboard } from "../features/optimization/AdminDashboard";
-import { DriverTracking } from "../features/simulation/DriverTracking";
-import { Analytics } from "../features/analytics/Analytics";
-import { Settings } from "../features/settings/Settings";
-import { PublicDashboard } from "../features/public/PublicDashboard";
-import { UpstreamWorkspace } from "../components/UpstreamWorkspace";
 /** Public routes stay read-only. API mutations retain server-side admin checks. */
 export function AppRoutes() {
   return (
     <Routes>
-      {[
-        "/",
-        "/public",
-        "/clinics",
-        "/admin",
-        "/dashboard/admin",
-        "/risk",
-        "/optimization",
-        "/simulator",
-      ].map((path) => (
+      {["/", "/public", "/admin"].map((path) => (
         <Route key={path} path={path} element={<AppLayout />} />
       ))}
-      <Route
-        element={
-          <Provider>
-            <Outlet />
-          </Provider>
-        }
-      >
-        <Route path="/workspace/*" element={<UpstreamWorkspace />} />
-        <Route path="/public/legacy" element={<PublicDashboard />} />
-        <Route element={<LegacyLayout />}>
-          <Route path="/admin/legacy" element={<AdminDashboard />} />
-          <Route path="/driver" element={<DriverTracking />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/settings" element={<Settings />} />
-        </Route>
-      </Route>
+      {["/clinics", "/public/legacy"].map((path) => (
+        <Route key={path} path={path} element={<Navigate to="/public" replace />} />
+      ))}
+      {[
+        ["/dashboard/admin", null],
+        ["/admin/legacy", "optimization"],
+        ["/optimization", "optimization"],
+        ["/analytics", "optimization"],
+        ["/settings", "optimization"],
+        ["/risk", null],
+        ["/simulator", "simulation"],
+        ["/driver", "simulation"],
+        ["/workspace/*", "optimization"],
+      ].map(([path, panel]) => (
+        <Route key={path} path={path!} element={<Navigate to="/admin" replace state={{ panel }} />} />
+      ))}
       <Route
         path="*"
         element={

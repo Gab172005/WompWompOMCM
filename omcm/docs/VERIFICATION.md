@@ -1,5 +1,71 @@
 # Verification record
 
+## Global audit, protected views and UI polish — 2026-10-24
+
+Branch: `audit/omcm-features-and-views`, based on fetched main `a7f5b7f`.
+All results below are local verification of the reviewed tree; they do not
+claim a new production deployment. Exact changes and proposal gaps:
+[GLOBAL_AUDIT.md](GLOBAL_AUDIT.md).
+
+| Check | Result | What it establishes |
+| --- | --- | --- |
+| Frontend `npm run lint` | Passed | Existing lint rules, no warnings |
+| Frontend `npm test` | 142 passed, 16 files | HNI, public refresh, authentication, model adapters, scenario guards, seven legacy map links, assistant boundary |
+| Frontend `npm run build` | Passed | TypeScript and Vite production build |
+| Backend `.venv/bin/python -m pytest -q` | 98 passed | Authenticated catalogs/analytics, publication, models, capacity/access, sources and Vercel startup |
+| `npm run test:hni` | Passed | 681 polygons, 56 hospital markers, search alignment, HNI consistency, desktop and 390/320px details/legend layout |
+| `npm run test:optimization` | Passed | Real FastAPI/XGBoost/CP-SAT request, stable `/admin` tools, service-impact preview, flood outlines, replan, public approval/revision, failure without fake fallback |
+| `npm run test:simulation` | Passed | Three same-day runs, local host/neighbor impact, real optimized draft, mobile panel/playback/legend separation, collapse with markers/timeline retained |
+| `npm run test:assistant` | Passed | Local commands, mocked provider actions/failure, in-place tools and responsive UI; external Gemini access is not verified |
+| `prepare-laguna-planning.mjs --check` | Passed | Shared policy/export matches 681 source records |
+| `clinic-sensitivity.mjs --check` | Passed | Committed offline sensitivity evidence matches current policy/data |
+| `import-laguna-datasets.py --check` | Passed | 681 joins, 66 hospital records and 385 OSM candidates match the bundled source |
+| `import-osm-clinics.py --check` | Passed | Snapshot valid; 382 active, 98 active located in province; 2 suspected duplicate pairs remain flagged |
+| Both native model SHA256 checks | Passed | Existing artifacts match manifests; no retraining |
+| `git diff --check` | Passed | No whitespace errors |
+
+The mobile browser checks caught and drove fixes for an expanded-sheet/filter
+collision and a panel/playback overlap. Assertions retain those checks. Screenshots
+were inspected for the compact desktop legend, blue actions, chips, mobile fields
+and visible map. Animation screenshots settle before capture.
+
+### Artifacts
+
+Generated browser images are ignored files and are not committed:
+
+- `frontend/test-results/optimization-connected-desktop.png`
+- `frontend/test-results/optimization-connected-mobile.png`
+- `frontend/test-results/optimization-flood-impact.png`
+- `frontend/test-results/public-visits-desktop.png`
+- `frontend/test-results/public-visits-mobile.png`
+- `frontend/test-results/hospital-hni-mobile.png`
+- `frontend/test-results/place-details-mobile-expanded.png`
+- `frontend/test-results/assistant-desktop.png`
+- `frontend/test-results/assistant-mobile.png`
+- `/tmp/omcm-simulation-desktop.png`
+- `/tmp/omcm-simulation-mobile.png`
+
+### Limits of the evidence
+
+Browser suites use installed Chrome and Leaflet. Google rendering has existing
+unit coverage; no live-key Google session or live Gemini provider was verified.
+The assistant suite intentionally stubs provider replies. HNI/assistant browser
+suites use explicit demo mode; connected optimizer/simulation suites start real
+FastAPI processes with isolated credentials and temporary databases. Demo-only
+planning catalog errors with no backend are expected and do not become fake
+allocations. Basemap tiles are stubbed/aborted in browser tests.
+
+Vite still reports a >500 kB chunk advisory; build succeeds. Pytest reports the
+existing Starlette/httpx deprecation warning. Model results remain synthetic.
+Backend 30-day deduction ownership, automatic nightly jobs, verified provincial
+roads, calibrated clinical forecasts and durable Vercel storage are not claimed.
+No data-model migration or credential change was performed.
+
+## Historical verification records
+
+The dated reports below remain as prior-build evidence. Their command counts,
+routes, provider status and pilot-only scope are not the current acceptance record.
+
 ## Floating map controls, 2026-10-16
 
 Removed the Overview and Schedules pages and their routes/navigation. The map

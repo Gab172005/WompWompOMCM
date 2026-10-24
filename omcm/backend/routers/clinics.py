@@ -11,22 +11,26 @@ router = APIRouter()
 
 
 @router.get("/api/clinics")
-def clinics():
+def clinics(actor=Depends(require_admin)):
     _, network, metadata = load_data()
     sites = [dict(site, eligible=site["eligible"] and not deployment_restricted(site)) for site in network["sites"]]
     return dict(sites=sites, roads=network["roads"], metadata=metadata)
 
 
 @router.get("/api/planning/clinics")
-def provincial_clinics():
+def provincial_clinics(actor=Depends(require_admin)):
     from services.provincial_planning import load_provincial_data
     _, network, metadata = load_provincial_data()
     return dict(sites=network["sites"], roads=network["roads"], metadata=metadata)
 
 
 @router.get("/api/schedules", response_model=SchedulesResult)
-def schedules():
-    return dict(**repo.schedules(), today=today().isoformat(), synthetic=True)
+def schedules(response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    published = repo.schedules()
+    # Public advisories identify the office, not the private login account.
+    published["notices"] = [dict(notice, actor="LGU administrator") for notice in published["notices"]]
+    return dict(**published, today=today().isoformat(), synthetic=True)
 
 
 def approved_payload(request, emergency=False):

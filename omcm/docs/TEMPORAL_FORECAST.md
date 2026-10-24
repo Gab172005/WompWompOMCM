@@ -1,5 +1,12 @@
 # Dated illness forecasting
 
+> **Current forecast scope — 2026-10-24:** [Global audit](GLOBAL_AUDIT.md) and
+> [current verification](VERIFICATION.md) supersede the historical branch names,
+> push commands, test counts and pilot-only limitations in older sections below.
+> The active admin UI stays on `/admin`; connected planning covers all 681
+> barangays and requires backend authentication. The agreed HNI percentages and
+> both trained XGBoost artifacts are preserved.
+
 Branch: `feat/temporal-forecast-public-clinics`. Reviewed 2026-10-24.
 
 Page 4 of `WompWomp.pdf` separates transparent risk estimation from

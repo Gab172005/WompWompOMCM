@@ -127,7 +127,12 @@ try {
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in to Admin View" }).click();
   await expect(page.locator(".workspace")).toHaveClass(/is-admin-view/);
+  await expect(page).toHaveURL(/\/admin$/);
+  await page.getByRole("button", { name: "30-day simulation", exact: true }).click();
+  await expect(page.getByRole("complementary", { name: "Try a 30-day clinic plan" })).toBeVisible();
+  await expect(page).toHaveURL(/\/admin$/);
   await page.getByRole("button", { name: "Plan clinics", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin$/);
   const panel = page.getByRole("complementary", {
     name: "Plan clinic locations",
   });
@@ -167,6 +172,8 @@ try {
   expect(new Set(plan.barangays.map((b) => b.municipality)).size).toBe(30);
   expect(plan.notes.join(" ")).toContain("Agreed Balanced HNI");
   expect(plan.optimized.clinics).toHaveLength(2);
+  await expect(page.locator(".barangay-boundary.has-clinic-impact").first()).toBeVisible();
+  await expect(page.getByText("Planned clinic impact", { exact: true })).toBeVisible();
   expect(plan.flood_affected_barangays).toEqual([]);
   await expect(
     panel.getByRole("region", { name: "Backend allocation results" }),
@@ -192,7 +199,9 @@ try {
   ).json();
   expect(draftSchedules.schedules).toEqual([]);
   const catalog = await (
-    await fetch("http://127.0.0.1:8007/api/planning/clinics")
+    await fetch("http://127.0.0.1:8007/api/planning/clinics", {
+      headers: { Authorization: "Basic " + Buffer.from(username + ":" + password).toString("base64") },
+    })
   ).json();
   expect(catalog.sites).toHaveLength(681);
   const unused = catalog.sites.find(

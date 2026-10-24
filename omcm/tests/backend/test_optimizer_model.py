@@ -83,7 +83,7 @@ def test_restricted_land_cannot_be_selected_through_api_or_catalog(client, auth,
     assert not deployment_restricted(dict(lat=14.2681, lng=121.4112))
     monkeypatch.setattr(optimizer, "load_data", lambda: (frame.copy(), network, metadata))
     monkeypatch.setattr(clinics, "load_data", lambda: (frame.copy(), network, metadata))
-    assert not client.get("/api/clinics").json()["sites"][0]["eligible"]
+    assert not client.get("/api/clinics", auth=auth).json()["sites"][0]["eligible"]
     rejected = client.post("/api/optimize", json={"manual_sites": [network["sites"][0]["id"]]}, auth=auth)
     assert rejected.status_code == 422
     allocation = optimize(PlacementRequest())

@@ -40,6 +40,8 @@ export function OptimizationPanel() {
           <ShieldCheck size={15} aria-hidden="true" />
           All Laguna · 681 barangays · 30 LGUs
         </span>
+        <details className="optimizer-context">
+          <summary>How these recommendations work</summary>
         <p className="workspace-note">
           Every barangay is considered. Recommendations use the agreed Balanced
           HNI with next-day XGBoost illness forecasts and appointment demand.
@@ -47,6 +49,7 @@ export function OptimizationPanel() {
           estimated adjacency links; a complete provincial road matrix is not
           available. The map retains baseline illness inputs.
         </p>
+        </details>
       </div>
       <form
         onSubmit={(event) => {
@@ -106,11 +109,13 @@ export function OptimizationPanel() {
             </select>
           </label>
           <p className="workspace-note">
-            Flood inputs use the supplied 25- and 100-year return-period
-            layers. The dataset does not provide measured flood depths in
-            meters. Generate recommendations to outline affected barangays on
-            the map.
+            Generate a plan to outline flagged barangays in blue. These are
+            mapped flood scenarios; water depth is unavailable.
           </p>
+          <details className="optimizer-context">
+            <summary>What do 25-year and 100-year mean?</summary>
+            <p>A 25-year event has about a 4% annual chance; a 100-year event has about a 1% annual chance. Selecting a layer excludes its flagged planning points and connected model links.</p>
+          </details>
           <RoadExclusions
             roads={roads}
             selected={config.closed_roads}
@@ -118,7 +123,7 @@ export function OptimizationPanel() {
           />
         </fieldset>
         <div className="workspace-button-row">
-          <Button type="submit" disabled={busy || !sites.length}>
+          <Button type="submit" disabled={busy || !sites.length} aria-busy={busy}>
             <BrainCircuit size={16} aria-hidden="true" />{" "}
             {busy ? "Finding clinic locations…" : "Generate recommendations"}
           </Button>

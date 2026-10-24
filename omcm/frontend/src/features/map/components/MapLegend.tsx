@@ -68,9 +68,11 @@ function LegendKey({
 export function MapLegend({
   clinicSnapshot,
   floodOverlay,
+  planningImpact = false,
 }: {
   clinicSnapshot?: ClinicSnapshotProvenance | null;
   floodOverlay?: FloodMapOverlay | null;
+  planningImpact?: boolean;
 }) {
   const {
     activeMetric: metric,
@@ -108,7 +110,7 @@ export function MapLegend({
     ? "Approved Care Locations"
     : simulation
       ? `Day ${forecast.runs[forecast.strategy].day} · ${forecast.metric === "hni" ? "Scenario HNI" : "Uncovered need"}`
-      : metricLabels[metric];
+      : planningImpact && metric === "score" ? "Planned clinic impact" : metricLabels[metric];
   const subtitle = isPublic
     ? schedule
       ? `${schedule.date} · ${schedule.startTime}–${schedule.endTime} PH Time`
@@ -125,8 +127,9 @@ export function MapLegend({
           ? "Sample cases per 1,000 people"
           : metric === "disasterRisk"
             ? "Score / 100 · one reference point"
-            : "Score / 100 · planning estimate";
+            : planningImpact ? "Illustrative service HNI · baseline in tooltips" : "Score / 100 · planning estimate";
   const scaleMetric = simulation ? "score" : metric;
+  const servicePreview = simulation || (planningImpact && metric === "score");
   const steps =
     scaleMetric === "disasterRisk"
       ? [0, 33.33, 66.67, 100]
@@ -372,7 +375,7 @@ export function MapLegend({
               <div key={value}>
                 <i
                   style={{
-                    background: simulation
+                    background: servicePreview
                       ? getSimulationNeedColor(value)
                       : getMetricColor(scaleMetric, value),
                   }}
@@ -389,8 +392,8 @@ export function MapLegend({
       {!isPublic && (
         <small className="legend-color-note">
           Darker ={" "}
-          {simulation
-            ? forecast.metric === "hni"
+          {servicePreview
+            ? !simulation || forecast.metric === "hni"
               ? "higher HNI after service"
               : "more uncovered need"
             : scaleMetric === "density"
@@ -430,6 +433,7 @@ export function MapLegend({
               "Lighter red shows lower scenario HNI. A soft coral outline marks barangays receiving modeled service; circles show the 3 km reach."}
             {floodOverlay && panel === "optimization" &&
               " Blue outlines mark barangays flagged by the selected return-period screen; they are not measured flood depths."}
+            {planningImpact && metric === "score" && " Lighter areas show the same illustrative clinic impact used by the simulator. Capacity and travel estimates remain in the plan results."}
           </p>
         )}
         {!simulation && (

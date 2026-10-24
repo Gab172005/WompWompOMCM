@@ -12,7 +12,7 @@ router = APIRouter()
 
 
 @router.get("/api/barangays", response_model=RiskResult, response_model_exclude_none=True)
-def barangays():
+def barangays(actor=Depends(require_admin)):
     frame, network, metadata = load_data()
     return dict(barangays=calculate_scores(frame, network, travel_times(road_graph(frame, network)), Weights()), metadata=metadata)
 
@@ -29,8 +29,8 @@ def risk(weights: Weights, actor=Depends(require_admin)):
 
 
 @router.get("/api/analytics", response_model=AnalyticsResult)
-def analytics():
-    data = barangays()
+def analytics(actor=Depends(require_admin)):
+    data = barangays(actor)
     bs = data["barangays"]
     return dict(total_barangays=len(bs), total_population=sum(b["population"] for b in bs),
                 vulnerable_residents=sum(b["vulnerable_residents"] for b in bs), total_demand=sum(b["demand"] for b in bs),

@@ -1,5 +1,12 @@
 # OMCM audit and proposed build plan
 
+> **Global review — 2026-10-24:** [Global audit](GLOBAL_AUDIT.md) and
+> [current verification](VERIFICATION.md) supersede the historical branch names,
+> push commands, test counts and pilot-only limitations in older sections below.
+> The active admin UI stays on `/admin`; connected planning covers all 681
+> barangays and requires backend authentication. The agreed HNI percentages and
+> both trained XGBoost artifacts are preserved.
+
 ## Google API preparation — 2026-10-16
 
 The user requested readiness for Google Maps and Google Routes after the map-first
@@ -375,12 +382,12 @@ The default backend dataset is `OMCM_DATASET=pilot`. Consult [`datasets/SOURCES.
 
 Primary implementation references:
 
-- [`MapView.tsx`](../frontend/src/components/MapView.tsx) and [`Heatmap.tsx`](../frontend/src/components/Heatmap.tsx)
-- [`PublicDashboard.tsx`](../frontend/src/pages/PublicDashboard.tsx)
-- [`Settings.tsx`](../frontend/src/pages/Settings.tsx) and [`risk_scoring.py`](../backend/risk_scoring.py)
-- [`AdminDashboard.tsx`](../frontend/src/pages/AdminDashboard.tsx) and [`optimization.py`](../backend/optimization.py)
-- [`Schedules.tsx`](../frontend/src/pages/Schedules.tsx) and [`repository.py`](../backend/app/database/repository.py)
-- [`DriverTracking.tsx`](../frontend/src/pages/DriverTracking.tsx) and [`ClinicTracker.tsx`](../frontend/src/components/ClinicTracker.tsx)
+- [`MapView.tsx`](../frontend/src/features/map/components/MapView.tsx) and [`Heatmap.tsx`](../frontend/src/features/map/components/Heatmap.tsx)
+- [`PublicDashboard.tsx`](../frontend/src/features/public/PublicDashboard.tsx)
+- [`Settings.tsx`](../frontend/src/features/settings/Settings.tsx) and [`risk_scoring.py`](../backend/services/risk_scoring.py)
+- [`AdminDashboard.tsx`](../frontend/src/features/optimization/AdminDashboard.tsx) and [`optimization.py`](../backend/services/clinic_optimizer.py)
+- [`Schedules.tsx`](../frontend/src/features/optimization/DeploymentApproval.tsx) and [`repository.py`](../backend/services/repository.py)
+- [`DriverTracking.tsx`](../frontend/src/features/simulation/DriverTracking.tsx) and [`ClinicTracker.tsx`](../frontend/src/features/tracking/ClinicTracker.tsx)
 
 ## Original proposed build plan — historical
 
@@ -435,17 +442,17 @@ broad. No implementation files were changed during verification.
 1. **Existing map metrics were removed.** The vulnerability and hospital-access
    layers worked before this change but disappeared from the metric selector and
    its type. This violates the instruction to preserve working features.
-   References: [`MapView.tsx`](../frontend/src/components/MapView.tsx),
+   References: [`MapView.tsx`](../frontend/src/features/map/components/MapView.tsx),
    [`mapMetrics.ts`](../frontend/src/components/mapMetrics.ts), and
-   [`Heatmap.tsx`](../frontend/src/components/Heatmap.tsx).
+   [`Heatmap.tsx`](../frontend/src/features/map/components/Heatmap.tsx).
 2. **Estimate provenance still disappears from backend scores.** All 20 pilot
    inputs carry `estimated: true`; verification found zero scored backend
    records retaining that field and zero with an explicit estimated warning.
    The added warning only handles municipality-level rows or missing values,
    so it does not cover these pilot barangay records. The Build Step 1 entry in
    `VERIFICATION.md` overstates completion of estimate labeling.
-   References: [`risk_scoring.py`](../backend/risk_scoring.py),
-   [`results.py`](../backend/app/models/results.py), and
+   References: [`risk_scoring.py`](../backend/services/risk_scoring.py),
+   [`results.py`](../backend/models/results.py), and
    [`VERIFICATION.md`](VERIFICATION.md).
 3. **Python-only calculations remain unresolved.** The change extended
    `scorePilot` with population percentile calculation. This preserves browser

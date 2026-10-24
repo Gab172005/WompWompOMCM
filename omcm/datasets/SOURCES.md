@@ -1,5 +1,11 @@
 # Dataset source guide
 
+> Current validation: the global audit checked the unchanged 681-barangay /
+> 30-LGU provincial snapshot against the shared Balanced HNI and verified both
+> native model checksums. Flood layers are point screening inputs, not measured
+> meter depths or complete inundation polygons. See
+> [the global audit](../docs/GLOBAL_AUDIT.md) for counts, limits and current evidence.
+
 The current supplied provincial files are `laguna_barangays.csv`,
 `laguna_barangay_risk_index.csv`, and `laguna_hospitals.csv`. Their usage,
 joins, missing-value rules, policy weights and limitations are documented in

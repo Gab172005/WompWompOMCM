@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { X } from "lucide-react";
+import { Activity, ChevronDown, ChevronUp, Crosshair, MessageCircle, X } from "lucide-react";
 import { MapControls } from "./MapControls";
 import { MapNavigation } from "./MapNavigation";
 import { SidePanel } from "./SidePanel";
@@ -27,6 +27,8 @@ import { useAppStore } from "../../store/useAppStore";
 import { useOptimizationStore } from "../../store/useOptimizationStore";
 import { useScheduleSync } from "../../features/public/useScheduleSync";
 import { isBrowserDemo } from "../../services/api";
+import { useAssistantStore } from "../../store/useAssistantStore";
+import { useForecastStore } from "../../store/useForecastStore";
 
 const ADMIN_ROUTES = new Set([
   "/admin",
@@ -37,37 +39,41 @@ const ADMIN_ROUTES = new Set([
 ]);
 
 export function AppLayout() {
+  const [collapsedTool, setCollapsedTool] = useState<string | null>(null);
   const state = useAppStore(),
-    { municipalities, plan, disruptions, floodOverlay } = usePlanningResults();
-  const { pathname } = useLocation();
+    { municipalities, plan, disruptions, floodOverlay, planningImpact } = usePlanningResults();
+  const { pathname, state: navigationState } = useLocation();
   useClinicAnimation();
   const forecastOverlay = useSimulationMap();
   const scheduleError = useScheduleSync();
   useEffect(() => {
-    if (!state.adminUser) useOptimizationStore.getState().invalidate();
-  }, [state.adminUser]);
+    useAssistantStore.getState().clear();
+    if (state.viewMode === "public" || !state.adminUser) {
+      useOptimizationStore.getState().invalidate();
+      useForecastStore.getState().reject();
+    }
+    if (!state.adminUser) useForecastStore.getState().reset();
+  }, [state.adminUser, state.viewMode]);
 
   useEffect(() => {
     const store = useAppStore.getState();
     if (ADMIN_ROUTES.has(pathname)) {
-      const targetPanel =
-        pathname === "/optimization"
-          ? "optimization"
-          : pathname === "/simulator"
-            ? "simulation"
-            : null;
+      const initialPanel = (navigationState as { panel?: string } | null)?.panel;
+      const targetPanel = initialPanel === "optimization" || initialPanel === "simulation"
+        ? initialPanel
+        : undefined;
       if (store.adminUser) {
         useAppStore.setState({ viewMode: "admin", loginModalOpen: false });
-        store.openPanel(targetPanel);
+        if (targetPanel) store.openPanel(targetPanel);
       } else {
         store.requestAdminView(targetPanel);
       }
     } else {
       store.setViewMode("public");
     }
-  }, [pathname, state.adminUser]);
+  }, [pathname, state.adminUser, navigationState]);
 
-  const isPublic = state.viewMode === "public";
+  const isPublic = state.viewMode !== "admin" || !state.adminUser;
   const publicSchedule =
     state.publishedSchedules[state.selectedScheduleDate] ?? null;
   const displayedClinics = isPublic
@@ -81,6 +87,8 @@ export function AppLayout() {
     simulation: "Try a 30-day clinic plan",
     chatbot: "Planning help",
   };
+  const PanelIcon = state.panel === "optimization" ? Crosshair : state.panel === "simulation" ? Activity : MessageCircle;
+  const toolCollapsed = Boolean(state.panel && collapsedTool === state.panel);
 
   return (
     <div
@@ -89,6 +97,7 @@ export function AppLayout() {
       <main className="workspace-stage" aria-label="Laguna planning map">
         <LagunaMap
           floodOverlay={floodOverlay}
+          planningImpact={planningImpact}
           forecastOverlay={forecastOverlay}
           municipalities={municipalities}
           selectedPsgc={state.selectedPsgc}
@@ -130,15 +139,26 @@ export function AppLayout() {
         <MapLegend
           clinicSnapshot={OSM_CLINIC_SNAPSHOT}
           floodOverlay={floodOverlay}
+          planningImpact={Boolean(planningImpact)}
         />
         <MapNavigation />
         {!isPublic && state.panel && (
           <aside
-            className="workspace-panel tool-panel card"
+            className={`workspace-panel tool-panel card${toolCollapsed ? " is-collapsed" : ""}`}
             aria-label={titles[state.panel]}
           >
             <div className="workspace-panel-heading">
-              <h2>{titles[state.panel]}</h2>
+              <h2><PanelIcon size={18} aria-hidden="true" />{titles[state.panel]}</h2>
+              <button
+                type="button"
+                className="icon-button"
+                aria-label={toolCollapsed ? "Expand tool panel" : "Collapse tool panel"}
+                aria-expanded={!toolCollapsed}
+                onClick={() => setCollapsedTool(toolCollapsed ? null : state.panel)}
+                title={toolCollapsed ? "Show tool details" : "See more of the map"}
+              >
+                {toolCollapsed ? <ChevronDown size={18} aria-hidden="true" /> : <ChevronUp size={18} aria-hidden="true" />}
+              </button>
               <button
                 className="icon-button"
                 aria-label="Close tool panel"
@@ -147,7 +167,7 @@ export function AppLayout() {
                 <X size={17} />
               </button>
             </div>
-            <div className="workspace-panel-body">
+            <div className="workspace-panel-body" hidden={toolCollapsed}>
               {state.panel === "optimization" ? (
                 <OptimizationPanel />
               ) : state.panel === "simulation" ? (

@@ -110,6 +110,7 @@ export function LagunaGoogleMap({
   zoomDelta,
   publicMode = false,
   floodOverlay,
+  planningImpact,
   onAuthFailure,
 }: LagunaGoogleMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -364,14 +365,15 @@ export function LagunaGoogleMap({
       const isFloodAffected = Boolean(
         isBarangay && floodOverlay?.barangayIds.has(barangayCode),
       );
-      const projected = forecastOverlay?.records.get(barangayCode);
+      const projected = forecastOverlay?.records.get(barangayCode) ??
+        (activeMetric === "score" ? planningImpact?.get(barangayCode) : undefined);
       const hasClinicImpact = Boolean(
         projected && projected.serviceFraction > 0,
       );
       const value = projected
-        ? forecastOverlay!.metric === "hni"
-          ? projected.scenarioHni
-          : projected.uhni
+        ? forecastOverlay?.metric === "uhni"
+          ? projected.uhni
+          : projected.scenarioHni
         : barangay
           ? barangayMetric(barangay, activeMetric)
           : mun
@@ -384,11 +386,11 @@ export function LagunaGoogleMap({
             : null;
       return {
         fillColor:
-          isSelected && !forecastOverlay
+          isSelected && !forecastOverlay && !planningImpact
             ? "#facc15"
             : publicMode
               ? "#f8fafc"
-              : forecastOverlay
+              : forecastOverlay || (planningImpact && activeMetric === "score")
                 ? getSimulationNeedColor(value)
                 : getMetricColor(activeMetric, value),
         fillOpacity: isSelected
@@ -464,11 +466,14 @@ export function LagunaGoogleMap({
             ? projected.scenarioHni
             : projected.uhni
           : null;
+        const draftImpact = activeMetric === "score" ? planningImpact?.get(barangay.psgc) : undefined;
         const valDisplay = projected
           ? `Day ${forecastOverlay!.day} · ${simulationMetricLabels[forecastOverlay!.metric]}: ${simulationValue!.toFixed(1)}/100${forecastOverlay!.metric === "hni" ? ` · Baseline ${projected.hni.toFixed(1)}` : ""} · Estimate${projected.provisional ? " · Some data missing" : ""}`
           : publicMode
             ? `Population: ${barangay.population.toLocaleString()} · Click for nearby clinics & hospitals`
-            : `${barangayMetricLabel(metric)}: ${value === null ? "Information unavailable" : value + (metric === "density" ? "/km²" : metric === "morbidity" ? " / 1,000" : "/100")}${metric === "score" ? ` · Healthcare need rank #${barangay.needRank} of 681${barangay.needProvisional ? " · Some data missing" : ""}` : ""}`;
+            : draftImpact
+              ? `Draft service HNI: ${draftImpact.scenarioHni.toFixed(1)}/100 · Baseline: ${draftImpact.hni.toFixed(1)} · Illustrative clinic effect`
+              : `${barangayMetricLabel(metric)}: ${value === null ? "Information unavailable" : value + (metric === "density" ? "/km²" : metric === "morbidity" ? " / 1,000" : "/100")}${metric === "score" ? ` · Healthcare need rank #${barangay.needRank} of 681${barangay.needProvisional ? " · Some data missing" : ""}` : ""}`;
 
         setHoveredInfo({
           name,
@@ -514,6 +519,7 @@ export function LagunaGoogleMap({
     geoJsonData,
     forecastOverlay,
     floodOverlay,
+    planningImpact,
     activeMetric,
     byPsgc,
     selectedPsgc,

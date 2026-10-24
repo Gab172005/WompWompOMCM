@@ -1,16 +1,26 @@
 import { useMemo } from "react";
 import {
   computeLagunaMunicipalities,
-  runClinicOptimizer,
   LAGUNA_DISRUPTIONS,
 } from "../../services/lagunaData";
 import { emptyScenario, useAppStore } from "../../store/useAppStore";
 import { useOptimizationStore } from "../../store/useOptimizationStore";
 import { EMPTY_PLAN, planToMapPlan } from "../../services/optimization";
+import { forecastDay } from "../../services/forecasting/forecast";
+import { buildCoverage, simulateDay } from "../../services/forecasting/interventions";
 
 export function usePlanningResults() {
-  const { panel, viewMode, scenario, clinicCount, manualSiteOverrides } = useAppStore();
+  const { panel, viewMode, scenario } = useAppStore();
   const result = useOptimizationStore((s) => s.result);
+  const planningImpact = useMemo(() => {
+    if (viewMode !== "admin" || panel !== "optimization" || !result?.optimized.clinics.length)
+      return undefined;
+    const baseline = forecastDay(1, emptyScenario());
+    const snapshot = simulateDay(1, "draft-preview", baseline, undefined,
+      result.optimized.clinics.map((clinic) => ({ clinicId: clinic.id, psgc: clinic.barangay_id })),
+      buildCoverage(baseline));
+    return new Map(snapshot.records.map((record) => [record.psgc, record]));
+  }, [panel, result, viewMode]);
   const floodOverlay = useMemo(() => {
     if (viewMode !== "admin" || panel !== "optimization" || !result) return null;
     const returnPeriodYears =
@@ -34,27 +44,10 @@ export function usePlanningResults() {
     [activeScenario],
   );
   const plan = useMemo(() => {
-    if (panel !== "simulation")
-      return result ? planToMapPlan(result) : EMPTY_PLAN;
-    const baseline = runClinicOptimizer(
-      clinicCount,
-      municipalities,
-      activeScenario,
-    );
-    if (!Object.keys(manualSiteOverrides).length) return baseline;
-    // Resolve overrides against the whole fleet so changing one clinic keeps the others.
-    const ids = baseline.clinics.map(
-      (c) => manualSiteOverrides[c.clinicId] ?? c.siteId,
-    );
-    return runClinicOptimizer(clinicCount, municipalities, activeScenario, ids);
-  }, [
-    panel,
-    result,
-    clinicCount,
-    municipalities,
-    activeScenario,
-    manualSiteOverrides,
-  ]);
+    return viewMode === "admin" && panel !== "simulation" && result
+      ? planToMapPlan(result)
+      : EMPTY_PLAN;
+  }, [panel, result, viewMode]);
   const disruptions = useMemo(
     () =>
       LAGUNA_DISRUPTIONS.map((d) => ({
@@ -63,5 +56,5 @@ export function usePlanningResults() {
       })),
     [activeScenario],
   );
-  return { municipalities, plan, disruptions, floodOverlay };
+  return { municipalities, plan, disruptions, floodOverlay, planningImpact };
 }

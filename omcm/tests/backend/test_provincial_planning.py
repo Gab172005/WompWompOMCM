@@ -11,16 +11,16 @@ from services.provincial_planning import (
 )
 
 
-def test_provincial_catalog_keeps_all_barangays_lgus_and_canonical_ids(client):
+def test_provincial_catalog_keeps_all_barangays_lgus_and_canonical_ids(client, auth):
     frame, network, metadata = load_provincial_data()
     assert len(frame) == frame.id.nunique() == 681
     assert frame.municipality.nunique() == 30
     assert len(network["sites"]) == 681
-    response = client.get("/api/planning/clinics")
+    response = client.get("/api/planning/clinics", auth=auth)
     assert response.status_code == 200
     assert {s["barangay_id"] for s in response.json()["sites"]} == set(frame.id)
     assert "not establish road access" in metadata["travel_times"]
-    assert len(client.get("/api/clinics").json()["sites"]) == 8
+    assert len(client.get("/api/clinics", auth=auth).json()["sites"]) == 8
 
 
 def test_native_baseline_matches_shared_browser_hni_for_every_barangay():
