@@ -156,6 +156,12 @@ try {
     max_travel_minutes: 20,
   });
   expect(plan.notes.join(" ")).toContain("XGBoost");
+  expect(plan.notes.join(" ")).toContain("Dated synthetic history");
+  expect(
+    plan.notes.some((note) =>
+      /^Forecast target date: \d{4}-\d{2}-\d{2}$/.test(note),
+    ),
+  ).toBe(true);
   expect(plan.optimized.clinics).toHaveLength(2);
   await expect(
     panel.getByRole("region", { name: "Backend allocation results" }),
@@ -255,18 +261,83 @@ try {
   await fresh
     .getByRole("button", { name: /Schedules & Advisories|Approved Schedule/ })
     .click();
-  await fresh.getByRole("button", { name: "Tomorrow", exact: true }).click();
+  await expect(fresh.getByLabel("Schedule date")).toHaveCount(0);
+  await fresh.getByRole("button", { name: /Next clinic day/ }).click();
   await expect(fresh.locator(".clinic-staging-marker")).toHaveCount(2);
   await expect(
     fresh.getByRole("meter", { name: "Healthcare need out of 100" }),
   ).toHaveCount(0);
-  await fresh.close();
+  await expect(fresh.getByText(/Planned service area:/).first()).toBeVisible();
+  await expect(fresh.locator("body")).not.toContainText(
+    "Forecast target date:",
+  );
+  await fresh.screenshot({
+    path: join(frontend, "test-results/public-visits-desktop.png"),
+  });
+  await fresh.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    fresh.getByRole("region", { name: "Published clinic visits" }),
+  ).toBeVisible();
+  expect(
+    await fresh.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await fresh.screenshot({
+    path: join(frontend, "test-results/public-visits-mobile.png"),
+  });
+  await fresh.setViewportSize({ width: 1440, height: 1000 });
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization:
+      "Basic " + Buffer.from(username + ":" + password).toString("base64"),
+  };
+  const revisedResponse = await fetch("http://127.0.0.1:8007/api/optimize", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ clinic_count: 1, capacity: 70 }),
+  });
+  expect(revisedResponse.status).toBe(200);
+  const revised = await revisedResponse.json();
+  await fresh.bringToFront();
+  await fresh.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(fresh.locator(".clinic-staging-marker")).toHaveCount(2);
+  const notice = "Test emergency update: revised approved clinic arrangements.";
+  const emergencyResponse = await fetch(
+    "http://127.0.0.1:8007/api/schedules/emergency-override",
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        plan_id: revised.plan_id,
+        deployment_date: schedule.date,
+        notice,
+        confirmed: true,
+      }),
+    },
+  );
+  expect(emergencyResponse.status).toBe(200);
+  await fresh.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(fresh.locator(".clinic-staging-marker")).toHaveCount(1);
+  await expect(
+    fresh.getByRole("alert").filter({ hasText: notice }),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "Admin View", exact: true })
     .first()
     .click();
   await page.getByRole("button", { name: "Plan clinics", exact: true }).click();
+  await expect(
+    panel.getByRole("button", { name: "Generate recommendations" }),
+  ).toBeEnabled();
   await stop(api);
+  await fresh.bringToFront();
+  await fresh.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(
+    fresh.getByRole("alert").filter({ hasText: "last confirmed" }),
+  ).toBeVisible();
+  await expect(fresh.locator(".clinic-staging-marker")).toHaveCount(1);
+  await fresh.close();
   await panel.getByRole("button", { name: "Generate recommendations" }).click();
   await expect(
     panel

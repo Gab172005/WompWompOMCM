@@ -1,6 +1,10 @@
 import type { Clinic, PublishedSchedule } from "../../types/clinic";
 import { interpolateRoutePosition } from "../../services/lagunaData";
 import { ClinicStatus } from "./ClinicStatus";
+import {
+  assignedCommunities,
+  usePublicScheduleStore,
+} from "../../store/usePublicScheduleStore";
 export function ClinicDetails({
   clinic,
   progress,
@@ -12,7 +16,13 @@ export function ClinicDetails({
   simulation: boolean;
   publicSchedule?: PublishedSchedule | null;
 }) {
+  const publicData = usePublicScheduleStore((s) => s.data);
   if (publicSchedule) {
+    const communities = assignedCommunities(
+      publicData,
+      publicSchedule.date,
+      clinic.siteId,
+    );
     return (
       <>
         <span
@@ -43,7 +53,9 @@ export function ClinicDetails({
           ))}
         </div>
         <p>
-          Assigned communities: {clinic.municipality} and neighboring barangays.
+          {communities.length
+            ? `Planned service area: ${communities.join(", ")}.`
+            : "Service-area details will be confirmed by the LGU."}
         </p>
         <p className="workspace-note">
           Approved mobile clinic location. Location sharing is disabled; only

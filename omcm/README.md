@@ -58,6 +58,15 @@ This allocation remains scoped to the Los Baños–Bay road pilot, while the map
 province-wide HNI retains its existing formula. See the
 [optimization implementation and exact change inventory](docs/OPTIMIZATION_ALLOCATION.md).
 
+The separate [dated illness forecast](docs/TEMPORAL_FORECAST.md) now uses fictional
+case/weather histories to supply next-day illness inputs while preserving the
+existing appointment model and factor coefficients. These are synthetic planning
+demonstrations, not clinically validated forecasts. In Public View, the
+[approved-visits summary](docs/PUBLIC_VISITS.md) shows today and the next published
+clinic day, with actual service areas and automatically refreshed schedules.
+The latter document includes the exact public file inventory and combined-branch
+push/PR instructions.
+
 ## Project structure
 
 ```text

@@ -1,34 +1,32 @@
-import { useEffect, useState } from "react";
-import { backendApi, isBrowserDemo } from "../../services/api";
-import { publicSchedules } from "../../services/optimization";
+import { useEffect } from "react";
+import { isBrowserDemo } from "../../services/api";
 import { useAppStore } from "../../store/useAppStore";
-import type { PublicData } from "../../types";
+import { usePublicScheduleStore } from "../../store/usePublicScheduleStore";
 
-export async function refreshPublishedSchedules(signal?: AbortSignal) {
-  const data = await backendApi<PublicData>("/schedules", undefined, signal);
-  signal?.throwIfAborted();
-  useAppStore.setState({ publishedSchedules: publicSchedules(data) });
-}
+export const PUBLIC_REFRESH_MS = 30000;
 
 export function useScheduleSync() {
   const viewMode = useAppStore((s) => s.viewMode);
-  const selectedDate = useAppStore((s) => s.selectedScheduleDate);
-  const [error, setError] = useState("");
+  const { error, lastSynced, refresh, cancel } = usePublicScheduleStore();
   useEffect(() => {
     if (isBrowserDemo() || viewMode !== "public") return;
-    const controller = new AbortController();
-    refreshPublishedSchedules(
-      AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]),
-    )
-      .then(() => setError(""))
-      .catch(() => {
-        if (controller.signal.aborted) return;
-        useAppStore.setState({ publishedSchedules: {} });
-        setError(
-          "Published schedules are unavailable. Check the backend connection and try again.",
-        );
-      });
-    return () => controller.abort();
-  }, [viewMode, selectedDate]);
-  return error;
+    const update = () => {
+      if (!document.hidden) void refresh();
+    };
+    update();
+    const timer = window.setInterval(update, PUBLIC_REFRESH_MS);
+    window.addEventListener("focus", update);
+    window.addEventListener("online", update);
+    document.addEventListener("visibilitychange", update);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", update);
+      window.removeEventListener("online", update);
+      document.removeEventListener("visibilitychange", update);
+      cancel();
+    };
+  }, [viewMode, refresh, cancel]);
+  return error
+    ? `${error}${lastSynced ? " Showing the last confirmed published schedule." : " Please retry when connected."}`
+    : "";
 }

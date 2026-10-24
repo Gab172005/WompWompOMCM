@@ -119,7 +119,7 @@ export function AppLayout() {
           }
         />
         <MapControls />
-        {isPublic && scheduleError && (
+        {isPublic && scheduleError && !state.sidePanelOpen && (
           <div className="workspace-connection-error" role="alert">
             {scheduleError}
           </div>
