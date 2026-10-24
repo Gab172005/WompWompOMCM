@@ -13,7 +13,51 @@
   color: #fff;
   box-shadow: 0 4px 16px #102f4630;
   font-weight: 650;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
+.assistant-launcher:hover:not(.is-dragging) {
+  background: #173e5a;
+  box-shadow: 0 6px 20px #102f4645;
+  transform: translateY(-1px);
+}
+.assistant-launcher:active {
+  cursor: grabbing;
+}
+.assistant-launcher.is-positioned {
+  right: auto !important;
+  bottom: auto !important;
+}
+.assistant-launcher.is-dragging {
+  cursor: grabbing !important;
+  user-select: none;
+  z-index: 1005;
+  box-shadow: 0 10px 28px rgba(16, 47, 70, 0.45);
+  transform: scale(1.02);
+  transition: none !important;
+}
+.assistant-launcher-drag-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #79a5c4;
+  margin-left: -4px;
+  margin-right: -2px;
+  opacity: 0.75;
+  cursor: grab;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+.assistant-launcher:hover .assistant-launcher-drag-indicator {
+  color: #afd4ef;
+  opacity: 1;
+}
+.assistant-launcher.is-dragging .assistant-launcher-drag-indicator {
+  cursor: grabbing !important;
+  color: #fff;
+}
+
 .assistant-widget {
   position: fixed;
   z-index: 1100;
