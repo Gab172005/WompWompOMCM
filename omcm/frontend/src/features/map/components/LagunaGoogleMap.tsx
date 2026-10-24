@@ -16,6 +16,7 @@ import {
   barangayMetricLabel,
 } from "../../../services/providedData";
 import type { LocatedOsmClinic } from "../../../types/osmClinic";
+import { isEligibleHospital } from "../../../services/healthcareNeed";
 import {
   osmClinicLink,
   osmClinicPopupText,
@@ -487,7 +488,7 @@ export function LagunaGoogleMap({
 
     if (!map || !showHospitals || !window.google?.maps) return;
 
-    const markers = hospitals.map((h) => {
+    const markers = hospitals.filter(isEligibleHospital).map((h) => {
       const marker = new google.maps.Marker({
         position: { lat: h.lat, lng: h.lng },
         map,

@@ -1,0 +1,19 @@
+# Dataset source guide
+
+The current supplied provincial files are `laguna_barangays.csv`,
+`laguna_barangay_risk_index.csv`, and `laguna_hospitals.csv`. Their usage,
+joins, missing-value rules, policy weights and limitations are documented in
+[README.md](README.md). Hospital capacity dates and verification labels are
+preserved per record; this repository does not verify live availability.
+
+The offline OSM clinic snapshot has separate
+[acquisition and provenance documentation](../docs/OSM_CLINICS.md).
+[The hospital/HNI audit](../docs/HOSPITAL_HNI_AUDIT.md) records the Step A checks.
+
+The backend's `data/pilot.json` and matching browser fixtures form the separate
+Los Baños–Bay road pilot. Keep `OMCM_DATASET=pilot`. Provincial HNI data and
+pilot schedules have different identifiers and scoring contracts.
+
+Morbidity and operational examples are synthetic planning inputs, with no
+patient records. Demographics and hazard screening retain the supplied PSA/
+GeoRiskPH-style context. These are bundled snapshots, not live operational feeds.

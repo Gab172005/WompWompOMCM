@@ -202,7 +202,7 @@ export function MapLegend({
                 background: "#ef4444",
               }}
             />{" "}
-            Hospital
+            Verified hospital
           </span>
         )}
         {showClinics && (

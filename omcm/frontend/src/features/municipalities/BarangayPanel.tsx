@@ -1,16 +1,15 @@
 import { useAppStore } from "../../store/useAppStore";
 import {
   BARANGAYS_BY_PSGC,
-  MAPPED_HOSPITALS,
   OSM_CLINIC_SNAPSHOT,
   OSM_CLINICS_BY_BARANGAY,
   PROVIDED_HOSPITALS,
-  distanceKm,
   normalizeMunicipality,
   LAGUNA_BARANGAYS,
 } from "../../services/providedData";
 import {
   HEALTHCARE_NEED_FACTORS,
+  hospitalsByDistance,
   type NeedFactor,
 } from "../../services/healthcareNeed";
 import type { OsmClinic } from "../../types/osmClinic";
@@ -50,10 +49,7 @@ export function BarangayPanel() {
   const hospitals = PROVIDED_HOSPITALS.filter(
     (h) => h.municipalityKey === normalizeMunicipality(b.municipality),
   );
-  const nearest = MAPPED_HOSPITALS.filter((h) => h.verified)
-    .map((h) => ({ ...h, distance: distanceKm(b, h) }))
-    .sort((a, c) => a.distance - c.distance)
-    .slice(0, 3);
+  const nearest = hospitalsByDistance(b, PROVIDED_HOSPITALS).slice(0, 3);
   // OSM clinics the importer assigned to this barangay polygon. They stay a
   // separate register from the municipal hospitals above.
   const clinics = OSM_CLINICS_BY_BARANGAY.get(b.psgc) ?? [];
@@ -335,14 +331,15 @@ export function BarangayPanel() {
       <h3>Nearby verified hospital records</h3>
       <p className="workspace-note">
         Straight-line distance from the supplied barangay point. Travel time and
-        service availability are not provided. This list is the municipal
-        hospital register and excludes OSM clinic records above.
+        service availability are not provided. Hospitals across Laguna are
+        eligible, using the same records as the HNI calculation. OSM clinic
+        records are listed separately above.
       </p>
       {nearest.map((h) => (
         <div className="barangay-hospital" key={h.id}>
           <strong>{h.name}</strong>
           <span>
-            {h.municipality} · {h.distance.toFixed(1)} km
+            {h.municipality} · {h.distanceKm.toFixed(2)} km straight line
           </span>
           <small>
             {h.capacity === null ? "Beds unverified" : `${h.capacity} beds`} ·{" "}

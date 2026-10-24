@@ -48,9 +48,18 @@ Both map engines, barangay details and ranking consume the same records from
 available-weight rescaling; scores are rounded to one decimal before competition
 ranking. Clinic counts are mapped observations, not verified absence.
 
+Hospital markers, nearby lists and HNI share one verified/finite-WGS84 eligibility
+rule and raw-ID distance tie ordering. All source hospital records remain in the
+register, including unverified, reported closed and unlocated facilities.
+Municipality headline scores, contributions and rankings are population-weighted
+rollups of the same barangay HNI records; incomplete barangays remain provisional.
+These are derived display values, with no new dataset or API schema.
+
 The municipality workspace retains testing's 30-municipality illustrative data
-and browser priority heuristic (`services/lagunaData.ts`). Its four-factor score
-and example route waypoints are separate from the server pilot.
+and browser priority heuristic (`services/lagunaData.ts`). Its four-factor allocation score
+and example route waypoints are separate from the server pilot. The allocation
+score is explicitly labeled as a separate heuristic in municipality details,
+optimization and assistant explanations; it is not the seven-factor map HNI.
 
 The server-backed fleet pilot retains main's 20 Los Baños–Bay barangay inputs,
 eight staging candidates, directed OSRM route fixtures, five-factor risk score,

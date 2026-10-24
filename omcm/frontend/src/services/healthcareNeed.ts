@@ -170,6 +170,27 @@ function validPoint(point: {
     : null;
 }
 
+/** One eligibility rule for hospital markers, nearest lists and HNI evidence. */
+export function isEligibleHospital<T extends HospitalInput>(
+  hospital: T,
+): hospital is T & { lat: number; lng: number } {
+  return hospital.verified && validPoint(hospital) !== null;
+}
+
+export function hospitalsByDistance<T extends HospitalInput>(
+  point: { lat: number; lng: number },
+  hospitals: T[],
+) {
+  if (!validPoint(point)) return [];
+  return hospitals
+    .filter(isEligibleHospital)
+    .map((hospital) => ({
+      ...hospital,
+      distanceKm: distanceKm(point, hospital),
+    }))
+    .sort((a, b) => a.distanceKm - b.distanceKm || compareIds(a.id, b.id));
+}
+
 /**
  * Active OSM clinics assigned to exactly this barangay polygon. Assignment alone
  * is not enough: the record must also be in-province and carry valid WGS84
@@ -204,7 +225,12 @@ interface ClinicAccess {
  * assigned active clinics only, including a genuine zero.
  */
 export function clinicAccessByBarangay<
-  T extends { psgc: string; lat: number; lng: number; population?: number | null },
+  T extends {
+    psgc: string;
+    lat: number;
+    lng: number;
+    population?: number | null;
+  },
 >(barangays: T[], dataset?: ClinicDataset): Map<string, ClinicAccess> {
   const result = new Map<string, ClinicAccess>();
   const snapshotValid = Boolean(dataset?.clinicSnapshot?.valid);
@@ -320,8 +346,7 @@ export function clinicAccessByBarangay<
         `${inProvinceUnassigned} active OSM clinic record(s) inside the Laguna polygon but in no barangay polygon are eligible for clinic distance and excluded from barangay counts; no barangay was guessed.`,
       );
     for (const warning of dataset?.clinicSnapshot?.warnings ?? [])
-      if (typeof warning === "string" && warning.length)
-        warnings.push(warning);
+      if (typeof warning === "string" && warning.length) warnings.push(warning);
     result.set(barangay.psgc, {
       clinicCount,
       clinicsPer10000: per10000,
@@ -364,23 +389,15 @@ export function computeBarangayHealthcareNeed<T extends NeedInput>(
   weights?: Record<NeedFactor, number>,
 ): (T & BarangayHealthcareNeed)[] {
   const factorWeights = resolveWeights(weights);
-  const locatedHospitals = hospitals.filter(
-    (h): h is HospitalInput & { lat: number; lng: number } =>
-      h.verified && validPoint(h) !== null,
-  );
-  const points = barangays.map(validPoint);
-  const nearest = barangays.map((_b, index) => {
-    const point = points[index];
-    if (!point) return null;
-    const candidates = locatedHospitals.map((h) => ({
-      id: h.id,
-      name: h.name,
-      distanceKm: distanceKm(point, validPoint(h)!),
-    }));
-    candidates.sort(
-      (a, c) => a.distanceKm - c.distanceKm || compareIds(a.id, c.id),
-    );
-    return candidates[0] ?? null;
+  const nearest = barangays.map((barangay) => {
+    const hospital = hospitalsByDistance(barangay, hospitals)[0];
+    return hospital
+      ? {
+          id: hospital.id,
+          name: hospital.name,
+          distanceKm: hospital.distanceKm,
+        }
+      : null;
   });
   const morbidity = percentileScores(barangays.map((b) => b.morbidity));
   const density = percentileScores(barangays.map((b) => b.density));

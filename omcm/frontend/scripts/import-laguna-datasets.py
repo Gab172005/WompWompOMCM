@@ -10,6 +10,7 @@ reading an unavailable snapshot as "zero clinics".
 import argparse
 import csv
 import json
+import math
 import sys
 import unicodedata
 from pathlib import Path
@@ -267,6 +268,40 @@ def load_clinics():
     return clinics, snapshot
 
 
+def hospital_records(rows):
+    """Preserve the supplied register, rejecting unusable numeric identities."""
+    hospitals = []
+    seen = set()
+    for index, row in enumerate(rows):
+        identity = (normalize(row["municipality"]), normalize(row["name"]))
+        if not all(identity) or identity in seen:
+            raise ValueError(f"Missing or duplicate hospital identity at CSV row {index + 2}")
+        seen.add(identity)
+        lat, lng = number(row["latitude"]), number(row["longitude"])
+        if (lat is None) != (lng is None):
+            raise ValueError(f"Incomplete hospital coordinates: {row['name']}")
+        if lat is not None and not (
+            math.isfinite(lat) and math.isfinite(lng)
+            and -90 <= lat <= 90 and -180 <= lng <= 180
+        ):
+            raise ValueError(f"Invalid hospital coordinates: {row['name']}")
+        capacity = number(row["capacity_beds"], True)
+        if capacity is not None and capacity < 0:
+            raise ValueError(f"Negative hospital bed capacity: {row['name']}")
+        hospitals.append(dict(
+            id=f"H-DATA-{index + 1:03}", name=row["name"], municipality=row["municipality"],
+            municipalityKey=normalize(row["municipality"]), barangay=row["barangay"],
+            lat=lat, lng=lng, type=row["facility_type"], classification=row["classification"],
+            capacity=capacity,
+            verificationStatus=row["verification_status"], capacityAsOf=row["capacity_as_of"],
+            capacityDefinition=row["capacity_definition"], capacityStatus=row["capacity_status"],
+            completeness=row["record_completeness"], notes=row["notes"],
+            verified=row["verification_status"].startswith(("DOH hospital register", "PhilHealth")),
+            services=[],
+        ))
+    return hospitals
+
+
 def build():
     geometry = json.loads(
         (ROOT / "frontend/public/assets/geo/laguna_barangays.geojson").read_text(encoding="utf-8")
@@ -300,20 +335,7 @@ def build():
             hazards={k.removesuffix("_score"): number(v) for k, v in risk.items() if k.endswith("_score")},
         ))
     assert len({b["psgc"] for b in barangays}) == 681, "Multiple CSV rows matched one boundary"
-    hospitals = []
-    for index, row in enumerate(read_csv("laguna_hospitals.csv")):
-        hospitals.append(dict(
-            id=f"H-DATA-{index + 1:03}", name=row["name"], municipality=row["municipality"],
-            municipalityKey=normalize(row["municipality"]), barangay=row["barangay"],
-            lat=number(row["latitude"]), lng=number(row["longitude"]),
-            type=row["facility_type"], classification=row["classification"],
-            capacity=number(row["capacity_beds"], True),
-            verificationStatus=row["verification_status"], capacityAsOf=row["capacity_as_of"],
-            capacityDefinition=row["capacity_definition"], capacityStatus=row["capacity_status"],
-            completeness=row["record_completeness"], notes=row["notes"],
-            verified=row["verification_status"].startswith(("DOH hospital register", "PhilHealth")),
-            services=[],
-        ))
+    hospitals = hospital_records(read_csv("laguna_hospitals.csv"))
     clinics, clinic_snapshot = load_clinics()
     bundle = dict(barangays=barangays, hospitals=hospitals, clinics=clinics, clinicSnapshot=clinic_snapshot)
     return json.dumps(bundle, ensure_ascii=False, separators=(",", ":")) + "\n"

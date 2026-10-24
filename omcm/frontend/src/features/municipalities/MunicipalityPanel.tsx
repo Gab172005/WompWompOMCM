@@ -66,7 +66,7 @@ export function MunicipalityPanel() {
         </Button>
       </div>
       <details>
-        <summary>Municipality planning ranking</summary>
+        <summary>Municipality HNI ranking</summary>
         <MunicipalityRanking municipalities={municipalities} />
       </details>
       <p className="workspace-note">

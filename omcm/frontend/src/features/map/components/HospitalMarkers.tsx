@@ -1,6 +1,7 @@
 import { divIcon } from "leaflet";
 import { Marker, Popup } from "react-leaflet";
 import type { HospitalFacility } from "../../../types/municipality";
+import { isEligibleHospital } from "../../../services/healthcareNeed";
 const icon = divIcon({
   className: "hospital-marker-custom",
   html: '<span class="workspace-hospital-marker">+</span>',
@@ -14,7 +15,7 @@ export function HospitalMarkers({
 }) {
   return (
     <>
-      {hospitals.map((h) => (
+      {hospitals.filter(isEligibleHospital).map((h) => (
         <Marker key={h.id} position={[h.lat, h.lng]} icon={icon}>
           <Popup>
             <strong>{h.name}</strong>

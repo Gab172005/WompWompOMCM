@@ -9,8 +9,9 @@ export function OptimizationPanel() {
   return (
     <>
       <p>
-        Allocate the fleet by municipality healthcare need. Estimates use
-        illustrative candidate sites.
+        Allocate the fleet using the separate municipal allocation heuristic
+        and illustrative candidate sites. This estimate uses a different formula
+        from the barangay HNI heatmap.
       </p>
       <ClinicCountInput />
       <Button onClick={useAppStore.getState().regenerate}>

@@ -16,8 +16,8 @@ export function ChatbotPanel() {
       "Select a municipality to inspect its need score, or open Optimize and Simulate to explore clinic recommendations and scenario effects.";
     if (/score|rank|why|need/.test(lower))
       answer = selected
-        ? `${selected.name}: need ${selected.needScore}/100, rank #${selected.rank}. ${selected.explanation}`
-        : "The municipal need score combines supplied synthetic morbidity (35%), illustrative vulnerability (25%), supplied disaster risk index (20%) and population density (20%). Select a municipality for its breakdown.";
+        ? `${selected.name}: municipal allocation estimate ${selected.needScore}/100, allocation rank #${selected.rank}. ${selected.explanation} This separate heuristic is not the barangay HNI shown on the heatmap; the municipality panel shows its HNI rollup.`
+        : "The municipal allocation estimate combines supplied synthetic morbidity (35%), illustrative vulnerability (25%), supplied disaster risk index (20%) and population density (20%). It is separate from the seven-factor barangay HNI heatmap. Select a municipality to compare its HNI rollup and allocation estimate.";
     else if (/clinic|recommend|placement/.test(lower))
       answer = `The priority heuristic proposes ${plan.clinics.length} clinics: ${plan.clinics.map((c) => c.clinicId + " at " + c.siteName).join("; ")}. Total capacity: ${plan.metrics.totalCapacity} appointments/day. This is an illustrative local proposal.`;
     else if (/scenario|flood|disaster|simulation/.test(lower))

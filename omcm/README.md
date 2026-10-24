@@ -234,27 +234,30 @@ cd omcm/frontend
 npm run lint
 npm test
 npm run build
-$env:OMCM_BROWSER_CHANNEL = "msedge"  # Windows; omit if Chromium is installed
-npm run test:barangays
+$env:OMCM_BROWSER_CHANNEL = "msedge"  # Windows; defaults to Chrome elsewhere
+npm run test:hni
 python scripts/import-osm-clinics.py --check
 python scripts/import-laguna-datasets.py --check
-python -m unittest discover -s ../tests/data -p "test_osm_clinics.py"
 node --experimental-strip-types scripts/clinic-sensitivity.mjs --check
 cd ../backend
 .venv/Scripts/python.exe -m pytest -q
-.venv/Scripts/python.exe export_datasets.py --check
 ```
 
-The barangay browser suite runs an isolated Vite instance on port 5176. On
-Windows select headless Edge with `OMCM_BROWSER_CHANNEL=msedge`; elsewhere install
-Chromium with `npx playwright install chromium`. Screenshots go to
+The hospital/HNI browser suite runs an isolated Vite instance on port 5177. On
+Windows select headless Edge with `OMCM_BROWSER_CHANNEL=msedge`; elsewhere it
+defaults to installed Chrome. Screenshots go to
 [the test-results directory](frontend/test-results/). Test sources live under
 [tests](tests/); frontend dependencies remain installed once. Historical package
-scripts `test:e2e`, `test:e2e:legacy` and `test:e2e:upstream` refer to suites not
-present in this checkout; do not treat them as successful verification.
-The backend test directory is also absent in this checkout, and the backend
-venv is not supplied. The backend commands above document the expected complete
-checkout environment, not a passing regression result for this working copy.
+scripts `test:barangays`, `test:e2e`, `test:e2e:legacy` and `test:e2e:upstream`
+refer to suites not present in this checkout. The historical Python OSM importer
+suite and dataset export targets also remain absent; do not treat those commands
+as successful verification.
+Step A recovered the hospital/HNI frontend regression suites and the backend
+API, risk-engine and road-pilot suites, plus added hospital importer tests.
+`npm run test:hni` checks the current hospital/HNI flow on desktop and mobile;
+it starts an isolated Vite server on port 5177 and defaults to installed Chrome.
+See [the audit and validation record](docs/HOSPITAL_HNI_AUDIT.md) for scope,
+the exact changed files, results, and the remaining simulation/model differences.
 
 Regenerate the inspectable dataset exports with
 `backend/.venv/Scripts/python.exe backend/export_datasets.py` from `omcm/`.

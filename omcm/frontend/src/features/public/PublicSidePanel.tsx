@@ -15,10 +15,11 @@ import {
 } from "../../store/useAppStore";
 import {
   BARANGAYS_BY_PSGC,
-  MAPPED_HOSPITALS,
+  PROVIDED_HOSPITALS,
   distanceKm,
 } from "../../services/providedData";
 import { LAGUNA_BASE_DATA } from "../../services/lagunaData";
+import { hospitalsByDistance } from "../../services/healthcareNeed";
 import { Button } from "../../components/ui/Button";
 
 export function PublicSidePanel() {
@@ -68,10 +69,7 @@ export function PublicSidePanel() {
   const nearestClinic = clinicsByDistance[0] ?? null;
 
   const nearestHospitals = targetPoint
-    ? MAPPED_HOSPITALS.filter((h) => h.verified)
-        .map((h) => ({ ...h, distance: distanceKm(targetPoint, h) }))
-        .sort((a, b) => a.distance - b.distance)
-        .slice(0, 3)
+    ? hospitalsByDistance(targetPoint, PROVIDED_HOSPITALS).slice(0, 3)
     : [];
 
   return (
@@ -258,7 +256,7 @@ export function PublicSidePanel() {
               <div className="barangay-hospital" key={h.id}>
                 <strong>{h.name}</strong>
                 <span>
-                  {h.municipality} · {h.distance.toFixed(1)} km away
+                  {h.municipality} · {h.distanceKm.toFixed(2)} km straight line
                 </span>
                 <small>
                   {h.capacity === null
