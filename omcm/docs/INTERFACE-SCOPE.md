@@ -1,5 +1,31 @@
 # Map-first interface acceptance report
 
+> **Current single-map acceptance — 2026-10-24:** [Global audit](GLOBAL_AUDIT.md) and
+> [current verification](VERIFICATION.md) supersede the historical branch names,
+> push commands, test counts and pilot-only limitations in older sections below.
+> The active admin UI stays on `/admin`; connected planning covers all 681
+> barangays and requires backend authentication. The agreed HNI percentages and
+> both trained XGBoost artifacts are preserved.
+
+## Active interface acceptance
+
+- One map canvas for public and admin; `/admin` tool changes are Zustand state.
+- Legacy routes redirect into that shell, including `/driver`, `/analytics`,
+  `/settings`, `/workspace` and `/admin/legacy`. Their previous components are
+  retained in source but are not mounted by the active router.
+- Floating search, metric/facility chips, rounded tool buttons, side sheets,
+  compact expandable legend and corner map controls use the existing plain CSS.
+- Details, optimization review, publication, simulation and assistant controls
+  remain in place. Tool sheets collapse while retaining simulation overlays and
+  playback, so the map can be inspected on a phone. Modal titles are unique and keyboard focus is restored.
+- Animations are short and respect reduced motion. Dropdowns, alerts, field
+  labels, button states and section spacing share the same visual treatment.
+- Public rendering omits HNI/drafts and backend authorization protects private
+  planning reads. The assistant follows the same public/admin boundaries.
+- Exact validation and remaining limits are in [the current record](VERIFICATION.md).
+
+## Historical acceptance record
+
 Implemented in the existing application with React Leaflet, plain CSS and the
 existing Python optimizer. No dependencies added. The only request-field addition
 is the user-approved optional `municipality_outbreak_multipliers`; bundled JSON

@@ -1,6 +1,27 @@
 # Approved visits and branch handoff
 
+> **Current public/admin boundary — 2026-10-24:** [Global audit](GLOBAL_AUDIT.md) and
+> [current verification](VERIFICATION.md) supersede the historical branch names,
+> push commands, test counts and pilot-only limitations in older sections below.
+> The active admin UI stays on `/admin`; connected planning covers all 681
+> barangays and requires backend authentication. The agreed HNI percentages and
+> both trained XGBoost artifacts are preserved.
+
 Branch: `fix/agreed-balanced-hni-weights`. Reviewed 2026-10-24.
+
+## Current view safeguards
+
+Public schedules still refresh and retain the last confirmed snapshot on outage.
+Private scored barangays, analytics and candidate catalogs now require backend
+authentication. Public assistant search/place details omit scores, contributions
+and draft metrics; score rankings require Admin View. Switching view/identity
+clears the assistant conversation and cancels pending planning proposals.
+Public emergency notices show the office label, not an administrator login.
+
+Public markers remain approved locations only. Legacy public links redirect to
+`/public`; legacy administrative links redirect to the single `/admin` map.
+Internal tools and the assistant open panels in place. Shared UI styles apply to
+both views, with a compact expandable legend and responsive detail sheets.
 
 ## Public behavior
 

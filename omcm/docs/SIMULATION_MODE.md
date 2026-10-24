@@ -1,85 +1,104 @@
-# 30-day Laguna simulation implementation
+# Three-scenario simulation
 
-Simulation Mode forecasts all 681 barangays over one shared 30-day timeline with three side-by-side runs: No Intervention, Manual Clinic Allocation and Optimized Clinic Allocation. The baseline need rises deterministically each day. A deployed clinic lowers the displayed scenario HNI for its host barangay and nearby barangays, while unaffected areas continue along the baseline. Each run can receive one placement during a weekly window; locations take effect on the selected day and remain through that window. Simulation changes remain local to the admin practice view and never publish public schedules.
+## User flow and shared time
 
-## Forecast and intervention algorithms
+Admin View → **30-day simulation** opens a side sheet over the same map.
+Select No intervention, Manual or Optimized to view that run's map. All three
+cards, chart series, logs and snapshots refer to the same viewed day. Playback
+advances them together, pauses at Days 8, 15 and 22, and stops on Day 30.
+Scrubbing reviews reached days only; earlier decisions cannot be edited. The
+side sheet can be collapsed to inspect the map while keeping clinics, colors and
+playback active.
 
-The simulator and map share the agreed `barangay-healthcare-need-v4-balanced` profile from `healthcareNeed.ts`. The historical v2 disaster/urban-rural profile is no longer used:
+The reproducible experiment starts on 2026-10-24 in Manila time with seed 42.
+It projects all 681 barangays. Changing environmental assumptions or fleet size
+restarts all runs and cancels stale proposals. Fleet size is 1–10, matching the
+backend maximum. The baseline uses the agreed Balanced HNI factors and fixed
+baseline percentiles with a small deterministic daily morbidity increase.
 
-| Factor | Weight |
-| --- | ---: |
-| Morbidity | 35% |
-| Density | 15% |
-| Hospital distance | 30% |
-| Income class | 10% |
-| Clinic distance | 5% |
-| Clinic provision deficit | 5% |
+## Scenarios
 
-Baseline percentiles and income normalization remain fixed throughout the month. Missing factors remain null; available weights are renormalized, and incomplete scores stay provisional. No CSV, generated dataset or boundary file changes are required. Disaster risk and urban/rural remain context and never alter HNI coverage or rank.
+| Scenario | Placement | Expected map behavior |
+| --- | --- | --- |
+| No intervention | No clinic service | Need rises along the common morbidity projection; capped factors may plateau. |
+| Manual | Distinct eligible barangays chosen by the user | Host and nearby barangays lighten; other areas follow the baseline. |
+| Optimized | Actual authenticated FastAPI XGBoost/CP-SAT proposal, then explicit Apply | Multiple returned locations create simultaneous service areas. |
 
-The synthetic experiment starts on October 24, 2026, at midnight Manila time. A fixed seed (42) and municipality PSGC set a small, repeatable daily morbidity increase. All three runs share identical baseline forecasts and the same six Balanced HNI weights. Morbidity controls affect the shared illness inputs. Flood controls do not add HNI points; the connected planner may use configured flood conditions for operating constraints. Browser catchments use straight-line distance.
+Draft markers are distinct from deployed markers. A connected proposal is
+required before optimized placement controls become available. The user may
+review/edit proposed sites for rehearsal; backend metrics describe the original
+proposal, not an independently solved edited draft. Manual placements remain
+local. Neither Apply nor playback publishes a schedule.
 
-Daily untreated demand is `min(100, baseline HNI + 0.15 × previous UHNI)`. Scenario HNI is the agreed weighted score after modeled service: service reduces HNI by up to 35% at the host and tapers to 17.5% at the 3 km edge. Neighboring barangays inside that catchment receive the same distance-based adjustment; areas outside it receive none. Overlapping clinics use the strongest single service fraction instead of adding deductions. UHNI is untreated demand multiplied by the remaining fraction. Manual and optimized deployments share these impact calculations. Baseline HNI remains available for comparison and the factor weights are never modified.
+Each scenario permits one placement per weekly window (1–7, 8–14, 15–21, 22–30)
+on its latest reached day. Locations remain active until a later placement
+replaces them. Weekly windows permit a new decision; they do not automatically
+remove deployed clinics. Earlier snapshots are preserved when a later decision
+recalculates the remaining days.
 
-## Optimized scenario
+## HNI policy and service deductions
 
-The Optimized Clinic Allocation scenario requests `/api/planning/optimize` from the connected FastAPI service. The backend uses its dated XGBoost appointment-demand model and capacity-aware CP-SAT planner across Laguna. The province endpoint enforces the fixed agreed Balanced HNI policy; the shared request's legacy pilot weights do not change that policy. Simulator morbidity/flood conditions pass through where supported. The returned plan and solver metrics are shown as a draft; the user can review or edit locations before Apply. Applying affects only the simulator and is required before optimized sites appear as deployed. There is no browser-side allocation fallback. The backend forecast estimates the next planning day; it is not a forecast for each synthetic simulator date.
+The baseline reads `defaultNeedWeights()` from `healthcareNeed.ts`:
+35% morbidity, 30% hospital distance, 15% density, 10% income class,
+5% clinic distance and 5% clinic provision deficit. Missing factors rescale
+available weights. Flood hazard has no direct HNI term.
 
-## State and interface
+For a barangay centroid within 3 km of an eligible host centroid, the modeled
+service fraction is:
 
-- Clinic count defaults to 3. Changing k or environmental conditions restarts all runs and clears any stale backend draft. The user explicitly requests a fresh optimized plan.
-- The scenarios retain separate placement histories and snapshots but share the same viewing day and reached day. Clinic locations remain active until a later weekly placement is applied.
-- Playback advances all three outcomes together, pauses when a new weekly placement window opens on Days 8, 15 and 22, and stops on Day 30. A clinic plan can be applied once per scenario during each window, on the current day.
-- The timeline scrubs all scenarios together. Applying a placement recalculates that scenario from the current day onward and preserves earlier snapshots. Past days can be reviewed but not edited.
-- Future snapshots are deterministic internal projections. The chart always compares all three runs for the same reached day, so the user no longer needs to advance each scenario separately.
-- Google Maps and the Leaflet fallback both render post-service HNI or uncovered-need shading. The simulation HNI palette is continuous so a reduction remains visible even within one legend band. Numbered deployed markers, distinct suggested markers and 3 km catchment circles show clinic status. Polygon selection can stage a clinic location at a decision point.
-- Daily metrics include baseline HNI, scenario HNI after service, UHNI, total unmet priority, served barangays, covered priority percentage, relocations and cumulative unmet priority. The chart compares scenario HNI across the three runs; the table shows baseline and scenario HNI separately.
+```text
+fraction = 0.35 × (1 − 0.5 × distanceKm / 3)
+scenario HNI = baseline HNI × (1 − fraction)
+```
 
-## Files changed
+The host receives a 35% score reduction; the catchment edge receives 17.5%.
+Affected neighboring areas use centroid distance, not shared-border membership
+or verified road access. Outside 3 km the deduction is zero. Overlapping clinics
+use the strongest single fraction rather than adding deductions. The original
+factor percentages and baseline records remain intact. For example, baseline
+HNI 80 becomes 52 at the host. This is a modeled score adjustment, not removal
+of 35 percentage points from an HNI factor weight.
 
-| Files | Purpose |
-| --- | --- |
-| `frontend/src/services/forecasting/forecast.ts` | Deterministic six-factor forecasts and operational periods |
-| `frontend/src/services/forecasting/interventions.ts` | Geographic coverage, post-service HNI, unmet demand and metrics |
-| `frontend/src/services/forecasting/optimizer.ts` | FastAPI request mapping and backend-plan validation; no local optimizer fallback |
-| `frontend/src/services/forecasting/simulation.test.ts` | Rising baseline, localized service impact, synchronized days and backend adapter tests |
-| `frontend/src/store/useForecastStore.ts` | Shared day progression with separate scenario histories and connected draft requests |
-| `frontend/src/features/simulation/SimulationPanel.tsx` | Selectable scenario cards, weekly placement windows and backend confirmation workflow |
-| `frontend/src/features/simulation/SimulationPlayback.tsx` | Shared daily timeline, play/pause, replay and stepping |
-| `frontend/src/features/simulation/SimulationResults.tsx` | Same-day HNI comparison, chart marker and per-scenario activity log |
-| `frontend/src/features/simulation/useSimulationMap.ts` | Adapter between simulation state and map rendering |
-| `frontend/src/features/map/components/SimulationLayers.tsx` | Leaflet active/recommended markers and catchments |
-| `frontend/src/features/map/components/BarangayBoundaryLayer.tsx` | Continuous post-service HNI colors, tooltip and selection support |
-| `frontend/src/features/map/components/LagunaGoogleMap.tsx` | Google simulation shading, numbered markers and catchments |
-| `frontend/src/features/map/components/LagunaLeafletMap.tsx` | Leaflet simulation layer integration |
-| `frontend/src/features/map/components/mapTypes.ts` | Shared simulation overlay contract |
-| `frontend/src/features/map/components/MapLegend.tsx` | Scenario HNI/UHNI ramp and deployment legend |
-| `frontend/src/components/layout/AppLayout.tsx` | Simulation map integration and panel title |
-| `frontend/src/types/google.maps.d.ts` | Minimal Google Circle declaration |
-| `frontend/src/styles/globals.css` | Allocation controls, statistics and scrollable comparison table |
-| `frontend/src/styles/map-workspace.css` | Simulation-only phone panel/clock/legend layout |
-| `frontend/src/services/lagunaData.ts` | Continuous simulation HNI color interpolation |
-| `frontend/src/services/assistantTools.ts` | Assistant reports the real optimizer request workflow accurately |
-| `backend/services/assistant.py` | Assistant guidance for scenario HNI and connected plan requests |
-| `frontend/scripts/simulation-browser.mjs` | Connected-backend browser regression for all three scenarios |
-| `frontend/src/services/assistant.test.ts` | Assert assistant cannot fabricate a simulation allocation |
-| `frontend/scripts/assistant-browser.mjs` | Verify assistant opens the optimizer action without inventing a plan |
-| `frontend/package.json` | `test:simulation` command |
-| `frontend/vite.config.ts` | Discover new source-local tests alongside existing tests |
-| `docs/SIMULATION_MODE.md` | Implementation, validation and limitations report |
+Uncovered need carries forward a separate backlog:
 
-## Validation
+```text
+untreated demand index = min(100, baseline HNI + 0.15 × previous UHNI)
+UHNI = untreated demand index × (1 − fraction)
+```
 
-- `npm run lint`: passed.
-- `npm test`: passed, 130 tests across 15 files.
-- `npm run build`: passed; Vite still reports the existing large JavaScript chunk advisory.
-- `python -m pytest -q` (backend virtual environment): passed, 75 tests. One Starlette/httpx deprecation warning remains.
-- `npm run test:simulation`: passed in Chrome against a temporary FastAPI service. Verified synchronized scenario days, rising baseline HNI, manual host/neighbor-only deductions, a real `/api/planning/optimize` response with XGBoost/CP-SAT notes, explicit draft confirmation, multiple optimized impact areas, visible numbered clinic markers and mobile layout.
-- `npm run test:assistant`: passed. Its demo setup logs an expected unavailable optional planning-catalog proxy; it verifies that the assistant opens the optimizer flow without fabricating a draft.
-- `git diff --check`: clean. No datasets, HNI weight percentages or public schedules were changed.
+HNI, UHNI and population-weighted totals are planning indices, not counts of
+patients. Capacity-aware backend appointments and browser service fractions are
+different calculations. Host/neighbor deduction currently runs in the browser's
+shared `interventions.ts`; no backend 30-day deduction contract exists yet.
+Backend ownership is an explicit remaining architecture gap, not a verified
+feature. Changing that API/data model requires separate approval.
 
-## Remaining limitations
+## Backend requests and operational context
 
-This is a deterministic planning simulation, not a clinically calibrated morbidity forecast. Priority units are population × index (or population × index-days for weekly/cumulative totals), not patient or appointment counts. The service radius, service fraction, backlog carryover and relocation penalty are explicit heuristic assumptions. Weekly optimizer coverage is an estimate against untreated projected demand; realized daily outcomes include feedback through the backlog recurrence.
+The optimized run calls authenticated `/api/planning/optimize` with fleet and
+supported municipality outbreak/flood conditions. It validates draft identity,
+XGBoost/Balanced provenance and returned locations. A response with fewer usable
+sites than requested gives an actionable error; no fabricated sites fill the gap.
+The planner forecasts the next real Manila day, not the selected synthetic
+future simulation day. A new weekly request therefore does not claim to be a
+week-ahead XGBoost forecast.
 
-Simulation morbidity growth, coverage radius, service fraction and backlog carryover are demonstration assumptions, not a clinically calibrated forecast. Scores and weighted totals are planning indices, not patient or appointment counts. Catchments use straight-line distances and do not model actual road access, terrain, staffing or available appointment capacity. The connected planner uses its own next-day XGBoost demand forecast and modeled adjacency travel; it does not forecast each future simulator date. State is held in memory, so reloading starts fresh runs. The browser regression uses Leaflet because no Google Maps key is configured in the test environment.
+Flood controls use no additional screen, the 25-year layer or the 100-year layer.
+They affect connected optimized planning exclusions; they do not add HNI weight
+or change the manual straight-line catchment. Road reference markers in the
+30-day rehearsal do not recompute road access. Operational model-link exclusions
+are configured in **Plan clinics**. No measured flood depth is available.
+
+## Files and verification
+
+Core files: `forecasting/forecast.ts`, `forecasting/interventions.ts`,
+`forecasting/optimizer.ts`, `store/useForecastStore.ts`, simulation components,
+`useSimulationMap.ts`, and both map renderers. Optimization also reuses the
+service formula for its map preview. Scenario cards, selected-run details,
+chart, activity log, numbered markers and HNI/UHNI colors share those snapshots.
+
+The [current verification record](VERIFICATION.md) records unit and browser
+checks for rising baseline, host/neighbor impact, overlap, synchronized days,
+weekly history, a real backend proposal, manual-pretending-to-be-optimized
+rejection, fleet limits, markers and responsive layout. Google Maps live
+verification needs a configured key. Refreshing clears in-memory rehearsals.
