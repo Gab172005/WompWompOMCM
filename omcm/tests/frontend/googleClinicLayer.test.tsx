@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  waitFor,
+} from "@testing-library/react";
 import { LagunaGoogleMap } from "../../frontend/src/features/map/components/LagunaGoogleMap";
 import {
   LAGUNA_HOSPITALS,
@@ -60,7 +66,11 @@ class MockMarker {
   map: unknown = null;
   title: string | undefined;
   position: { lat: number; lng: number };
-  constructor(options: { map?: unknown; title?: string; position: { lat: number; lng: number } }) {
+  constructor(options: {
+    map?: unknown;
+    title?: string;
+    position: { lat: number; lng: number };
+  }) {
     this.map = options.map ?? null;
     this.title = options.title;
     this.position = options.position;
@@ -172,7 +182,10 @@ const osmMarkers = () =>
   instances.markers.filter((marker) => marker.title?.startsWith("OSM clinic"));
 
 beforeEach(() => {
-  vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => new Promise(() => {})),
+  );
   instances.markers = [];
   instances.listeners = [];
   instances.windows = [];
@@ -188,19 +201,101 @@ afterEach(() => {
 });
 
 describe("Google Maps fixed OSM clinic layer (mocked, no live key)", () => {
+  it("emphasizes the selected municipality above barangay shading", async () => {
+    const geometry = {
+      type: "Polygon",
+      coordinates: [
+        [
+          [121.4, 14.4],
+          [121.5, 14.4],
+          [121.5, 14.5],
+          [121.4, 14.4],
+        ],
+      ],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          type: "FeatureCollection",
+          features: [
+            {
+              type: "Feature",
+              properties: { adm3_psgc: "403421000" },
+              geometry,
+            },
+          ],
+        }),
+      })),
+    );
+    render(
+      <LagunaGoogleMap
+        {...props}
+        selectedPsgc="403421000"
+        showOsmClinics={false}
+      />,
+    );
+    await waitFor(() =>
+      expect(instances.maps[0].data.setStyle).toHaveBeenCalled(),
+    );
+    const calls = instances.maps[0].data.setStyle.mock.calls as unknown as [
+      (feature: {
+        getProperty: (key: string) => string | undefined;
+      }) => Record<string, unknown>,
+    ][];
+    const style = calls.at(-1)![0];
+    expect(
+      style({
+        getProperty: (key) => (key === "adm3_psgc" ? "403421000" : undefined),
+      }),
+    ).toMatchObject({
+      strokeColor: "#1a73e8",
+      strokeWeight: 5,
+      zIndex: 4,
+      fillOpacity: 0,
+    });
+    expect(
+      style({
+        getProperty: (key) => (key === "adm3_psgc" ? "403402000" : undefined),
+      }),
+    ).toMatchObject({ strokeColor: "#334155", strokeWeight: 1.8, zIndex: 1 });
+  });
+
   it("draws the HNI-eligible hospital set and removes it when toggled off", () => {
-    const view = render(<LagunaGoogleMap {...props} showHospitals showOsmClinics={false} />);
+    const view = render(
+      <LagunaGoogleMap {...props} showHospitals showOsmClinics={false} />,
+    );
     const active = instances.markers.filter((marker) => marker.map !== null);
     expect(active).toHaveLength(56);
     expect(active.map((marker) => marker.position)).toEqual(
-      LAGUNA_HOSPITALS.map((hospital) => ({ lat: hospital.lat, lng: hospital.lng })),
+      LAGUNA_HOSPITALS.map((hospital) => ({
+        lat: hospital.lat,
+        lng: hospital.lng,
+      })),
     );
-    expect(active.some((marker) => marker.title?.includes("SAN JOSE HOSPITAL"))).toBe(false);
+    expect(
+      active.some((marker) => marker.title?.includes("SAN JOSE HOSPITAL")),
+    ).toBe(false);
     act(() => active[0].click());
     const popup = instances.windows.at(-1)!;
-    expect((popup.content as HTMLElement).textContent).toContain(LAGUNA_HOSPITALS[0].verificationStatus);
-    act(() => view.rerender(<LagunaGoogleMap {...props} showHospitals={false} showOsmClinics={false} />));
-    expect(active.every((marker) => marker.map === null && marker.handlers.length === 0)).toBe(true);
+    expect((popup.content as HTMLElement).textContent).toContain(
+      LAGUNA_HOSPITALS[0].verificationStatus,
+    );
+    act(() =>
+      view.rerender(
+        <LagunaGoogleMap
+          {...props}
+          showHospitals={false}
+          showOsmClinics={false}
+        />,
+      ),
+    );
+    expect(
+      active.every(
+        (marker) => marker.map === null && marker.handlers.length === 0,
+      ),
+    ).toBe(true);
     expect(popup.closed).toBe(true);
   });
 
@@ -209,7 +304,9 @@ describe("Google Maps fixed OSM clinic layer (mocked, no live key)", () => {
     expect(osmMarkers()).toHaveLength(1);
     expect(osmMarkers()[0].position).toEqual({ lat: 14.2, lng: 121.2 });
     // Both other independently hidden layers have no active markers.
-    expect(instances.markers.filter((m) => m.map !== null)).toEqual(osmMarkers());
+    expect(instances.markers.filter((m) => m.map !== null)).toEqual(
+      osmMarkers(),
+    );
   });
 
   it("keeps fixed, hospital and mobile map layers independently switchable", () => {
@@ -226,28 +323,34 @@ describe("Google Maps fixed OSM clinic layer (mocked, no live key)", () => {
         proposedClinics={mobileProps}
       />,
     );
-    const activeOsm = () => instances.markers.filter(
-      (marker) => marker.map !== null && marker.title?.startsWith("OSM clinic"),
-    );
-    const activeHospitals = () => instances.markers.filter(
-      (marker) => marker.map !== null && marker.title?.includes("("),
-    );
-    const activeMobile = () => instances.markers.filter(
-      (marker) => marker.map !== null && marker.title?.startsWith("MC-"),
-    );
+    const activeOsm = () =>
+      instances.markers.filter(
+        (marker) =>
+          marker.map !== null && marker.title?.startsWith("OSM clinic"),
+      );
+    const activeHospitals = () =>
+      instances.markers.filter(
+        (marker) => marker.map !== null && marker.title?.includes("("),
+      );
+    const activeMobile = () =>
+      instances.markers.filter(
+        (marker) => marker.map !== null && marker.title?.startsWith("MC-"),
+      );
     expect(activeOsm()).toHaveLength(1);
     expect(activeHospitals()).toHaveLength(LAGUNA_HOSPITALS.length);
     expect(activeMobile()).toHaveLength(1);
 
-    act(() => view.rerender(
-      <LagunaGoogleMap
-        {...props}
-        showOsmClinics={false}
-        showHospitals
-        showClinics
-        proposedClinics={mobileProps}
-      />,
-    ));
+    act(() =>
+      view.rerender(
+        <LagunaGoogleMap
+          {...props}
+          showOsmClinics={false}
+          showHospitals
+          showClinics
+          proposedClinics={mobileProps}
+        />,
+      ),
+    );
     expect(activeOsm()).toHaveLength(0);
     expect(activeHospitals()).toHaveLength(LAGUNA_HOSPITALS.length);
     expect(activeMobile()).toHaveLength(1);
@@ -290,9 +393,15 @@ describe("Google Maps fixed OSM clinic layer (mocked, no live key)", () => {
     // Provenance and known link are present as safe text/attributes.
     expect(content.textContent).toContain("Offline snapshot retrieved");
     expect(content.textContent).toContain("not a live query");
-    expect(content.textContent).toContain("retrieved 2026-10-23T17:32:47.575509+00:00");
-    expect(content.textContent).toContain("Healthcare speciality (OSM tag): <b>general</b>");
-    expect(content.textContent).toContain("Operator (OSM tag): <script>window.__osmClinicXss=1</script>");
+    expect(content.textContent).toContain(
+      "retrieved 2026-10-23T17:32:47.575509+00:00",
+    );
+    expect(content.textContent).toContain(
+      "Healthcare speciality (OSM tag): <b>general</b>",
+    );
+    expect(content.textContent).toContain(
+      "Operator (OSM tag): <script>window.__osmClinicXss=1</script>",
+    );
     expect(content.textContent).toContain("Placed at the mapped node");
     const link = content.querySelector("a")!;
     expect(link.getAttribute("href")).toBe(
@@ -324,13 +433,22 @@ describe("Google Maps fixed OSM clinic layer (mocked, no live key)", () => {
     const first = osmMarkers()[0];
     act(() => first.click());
     const firstInfo = instances.windows.at(-1)!;
-    const replacement = { ...MAPPED_OSM_CLINICS[0], id: "way/123", osmType: "way" as const, osmId: 123 };
+    const replacement = {
+      ...MAPPED_OSM_CLINICS[0],
+      id: "way/123",
+      osmType: "way" as const,
+      osmId: 123,
+    };
     act(() => {
       view.rerender(<LagunaGoogleMap {...props} osmClinics={[replacement]} />);
     });
     expect(first.map).toBeNull();
     expect(firstInfo.closed).toBe(true);
-    expect(osmMarkers().filter((m) => m.map !== null).map((m) => m.title)).toEqual(["OSM clinic way/123"]);
+    expect(
+      osmMarkers()
+        .filter((m) => m.map !== null)
+        .map((m) => m.title),
+    ).toEqual(["OSM clinic way/123"]);
     expect(first.handlers).toHaveLength(0);
   });
 

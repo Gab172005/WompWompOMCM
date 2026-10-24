@@ -78,6 +78,7 @@ export function LagunaGoogleMap({
   municipalities,
   selectedPsgc,
   selectedBarangayPsgc,
+  selectionRevision = 0,
   onSelectBarangay,
   activeMetric,
   showHospitals,
@@ -332,6 +333,7 @@ export function LagunaGoogleMap({
       const mun = byPsgc.get(code);
       const isBarangay = Boolean(barangayCode);
       const isSelected = isBarangay && selectedBarangayPsgc === barangayCode;
+      const isSelectedMunicipality = !isBarangay && code === selectedPsgc;
       const projected = forecastOverlay?.records.get(barangayCode);
       const value = projected
         ? projected[forecastOverlay!.metric]
@@ -360,14 +362,20 @@ export function LagunaGoogleMap({
             : 0,
         strokeColor: isSelected
           ? "#102c43"
-          : isBarangay
-            ? "#64748b"
-            : "#334155",
-        strokeWeight: isSelected ? 3.5 : isBarangay ? 0.7 : 1.8,
+          : isSelectedMunicipality
+            ? "#1a73e8"
+            : isBarangay
+              ? "#64748b"
+              : "#334155",
+        strokeWeight: isSelected
+          ? 3.5
+          : isSelectedMunicipality
+            ? 5
+            : isBarangay ? 0.7 : 1.8,
         strokeOpacity: 0.95,
         clickable: isBarangay,
         cursor: "pointer",
-        zIndex: isSelected ? 5 : isBarangay ? 2 : 1,
+        zIndex: isSelected ? 5 : isSelectedMunicipality ? 4 : isBarangay ? 2 : 1,
       };
     });
 
@@ -459,19 +467,29 @@ export function LagunaGoogleMap({
       });
       const width = containerRef.current?.clientWidth ?? 1440;
       const height = containerRef.current?.clientHeight ?? 1000;
+      const mobileTop = Math.min(264, height * 0.32);
+      const mobileBottom = Math.max(
+        0,
+        Math.min(height * 0.32 + 148, height - mobileTop - 96),
+      );
       map.fitBounds(
         bounds,
         width <= 760
           ? {
-              top: 140,
+              top: mobileTop,
               right: 24,
-              bottom: Math.min(height * 0.46, height - 320) + 148,
+              bottom: mobileBottom,
               left: 24,
             }
           : { top: 80, right: 50, bottom: 100, left: 420 },
       );
     }
-  }, [selectedPsgc, selectedBarangayPsgc, geoJsonData]);
+  }, [
+    selectedPsgc,
+    selectedBarangayPsgc,
+    selectionRevision,
+    geoJsonData,
+  ]);
 
   // Render Hospital Markers
   useEffect(() => {

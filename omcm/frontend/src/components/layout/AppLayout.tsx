@@ -77,7 +77,7 @@ export function AppLayout() {
 
   return (
     <div
-      className={`workspace ${!isPublic && state.panel ? "has-tool-panel" : state.sidePanelOpen ? "has-detail-panel" : ""} ${!isPublic && state.panel === "simulation" ? "is-simulating" : ""} ${isPublic ? "is-public-view" : "is-admin-view"}`}
+      className={`workspace ${!isPublic && state.panel ? "has-tool-panel" : state.sidePanelOpen ? "has-detail-panel" : ""} ${state.selectedPsgc ? "has-map-selection" : ""} ${!isPublic && state.panel === "simulation" ? "is-simulating" : ""} ${isPublic ? "is-public-view" : "is-admin-view"}`}
     >
       <main className="workspace-stage" aria-label="Laguna planning map">
         <LagunaMap
@@ -85,6 +85,7 @@ export function AppLayout() {
           municipalities={municipalities}
           selectedPsgc={state.selectedPsgc}
           selectedBarangayPsgc={state.selectedBarangayPsgc}
+          selectionRevision={state.selectionRevision}
           onSelectBarangay={state.selectBarangay}
           onSelectMunicipality={state.selectMunicipality}
           activeMetric={state.activeMetric}

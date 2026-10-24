@@ -364,7 +364,7 @@ export function BarangayPanel() {
             </small>
           </div>
         ))}
-        {!hospitals.length && <p>No hospital records in this municipality.</p>}
+        {!hospitals.length && <p>No hospital records for this municipality in the supplied dataset. Nearby verified hospitals above may be in other municipalities.</p>}
       </details>
       <details>
         <summary>Adjacent barangays ({b.adjacentBarangays.length})</summary>

@@ -72,6 +72,33 @@ try {
   });
   await search.fill("Pangil");
   await page.getByRole("option", { name: /^Pangil Municipality/ }).click();
+  const selection = page.getByRole("region", { name: "Selected place" });
+  await expect(selection).toContainText(
+    "No hospital records in Pangil in this dataset.",
+  );
+  const selectedOutline = page.locator(".municipality-boundary.is-selected");
+  await expect(selectedOutline).toHaveCount(1);
+  await expect(selectedOutline).toHaveAttribute("stroke", "#1a73e8");
+  await expect(selectedOutline).toHaveAttribute("stroke-width", "5");
+  const anchoredSearch = await page.locator(".map-search-card").boundingBox();
+  await expect(page.locator(".map-search-card")).toHaveCSS("position", "fixed");
+  const selectedBounds = await selectedOutline.boundingBox();
+  await selection
+    .getByRole("button", { name: "Show all 56 hospitals" })
+    .click();
+  await expect(page.locator(".hospital-marker-custom")).toHaveCount(56);
+  await expect
+    .poll(async () => (await selectedOutline.boundingBox()).width)
+    .toBeLessThan(selectedBounds.width);
+  await search.press("Enter");
+  await expect
+    .poll(async () => (await selectedOutline.boundingBox()).width)
+    .toBeCloseTo(selectedBounds.width, 0);
+  const searchAfterRefocus = await page
+    .locator(".map-search-card")
+    .boundingBox();
+  expect(searchAfterRefocus.x).toBe(anchoredSearch.x);
+  expect(searchAfterRefocus.y).toBe(anchoredSearch.y);
   const summary = page.getByRole("region", {
     name: "Municipality healthcare need",
     exact: true,
@@ -114,14 +141,12 @@ try {
             ? "#f87171"
             : "#fee2e2";
   const scores = new Map(expected.scores.map((b) => [b.psgc, b.score]));
-  const colors = await page
-    .locator(".barangay-boundary")
-    .evaluateAll((paths) =>
-      paths.map((path) => ({
-        psgc: path.getAttribute("data-barangay-psgc"),
-        fill: path.getAttribute("fill"),
-      })),
-    );
+  const colors = await page.locator(".barangay-boundary").evaluateAll((paths) =>
+    paths.map((path) => ({
+      psgc: path.getAttribute("data-barangay-psgc"),
+      fill: path.getAttribute("fill"),
+    })),
+  );
   for (const polygon of colors)
     expect(polygon.fill, polygon.psgc).toBe(
       scoreColor(scores.get(polygon.psgc)),
@@ -141,6 +166,15 @@ try {
   await expect(detail).toContainText(
     `${expected.barangay.nearestHospital.distanceKm.toFixed(2)} km straight-line distance`,
   );
+  await expect(selection).toContainText("Dambo, Pangil");
+  await expect(selection).toContainText("Nearest: 4.56 km straight line");
+  await page.getByRole("button", { name: "Close intelligence panel" }).click();
+  await expect(selection).toBeVisible();
+  await expect(selectedOutline).toHaveAttribute("stroke", "#1a73e8");
+  await selection
+    .getByRole("button", { name: "Open selected place details" })
+    .click();
+  await expect(detail).toBeVisible();
 
   // Retained historical records are inspectable without appearing as care locations.
   await search.fill("City of Calamba");
@@ -152,11 +186,9 @@ try {
     .getByRole("button", { name: /^Rank \d+:/ })
     .first()
     .click();
-  const register = page
-    .locator("details")
-    .filter({
-      has: page.locator("summary", { hasText: /^Hospital register in/ }),
-    });
+  const register = page.locator("details").filter({
+    has: page.locator("summary", { hasText: /^Hospital register in/ }),
+  });
   await register.locator("summary").click();
   await expect(register).toContainText("SAN JOSE HOSPITAL AND MEDICAL CENTER");
   await expect(register).toContainText(
@@ -171,6 +203,23 @@ try {
     path: `${frontend}/test-results/hospital-hni-desktop.png`,
   });
   await page.setViewportSize({ width: 390, height: 844 });
+  await expect(selection).toBeVisible();
+  const mobileSearch = await page.locator(".map-search-card").boundingBox();
+  expect(mobileSearch.x).toBe(12);
+  expect(mobileSearch.y).toBe(12);
+  const mobileSelection = await selection.boundingBox();
+  const mobilePanel = await page
+    .getByRole("complementary", { name: "Municipality intelligence" })
+    .boundingBox();
+  expect(mobileSelection.y + mobileSelection.height).toBeLessThanOrEqual(
+    mobilePanel.y,
+  );
+  const mobileLegend = await page
+    .getByRole("region", { name: "Map legend" })
+    .boundingBox();
+  expect(mobilePanel.y + mobilePanel.height).toBeLessThanOrEqual(
+    mobileLegend.y,
+  );
   await expect(summary).toBeVisible();
   await expect(summary).toContainText(
     expected.municipality.needScore.toFixed(1),
@@ -183,9 +232,12 @@ try {
   await page.screenshot({
     path: `${frontend}/test-results/hospital-hni-mobile.png`,
   });
+  await page.getByRole("button", { name: "Simulate", exact: true }).click();
+  await expect(page.getByRole("complementary", { name: "Healthcare simulation" })).toBeVisible();
+  await expect(selection).not.toBeVisible();
   expect(errors).toEqual([]);
   console.log(
-    "Step A browser checks passed: 681 polygons, 56 verified hospitals, matching HNI colors/details/rollups, provisional coverage, historical register, desktop/mobile, no page errors.",
+    "Hospital/HNI and search browser checks passed: 681 polygons, 56 hospitals, fixed search, repeated refocus, blue municipality selection, scoped hospital counts, matching HNI, desktop/mobile without selection-panel or legend overlap, no page errors.",
   );
 } finally {
   await browser?.close();

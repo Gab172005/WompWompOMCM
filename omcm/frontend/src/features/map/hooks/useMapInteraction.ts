@@ -10,6 +10,7 @@ export function useMapInteraction(
   zoomDelta: number,
   barangayData: FeatureCollection | null = null,
   selectedBarangay: string | null = null,
+  selectionRevision = 0,
 ) {
   const map = useMap();
   const previousZoom = useRef(zoomDelta);
@@ -45,21 +46,22 @@ export function useMapInteraction(
     const feature =
       barangay ??
       data?.features.find((f) => String(f.properties?.adm3_psgc) === selected);
+    const height = map.getSize().y;
+    const mobileTop = Math.min(264, height * 0.32);
+    const mobileBottom = Math.max(
+      0,
+      Math.min(height * 0.32 + 148, height - mobileTop - 96),
+    );
     if (feature)
       map.fitBounds(geoJSON(feature).getBounds(), {
-        paddingTopLeft: map.getSize().x > 760 ? [420, 80] : [24, 140],
+        paddingTopLeft: map.getSize().x > 760 ? [420, 80] : [24, mobileTop],
         paddingBottomRight:
-          map.getSize().x > 760
-            ? [50, 100]
-            : [
-                24,
-                Math.min(map.getSize().y * 0.46, map.getSize().y - 320) + 148,
-              ],
+          map.getSize().x > 760 ? [50, 100] : [24, mobileBottom],
         maxZoom: barangay ? 16 : 13,
         animate: false,
       });
   }, [map, data, selected, barangayData, selectedBarangay]);
-  useEffect(fitSelection, [fitSelection]);
+  useEffect(fitSelection, [fitSelection, selectionRevision]);
   useEffect(() => {
     const resize = () => {
       map.invalidateSize({ pan: false });

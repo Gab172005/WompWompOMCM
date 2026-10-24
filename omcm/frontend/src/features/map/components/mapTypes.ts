@@ -12,6 +12,8 @@ export interface MapProps {
   municipalities: ComputedMunicipality[];
   selectedPsgc: string | null;
   selectedBarangayPsgc: string | null;
+  /** Repeated searches for the same place should refit its bounds. */
+  selectionRevision?: number;
   onSelectBarangay: (psgc: string, municipalityPsgc: string) => void;
   onSelectMunicipality: (psgc: string | null) => void;
   activeMetric: MapMetric;

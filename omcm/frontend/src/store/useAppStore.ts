@@ -83,6 +83,7 @@ interface AppState {
   publishedSchedules: Record<string, PublishedSchedule>;
   selectedPsgc: string | null;
   selectedBarangayPsgc: string | null;
+  selectionRevision: number;
   activeMetric: MapMetric;
   showHospitals: boolean;
   /** Mobile clinics: the proposed staging/deployment layer, not fixed facilities. */
@@ -141,6 +142,7 @@ export const useAppStore = create<AppState>()(
       publishedSchedules: createInitialPublishedSchedules(),
       selectedPsgc: null,
       selectedBarangayPsgc: null,
+      selectionRevision: 0,
       activeMetric: "score",
       showHospitals: true,
       showClinics: true,
@@ -237,11 +239,19 @@ export const useAppStore = create<AppState>()(
         return schedule;
       },
       selectMunicipality: (selectedPsgc) =>
-        set({ selectedPsgc, selectedBarangayPsgc: null, sidePanelOpen: true }),
+        set((s) => ({
+          selectedPsgc,
+          selectedBarangayPsgc: null,
+          selectionRevision: s.selectionRevision + 1,
+          sidePanelOpen: true,
+          panel: null,
+          ...(s.panel === "simulation" ? invalidate : {}),
+        })),
       selectBarangay: (selectedBarangayPsgc, selectedPsgc) =>
         set((s) => ({
           selectedPsgc,
           selectedBarangayPsgc,
+          selectionRevision: s.selectionRevision + 1,
           sidePanelOpen: true,
           panel: null,
           ...(s.panel === "simulation" ? invalidate : {}),

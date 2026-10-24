@@ -14,7 +14,8 @@ const normalize = (value: string) =>
   value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
 
 export function MunicipalitySearch() {
   const {
@@ -28,9 +29,10 @@ export function MunicipalitySearch() {
   const [active, setActive] = useState(-1);
   const input = useRef<HTMLInputElement>(null);
   const listId = useId();
-  const choices = query.trim() ? [...towns, ...communities] : towns;
+  const normalizedQuery = normalize(query.trim());
+  const choices = normalizedQuery ? [...towns, ...communities] : towns;
   const matches = choices
-    .filter((town) => normalize(town.name).includes(normalize(query.trim())))
+    .filter((town) => normalize(town.name).includes(normalizedQuery))
     .slice(0, 60);
 
   useEffect(() => {
@@ -63,8 +65,15 @@ export function MunicipalitySearch() {
   }
 
   return (
-    <div
+    <form
       className="workspace-search"
+      role="search"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (normalizedQuery && matches.length)
+          select(matches[Math.max(0, active)].psgc);
+        else setOpen(true);
+      }}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
       }}
@@ -90,6 +99,7 @@ export function MunicipalitySearch() {
         }}
         onKeyDown={(event) => {
           if (event.key === "Escape") {
+            event.preventDefault();
             setOpen(false);
             return;
           }
@@ -103,24 +113,22 @@ export function MunicipalitySearch() {
                   : (index <= 0 ? matches.length : index) - 1,
               );
           }
-          if (event.key === "Enter" && open && matches.length) {
-            event.preventDefault();
-            select(matches[Math.max(0, active)].psgc);
-          }
         }}
       />
       {query ? (
         <button
+          type="button"
           className="map-icon-button"
           aria-label="Clear municipality search"
           title="Clear search"
           onClick={() => {
             setQuery("");
-            useAppStore.setState({
+            useAppStore.setState((state) => ({
               selectedPsgc: null,
               selectedBarangayPsgc: null,
               sidePanelOpen: false,
-            });
+              recenterTrigger: state.recenterTrigger + 1,
+            }));
             input.current?.focus();
             setOpen(true);
           }}
@@ -128,7 +136,13 @@ export function MunicipalitySearch() {
           <X size={19} aria-hidden="true" />
         </button>
       ) : (
-        <Search className="map-search-icon" size={20} aria-hidden="true" />
+        <button
+          type="submit"
+          className="map-icon-button"
+          aria-label="Search Laguna"
+        >
+          <Search size={20} aria-hidden="true" />
+        </button>
       )}
       {open && (
         <div
@@ -142,6 +156,7 @@ export function MunicipalitySearch() {
           </div>
           {matches.map((town, index) => (
             <button
+              type="button"
               key={town.psgc}
               id={`${listId}-${index}`}
               role="option"
@@ -161,10 +176,10 @@ export function MunicipalitySearch() {
             </button>
           ))}
           {!matches.length && (
-            <p role="presentation">No matching municipalities or barangays</p>
+            <p role="status">No matching municipalities or barangays</p>
           )}
         </div>
       )}
-    </div>
+    </form>
   );
 }

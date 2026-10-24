@@ -27,6 +27,7 @@ export function MapLegend({
     showHospitals,
     showClinics,
     showOsmClinics,
+    selectedPsgc,
   } = useAppStore();
   const forecast = useForecastStore();
   const simulation = useAppStore(
@@ -78,6 +79,12 @@ export function MapLegend({
           <span>
             <i className="boundary-key municipality-key" /> Municipality
           </span>
+          {selectedPsgc && (
+            <span>
+              <i className="boundary-key selected-municipality-key" /> Selected
+              municipality
+            </span>
+          )}
           <span>
             <i className="boundary-key selected-key" /> Selected community
           </span>
@@ -163,6 +170,12 @@ export function MapLegend({
         <span>
           <i className="boundary-key municipality-key" /> Municipality
         </span>
+        {selectedPsgc && (
+          <span>
+            <i className="boundary-key selected-municipality-key" /> Selected
+            municipality
+          </span>
+        )}
         <span>
           <i className="boundary-key barangay-key" /> Barangay
         </span>
