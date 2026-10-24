@@ -5,9 +5,12 @@ import {
   LAGUNA_DISRUPTIONS,
 } from "../../services/lagunaData";
 import { emptyScenario, useAppStore } from "../../store/useAppStore";
+import { useOptimizationStore } from "../../store/useOptimizationStore";
+import { EMPTY_PLAN, planToMapPlan } from "../../services/optimization";
 
 export function usePlanningResults() {
   const { panel, scenario, clinicCount, manualSiteOverrides } = useAppStore();
+  const result = useOptimizationStore((s) => s.result);
   const activeScenario = useMemo(
     () => (panel === "simulation" ? scenario : emptyScenario()),
     [panel, scenario],
@@ -17,6 +20,8 @@ export function usePlanningResults() {
     [activeScenario],
   );
   const plan = useMemo(() => {
+    if (panel !== "simulation")
+      return result ? planToMapPlan(result) : EMPTY_PLAN;
     const baseline = runClinicOptimizer(
       clinicCount,
       municipalities,
@@ -28,7 +33,14 @@ export function usePlanningResults() {
       (c) => manualSiteOverrides[c.clinicId] ?? c.siteId,
     );
     return runClinicOptimizer(clinicCount, municipalities, activeScenario, ids);
-  }, [clinicCount, municipalities, activeScenario, manualSiteOverrides]);
+  }, [
+    panel,
+    result,
+    clinicCount,
+    municipalities,
+    activeScenario,
+    manualSiteOverrides,
+  ]);
   const disruptions = useMemo(
     () =>
       LAGUNA_DISRUPTIONS.map((d) => ({

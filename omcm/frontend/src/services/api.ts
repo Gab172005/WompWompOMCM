@@ -20,6 +20,9 @@ export function setCredentials(username: string, password: string) {
 export function clearCredentials() {
   authorization = "";
 }
+export function hasCredentials() {
+  return Boolean(authorization);
+}
 export async function api<T>(
   path: string,
   body?: unknown,
@@ -31,8 +34,20 @@ export async function api<T>(
     signal?.throwIfAborted();
     return data as T;
   }
+  return backendApi<T>(path, body, signal);
+}
+
+/** Always reaches FastAPI, including when the rest of the app uses demo mode. */
+export async function backendApi<T>(
+  path: string,
+  body?: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
   const response = await fetch(`${base}/api${path}`, {
     method: body === undefined ? "GET" : "POST",
+    // Authentication uses the explicit in-memory header, not browser-managed
+    // credentials or a native Basic-auth prompt after a rejected sign-in.
+    credentials: "omit",
     signal,
     headers: {
       ...(body === undefined ? {} : { "Content-Type": "application/json" }),

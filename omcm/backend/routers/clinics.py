@@ -6,13 +6,15 @@ from models.clinic import ApproveRequest, EmergencyRequest
 from models.results import SchedulesResult, ScheduleResult
 from services.data import load_data
 from services import repository as repo
+from services.deployment_rules import deployment_restricted
 router = APIRouter()
 
 
 @router.get("/api/clinics")
 def clinics():
     _, network, metadata = load_data()
-    return dict(sites=network["sites"], roads=network["roads"], metadata=metadata)
+    sites = [dict(site, eligible=site["eligible"] and not deployment_restricted(site)) for site in network["sites"]]
+    return dict(sites=sites, roads=network["roads"], metadata=metadata)
 
 
 @router.get("/api/schedules", response_model=SchedulesResult)

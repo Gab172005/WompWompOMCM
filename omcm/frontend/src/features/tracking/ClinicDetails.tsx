@@ -63,7 +63,7 @@ export function ClinicDetails({
       <div className="workspace-metrics">
         <div>
           <strong>{clinic.capacity}</strong>
-          <span>Patients / day capacity</span>
+          <span>Appointments / day capacity</span>
         </div>
         <div>
           <strong>
@@ -76,7 +76,9 @@ export function ClinicDetails({
         Position: {position.lat.toFixed(4)}, {position.lng.toFixed(4)}
       </p>
       <p className="workspace-note">
-        Illustrative route animation; no live GPS or traffic-based ETA.
+        {clinic.route.length
+          ? "Illustrative route animation; no live GPS or traffic-based ETA."
+          : "Backend-recommended staging location; no deployment route or live position is implied."}
       </p>
     </>
   );

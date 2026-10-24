@@ -18,6 +18,9 @@ export default defineConfig({
       "react-dom": fileURLToPath(
         new URL("./node_modules/react-dom", import.meta.url),
       ),
+      "react-router-dom": fileURLToPath(
+        new URL("./node_modules/react-router-dom", import.meta.url),
+      ),
       "react-leaflet": fileURLToPath(
         new URL("./node_modules/react-leaflet", import.meta.url),
       ),

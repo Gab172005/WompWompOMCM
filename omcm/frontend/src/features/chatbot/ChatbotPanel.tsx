@@ -19,7 +19,9 @@ export function ChatbotPanel() {
         ? `${selected.name}: municipal allocation estimate ${selected.needScore}/100, allocation rank #${selected.rank}. ${selected.explanation} This separate heuristic is not the barangay HNI shown on the heatmap; the municipality panel shows its HNI rollup.`
         : "The municipal allocation estimate combines supplied synthetic morbidity (35%), illustrative vulnerability (25%), supplied disaster risk index (20%) and population density (20%). It is separate from the seven-factor barangay HNI heatmap. Select a municipality to compare its HNI rollup and allocation estimate.";
     else if (/clinic|recommend|placement/.test(lower))
-      answer = `The priority heuristic proposes ${plan.clinics.length} clinics: ${plan.clinics.map((c) => c.clinicId + " at " + c.siteName).join("; ")}. Total capacity: ${plan.metrics.totalCapacity} appointments/day. This is an illustrative local proposal.`;
+      answer = plan.clinics.length
+        ? `The backend draft proposes ${plan.clinics.length} clinics: ${plan.clinics.map((c) => c.clinicId + " at " + c.siteName).join("; ")}. Total capacity: ${plan.metrics.totalCapacity} appointments/day. XGBoost demand estimates use synthetic inputs and the allocation is limited to the road pilot.`
+        : "Open Optimize and generate a backend draft to inspect clinic recommendations. No allocation has been generated.";
     else if (/scenario|flood|disaster|simulation/.test(lower))
       answer = `Configured scenario: ${Object.keys(scenario.floodOverrides).length} flood overrides, ${Object.keys(scenario.morbiditySpikes).length} morbidity overrides, ${scenario.closedRoadIds.length} closed corridors. Open Simulate to apply and compare these conditions.`;
     setMessages((prev) => [

@@ -2,6 +2,8 @@ from ortools.sat.python import cp_model
 from services.risk_scoring import calculate_scores
 from services.data import load_data, road_graph, travel_times, validate_references
 from services.pilot import active_hazards, road_evidence
+from services.demand_model import estimate_demands
+from services.deployment_rules import deployment_restricted
 
 
 def preventive_services(assignments, barangays):
@@ -37,8 +39,10 @@ def solve(barangays, sites, times, request, selected=None):
     # Lexicographic integer objective: priority demand, then shorter travel, then fewer sites.
     # Every weighted unit outweighs the maximum possible total secondary penalty.
     priority = {b["id"]: max(1, round(b["score"] * 100)) for b in barangays}
-    scale = sum(b["demand"] for b in barangays) * 120 + len(sites) + 1
-    model.maximize(sum(v * (priority[bid] * scale - minutes[(bid, sid)]) for (bid, sid), v in allocations.items()) - sum(active.values()))
+    travel_scale = len(sites) + 1
+    scale = sum(b["demand"] for b in barangays) * 120 * travel_scale + len(sites) + 1
+    model.maximize(sum(v * (priority[bid] * scale - minutes[(bid, sid)] * travel_scale)
+                       for (bid, sid), v in allocations.items()) - sum(active.values()))
     solver = cp_model.CpSolver()
     # Bound search work reproducibly; allow the larger provincial model to presolve.
     solver.parameters.max_deterministic_time = 10.0
@@ -100,7 +104,10 @@ def optimize(request):
     else:
         times = travel_times(road_graph(frame, network, request.closed_roads))
     barangays = calculate_scores(frame, network, times, request.weights, request.outbreak_barangays, request.outbreak_multiplier, request.municipality_outbreak_multipliers)
+    model = estimate_demands(barangays, request)
+    metadata = dict(metadata, disease=metadata["disease"] + f"; {model['model_id']} XGBoost synthetic appointment-demand estimates")
     sites = [s for s in network["sites"] if s["eligible"] and s["id"] not in excluded
+             and not deployment_restricted(s)
              and (request.eligible_sites is None or s["id"] in request.eligible_sites)]
     if request.manual_sites is not None:
         if len(request.manual_sites) > request.clinic_count or set(request.manual_sites) - {s["id"] for s in sites}:
@@ -112,10 +119,22 @@ def optimize(request):
     baseline = greedy_baseline(barangays, sites, times, request, baseline_sites)
     base = baseline["metrics"]["weighted_demand"]
     gain = round((optimum["metrics"]["weighted_demand"]-base) / base * 100, 2) if base else None
+    for allocation in (optimum, baseline):
+        open_sites = allocation["clinics"]
+        reachable_demand = sum(b["demand"] for b in barangays if any(
+            times.get(b["id"], {}).get(s["barangay_id"], float("inf")) <= request.max_travel_minutes
+            for s in open_sites))
+        total = allocation["metrics"]["total_demand"]
+        allocation["metrics"]["flood_safe_accessibility_pct"] = round(reachable_demand / total * 100, 2) if total else 0
     return dict(optimized=optimum, baseline=baseline, improvement_pct=gain, barangays=barangays,
                 inputs=request.model_dump(), metadata=metadata,
                 notes=["Demand represents estimated daily appointments, not total population coverage.",
                        "Priority-weighted demand = allocated appointments × illustrative need / 100.",
+                       f"Demand model: {model['model_id']} · XGBoost {model['xgboost_version']} · synthetic-only, not clinically validated. Model SHA256: {model['model_sha256']}.",
+                       f"Held-out synthetic appointment-rate MAE: {model['metrics']['test_mae']:.3f}/1,000; mean-rate baseline MAE: {model['metrics']['mean_rate_baseline_mae']:.3f}/1,000. These are not real-world accuracy estimates.",
+                       "Optimization uses the transparent six-factor pilot index, separate from the province's seven-factor HNI. XGBoost estimates demand, not HNI.",
+                       "Flood-safe accessibility is demand with a safe modeled route to an opened site, before capacity limits; demand served includes capacity limits.",
+                       "Paete's approximate user-configured forest-land exclusion is enforced server-side; it is not an official land classification.",
                        "Flood safety is based only on selected demo exclusions, not verified hazard conditions.",
                        f"{len(sites)} viable staging sites under this scenario. Blocked fixture routes are excluded; no diversion is assumed."])
 

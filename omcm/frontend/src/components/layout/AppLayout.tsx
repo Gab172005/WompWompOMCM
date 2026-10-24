@@ -24,6 +24,9 @@ import {
   OSM_CLINIC_SNAPSHOT,
 } from "../../services/providedData";
 import { useAppStore } from "../../store/useAppStore";
+import { useOptimizationStore } from "../../store/useOptimizationStore";
+import { useScheduleSync } from "../../features/public/useScheduleSync";
+import { isBrowserDemo } from "../../services/api";
 
 const ADMIN_ROUTES = new Set([
   "/admin",
@@ -39,6 +42,10 @@ export function AppLayout() {
   const { pathname } = useLocation();
   useClinicAnimation();
   const forecastOverlay = useSimulationMap();
+  const scheduleError = useScheduleSync();
+  useEffect(() => {
+    if (!state.adminUser) useOptimizationStore.getState().invalidate();
+  }, [state.adminUser]);
 
   useEffect(() => {
     const store = useAppStore.getState();
@@ -112,6 +119,11 @@ export function AppLayout() {
           }
         />
         <MapControls />
+        {isPublic && scheduleError && (
+          <div className="workspace-connection-error" role="alert">
+            {scheduleError}
+          </div>
+        )}
         {isPublic ? <PublicSidePanel /> : !state.panel && <SidePanel />}
         <FloatingControls />
         <MapLegend clinicSnapshot={OSM_CLINIC_SNAPSHOT} />
@@ -148,7 +160,7 @@ export function AppLayout() {
       </main>
       <div className="map-disclaimer">
         {isPublic
-          ? "OMCM · Public View · Approved mobile clinic schedules & hospitals (Demo)"
+          ? `OMCM · Public View · Approved mobile clinic schedules & hospitals${isBrowserDemo() ? " (Demo)" : ""}`
           : "OMCM · Admin View · Supplied barangay data · Planning estimates"}
       </div>
     </div>

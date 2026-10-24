@@ -55,6 +55,7 @@ export function AdminLoginModal() {
     setError("");
     try {
       if (
+        isBrowserDemo() &&
         trimmedUser === DEMO_ADMIN_USERNAME &&
         password === DEMO_ADMIN_PASSWORD
       ) {

@@ -1,0 +1,37 @@
+{
+  "model_id": "appointment-demand-v1",
+  "synthetic": true,
+  "target": "daily_appointments_per_1000",
+  "features": [
+    "disease_per_1000",
+    "vulnerable_pct",
+    "poverty_pct",
+    "flood_exposure",
+    "hospital_minutes"
+  ],
+  "xgboost_version": "3.4.1",
+  "params": {
+    "objective": "reg:squarederror",
+    "eval_metric": "rmse",
+    "tree_method": "hist",
+    "max_depth": 3,
+    "eta": 0.08,
+    "seed": 42,
+    "nthread": 1,
+    "monotone_constraints": "(1,1,1,1,1)"
+  },
+  "training_rows": 3200,
+  "validation_rows": 800,
+  "test_rows": 800,
+  "split": "Independent synthetic observations from disjoint RNG streams: 42/43/44; test never used for tuning.",
+  "generator": "backend/scripts/train_demand_model.py:observations; hand-designed synthetic process, not observed healthcare outcomes",
+  "limitations": "Synthetic-only demonstration; these errors do not measure clinical or real-world accuracy. No HNI distillation or patient records.",
+  "boosting_rounds": 249,
+  "metrics": {
+    "test_mae": 0.6087667041047666,
+    "test_rmse": 0.7676184550457892,
+    "mean_rate_baseline_mae": 5.331729385565443,
+    "mean_rate_baseline_rmse": 6.474566484534599
+  },
+  "model_sha256": "e22eb43268c46cab33021b261fc994790fbcc3c901b55dcb083ba85d27f3fa3e"
+}

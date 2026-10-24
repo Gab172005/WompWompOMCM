@@ -48,6 +48,16 @@ Keep `OMCM_DATASET=pilot` for the server-backed Los Baños–Bay fleet pilot.
 API mutations require the configured demo administrator; public schedules are
 read-only. SQLite stores connected drafts, approved schedules and audit events.
 
+The map's Optimize panel now calls FastAPI using the configured backend sign-in.
+Choose fleet size, appointment capacity, road-time limit and optional exclusions,
+then select **Generate recommendations**. XGBoost estimates synthetic appointment
+demand and CP-SAT chooses capacity-constrained placements. No recommendation is
+generated automatically or substituted locally if the backend fails. Approval
+publishes the stored server draft; fresh public sessions read its approved schedule.
+This allocation remains scoped to the Los Baños–Bay road pilot, while the map's
+province-wide HNI retains its existing formula. See the
+[optimization implementation and exact change inventory](docs/OPTIMIZATION_ALLOCATION.md).
+
 ## Project structure
 
 ```text
@@ -236,6 +246,7 @@ npm test
 npm run build
 $env:OMCM_BROWSER_CHANNEL = "msedge"  # Windows; defaults to Chrome elsewhere
 npm run test:hni
+npm run test:optimization
 python scripts/import-osm-clinics.py --check
 python scripts/import-laguna-datasets.py --check
 node --experimental-strip-types scripts/clinic-sensitivity.mjs --check

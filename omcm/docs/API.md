@@ -53,6 +53,22 @@ community IDs, daily appointment counts and modeled road minutes. Metrics
 include served/high-priority/weighted demand, unserved demand, mean travel,
 utilization and accessibility relative to synthetic hazard exclusions.
 
+Optimization now replaces fixture demand rates with the bundled
+`appointment-demand-v1` XGBoost appointment-rate model, trained exclusively on
+synthetic observations. The model predicts demand; the normalized six-factor
+pilot index supplies allocation priority and CP-SAT selects sites/assignments.
+Both allocation strategies use the same estimated demand. Version, artifact hash,
+synthetic evaluation and scope are returned through the existing `notes` and
+`metadata.disease` fields. The request/response schemas and SQLite tables are
+unchanged. Missing or mismatched model artifacts return 503, without a draft or
+fallback allocation. See [model provenance and limitations](OPTIMIZATION_ALLOCATION.md).
+
+Forest-land exclusions apply to candidate eligibility on the server as well as
+the map. `flood_safe_accessibility_pct` measures estimated demand with a safe
+modeled route to an opened clinic before capacity limits; `demand_served_pct`
+measures appointments allocated after capacity limits. Neither is verified hazard
+safety or a claim of entire-population coverage.
+
 `POST /api/simulate` takes `{ "original": PlacementRequest, "scenario": PlacementRequest }`
 and returns before/after plans plus gained/lost appointments and travel/utilization
 deltas. No plan is automatically published.
@@ -78,6 +94,11 @@ and returns schedule timestamps. Drafts and simulations never appear in public
 responses. There is no GPS upload endpoint.
 
 ## Frontend-only contract
+
+The map's Optimize panel and approval flow use `backendApi` and always require
+FastAPI, even in explicit browser demo mode. Connected sign-in and public schedule
+loading also use the backend. The legacy demo-capable transport below remains
+available for the separate browser rehearsal features.
 
 `services/api.ts` selects browser demo only during initialization or explicit
 configuration. `demoApi.ts` implements equivalent read, score, optimize,
