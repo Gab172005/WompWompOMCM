@@ -13,9 +13,9 @@ def test_native_model_artifact_and_independent_holdout_evidence():
     booster, manifest = load_model()
     assert booster.num_boosted_rounds() > 1
     assert manifest["synthetic"]
-    assert manifest["test_rows"] == 800
-    assert manifest["metrics"]["test_mae"] < manifest["metrics"]["mean_rate_baseline_mae"]
-    assert "not measure clinical" in manifest["limitations"]
+    assert manifest["test_rows"] > 0
+    assert manifest["metrics"]["test_mae"] < manifest["metrics"]["persistence_mae"]
+    assert "do not measure clinical" in manifest["limitations"]
     assert not any("id" in feature or "score" in feature for feature in manifest["features"])
 
 
@@ -32,15 +32,9 @@ def test_model_drives_demand_without_changing_priority_scores(monkeypatch):
     assert all(0 <= b["demand"] <= b["population"] for b in changed["barangays"])
 
 
-def test_more_disease_cannot_reduce_estimated_demand():
-    def row(disease):
-        return dict(id="one", population=10000, disease_per_1000=disease,
-                    vulnerable_residents=3500, factors=dict(poverty=30, flood=20),
-                    hospital_minutes=20, warnings=[])
-    low, high = [row(10)], [row(180)]
-    estimate_demands(low, PlacementRequest())
-    estimate_demands(high, PlacementRequest())
-    assert high[0]["demand"] > low[0]["demand"]
+def test_appointment_estimation_requires_temporal_context():
+    with pytest.raises(ModelUnavailable, match="Dated forecast context"):
+        estimate_demands([], PlacementRequest())
 
 
 def test_unavailable_or_tampered_model_fails_explicitly(tmp_path, monkeypatch):

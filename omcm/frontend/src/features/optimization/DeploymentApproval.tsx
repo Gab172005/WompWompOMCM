@@ -19,7 +19,10 @@ export function DeploymentApproval({ plan }: { plan: Plan }) {
   const today = getManilaToday();
   const tomorrow = addIsoDays(today, 1);
 
-  const [date, setDate] = useState(tomorrow);
+  const forecastTarget = plan.notes
+    .find((note) => note.startsWith("Forecast target date: "))
+    ?.slice("Forecast target date: ".length);
+  const [date, setDate] = useState(forecastTarget ?? tomorrow);
   const [startTime, setStartTime] = useState("08:00");
   const [endTime, setEndTime] = useState("17:00");
   const [services, setServices] = useState<string[]>([
@@ -123,12 +126,19 @@ export function DeploymentApproval({ plan }: { plan: Plan }) {
             aria-label="Deployment date"
             required
             min={emergency ? today : tomorrow}
+            max={emergency ? undefined : forecastTarget}
             value={date}
             onChange={(e) => {
               setDate(e.target.value);
               setPublishedMessage("");
             }}
           />
+          {forecastTarget && (
+            <p className="workspace-note">
+              This saved forecast is for {forecastTarget}. Generate a new plan
+              for a different forecast date.
+            </p>
+          )}
         </label>
 
         <div className="approval-time-grid">

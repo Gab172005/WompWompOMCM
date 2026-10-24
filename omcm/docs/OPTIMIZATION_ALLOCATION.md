@@ -1,5 +1,10 @@
 # Optimization allocation review and implementation
 
+Current extension: [dated illness forecasting](TEMPORAL_FORECAST.md), on
+`feat/temporal-forecast-public-clinics`. The original appointment model remains
+active and unchanged; a separate temporal model supplies forecast illness inputs.
+The sections below record the original Step B implementation.
+
 Current review branch: `feat/xgboost-clinic-allocation`, reconciled with main
 at `537dde3`. The UI now uses main's **Plan clinics** label. See
 [the final PR review](OPTIMIZATION_PR_REVIEW.md) for current checks, compatibility

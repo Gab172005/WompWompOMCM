@@ -1,0 +1,65 @@
+{
+  "model_id": "illness-forecast-v2",
+  "synthetic": true,
+  "target": "next_day_case_rate_per_1000",
+  "features": [
+    "case_rate_lag1",
+    "case_rate_mean7",
+    "case_rate_mean14",
+    "case_rate_trend7",
+    "rainfall_today_mm",
+    "rainfall_mean7_mm",
+    "rainfall_forecast_mm",
+    "temperature_today_c",
+    "flood_exposure",
+    "season_sin",
+    "season_cos"
+  ],
+  "xgboost_version": "3.4.1",
+  "params": {
+    "objective": "reg:squarederror",
+    "eval_metric": "rmse",
+    "tree_method": "hist",
+    "max_depth": 4,
+    "eta": 0.05,
+    "seed": 42,
+    "nthread": 1
+  },
+  "boosting_rounds": 499,
+  "periods": {
+    "train": {
+      "first_target": "2023-01-31",
+      "last_target": "2024-06-30",
+      "rows": 16544
+    },
+    "validation": {
+      "first_target": "2024-07-01",
+      "last_target": "2024-09-30",
+      "rows": 2944
+    },
+    "test": {
+      "first_target": "2024-10-01",
+      "last_target": "2024-12-31",
+      "rows": 2944
+    }
+  },
+  "training_rows": 16544,
+  "validation_rows": 2944,
+  "test_rows": 2944,
+  "metrics": {
+    "test_mae": 0.05117869256438759,
+    "test_rmse": 0.06967817877579456,
+    "persistence_mae": 0.08715246412427924,
+    "persistence_rmse": 0.14011344305847004,
+    "rolling7_mae": 0.13493893350433125,
+    "rolling7_rmse": 0.22341274116927343,
+    "linear_mae": 0.08943589647489661,
+    "linear_rmse": 0.1288443190016686
+  },
+  "model_sha256": "1fb55f076a49264be14ef1c9060306d15f566dc6e06fb39944a896cb335bb286",
+  "generator": "services/forecast_history.py; dated fictional illness and weather sequences, seeded per profile",
+  "split": "Chronological target dates: train before July 2024, validation July-September, untouched test October-December. No randomized row split.",
+  "limitations": "Synthetic-only demonstration. Errors do not measure clinical or real-world accuracy; no disease-specific diagnosis or observed PAGASA/patient data.",
+  "history_policy": "Features end at the issue day. Weather forecast uses past rain and calendar only. Histories retain identical prefixes when future days are appended.",
+  "demand_conversion": "The existing appointment-demand-v1 model estimates appointments using forecast illness burden; its artifact and agreed scoring weights are unchanged."
+}

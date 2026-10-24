@@ -2,7 +2,7 @@ from ortools.sat.python import cp_model
 from services.risk_scoring import calculate_scores
 from services.data import load_data, road_graph, travel_times, validate_references
 from services.pilot import active_hazards, road_evidence
-from services.demand_model import estimate_demands
+from services.demand_model import estimate_demands, forecast_illness, TARGET_PREFIX
 from services.deployment_rules import deployment_restricted
 
 
@@ -103,9 +103,10 @@ def optimize(request):
         ]
     else:
         times = travel_times(road_graph(frame, network, request.closed_roads))
+    frame, forecast_context = forecast_illness(frame)
     barangays = calculate_scores(frame, network, times, request.weights, request.outbreak_barangays, request.outbreak_multiplier, request.municipality_outbreak_multipliers)
-    model = estimate_demands(barangays, request)
-    metadata = dict(metadata, disease=metadata["disease"] + f"; {model['model_id']} XGBoost synthetic appointment-demand estimates")
+    model = estimate_demands(barangays, request, forecast_context)
+    metadata = dict(metadata, disease=metadata["disease"] + f"; {model['model_id']} XGBoost next-day synthetic illness forecast for {model['target_date']}")
     sites = [s for s in network["sites"] if s["eligible"] and s["id"] not in excluded
              and not deployment_restricted(s)
              and (request.eligible_sites is None or s["id"] in request.eligible_sites)]
@@ -129,10 +130,13 @@ def optimize(request):
     return dict(optimized=optimum, baseline=baseline, improvement_pct=gain, barangays=barangays,
                 inputs=request.model_dump(), metadata=metadata,
                 notes=["Demand represents estimated daily appointments, not total population coverage.",
+                       TARGET_PREFIX + model["target_date"],
+                       f"Forecast issued: {model['issue_date']} (Asia/Manila). Dated synthetic history ends on the issue date; actual future observations are excluded.",
                        "Priority-weighted demand = allocated appointments × illustrative need / 100.",
-                       f"Demand model: {model['model_id']} · XGBoost {model['xgboost_version']} · synthetic-only, not clinically validated. Model SHA256: {model['model_sha256']}.",
-                       f"Held-out synthetic appointment-rate MAE: {model['metrics']['test_mae']:.3f}/1,000; mean-rate baseline MAE: {model['metrics']['mean_rate_baseline_mae']:.3f}/1,000. These are not real-world accuracy estimates.",
-                       "Optimization uses the transparent six-factor pilot index, separate from the province's seven-factor HNI. XGBoost estimates demand, not HNI.",
+                       f"Illness forecast: {model['model_id']} · XGBoost {model['xgboost_version']} · synthetic-only, not clinically validated. Model SHA256: {model['model_sha256']}.",
+                       f"Later-date synthetic daily-case MAE: {model['metrics']['test_mae']:.3f}/1,000; persistence MAE: {model['metrics']['persistence_mae']:.3f}/1,000; linear regression MAE: {model['metrics']['linear_mae']:.3f}/1,000. These are not real-world accuracy estimates.",
+                       "The six-factor pilot priority uses tomorrow's modeled rolling 30-day illness burden. The province-wide map retains its separate baseline HNI.",
+                       f"Appointment demand uses the unchanged {model['demand_model_id']} XGBoost model with forecast illness inputs, then explicit surge settings. Agreed factor weights and the original demand model artifact are unchanged.",
                        "Flood-safe accessibility is demand with a safe modeled route to an opened site, before capacity limits; demand served includes capacity limits.",
                        "Paete's approximate user-configured forest-land exclusion is enforced server-side; it is not an official land classification.",
                        "Flood safety is based only on selected demo exclusions, not verified hazard conditions.",

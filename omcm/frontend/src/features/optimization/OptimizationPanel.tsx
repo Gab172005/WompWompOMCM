@@ -41,8 +41,9 @@ export function OptimizationPanel() {
         </span>
         <p className="workspace-note">
           Locations and capacities need local verification. Recommendations use
-          a separate clinic planning score and XGBoost appointment estimates.
-          The map's province-wide Healthcare Need Score remains the baseline.
+          a separate clinic planning score and next-day XGBoost illness
+          forecasts from simulated case and weather histories. The map's
+          province-wide Healthcare Need Score remains the baseline.
         </p>
       </div>
       <form

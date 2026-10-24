@@ -12,7 +12,7 @@ import numpy as np
 import xgboost as xgb
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from services.demand_model import FEATURES, MODEL_DIR, MODEL_NAME
+from services.demand_model import DEMAND_FEATURES as FEATURES, MODEL_DIR, DEMAND_MODEL_NAME as MODEL_NAME
 
 
 def observations(seed, count):
