@@ -16,7 +16,7 @@ Pydantic schemas. The existing route names are retained.
 | POST `/api/planning/optimize` | Compute and persist a province-wide draft | Basic auth |
 | POST `/api/simulate` | Before/after allocation, no schedule mutation | Basic auth |
 | GET `/api/schedules` | Published schedules, notices, current Manila day | Public |
-| POST `/api/schedules/approve` | Approve and publish stored next-day draft | Basic auth |
+| POST `/api/schedules/approve` | Publish a stored fresh draft within seven days | Basic auth |
 | POST `/api/schedules/emergency-override` | Confirmed revision with public notice | Basic auth |
 | GET `/api/analytics` | Rankings and synthetic population/demand totals | Basic auth |
 | GET/POST `/api/boundaries` | Read / validate uploaded boundaries | POST requires auth |
@@ -125,11 +125,17 @@ deltas. No plan is automatically published.
 }
 ```
 
-The date must be tomorrow or later in Manila. For dated forecast drafts, it must
-also match the saved `Forecast target date: YYYY-MM-DD` note; a mismatch returns
-422 and requires a fresh plan. Existing dates return 409.
+Ordinary dates are tomorrow through `today + 7 days`, inclusive, in Manila.
+The saved `Forecast target date: YYYY-MM-DD` must be tomorrow, proving that the
+estimate was freshly issued; an expired dated draft returns 422. A booking later
+in that window reuses the existing next-day allocation; it does not create a
+forecast for the booked date. Undated legacy drafts retain compatibility but
+use the same date window. Existing published dates return 409.
 Emergency override also takes `notice` (10–500 characters) and `confirmed: true`;
-it can revise today or a future date, never the past. An unknown draft returns
+it can revise today through Day 7, never the past. The endpoint trims the notice
+and requires at least 10 characters afterward. It also rejects expired dated
+drafts. These are business-rule updates to existing fields, with no schema or
+database migration. See [scheduling behavior](SCHEDULING.md). An unknown draft returns
 404; unauthenticated requests return 401, disabled demo auth 503, invalid inputs
 422. Publishing reads the stored allocation, updates the plan to `published`,
 and returns schedule timestamps. Drafts and simulations never appear in public

@@ -80,8 +80,9 @@ all planning mutations. Public health, hospitals, geography and approved schedul
 remain available; public notices identify the office rather than a login name.
 
 `repository.py` persists drafts and approved schedules separately. Ordinary
-publication targets the forecast day; today's revisions require a confirmed
-emergency override. Publication is transactional. Neither a new draft nor a
+publication accepts tomorrow through Day 7 with a fresh next-day forecast draft;
+the booking date is distinct from the forecast date. Today's revisions require a
+confirmed emergency override and a trimmed notice of at least 10 characters. Publication is transactional. Neither a new draft nor a
 simulation mutates a public deployment. Vercel scratch SQLite enables startup
 but is temporary and not shared between instances. It is not durable storage.
 

@@ -89,8 +89,10 @@ metrics and methodology are inside clinic planning; adjustable legacy weight
 screens are no longer mounted. Their source modules remain for reference.
 
 Only authenticated FastAPI approval publishes a connected schedule. Ordinary
-approval is for the draft's next-day forecast date; revising today's schedule
-requires a confirmed emergency notice. Public sessions refresh confirmed
+approval can book any date from tomorrow through the next seven days using a
+freshly generated plan. Later bookings reuse its next-day estimate; they do not
+claim a forecast for the booked date. Today's changes require a confirmed
+emergency notice. See [scheduling rules](docs/SCHEDULING.md). Public sessions refresh confirmed
 schedules every 30 seconds while visible and on focus/connectivity return.
 During an outage, the last confirmed visits stay visible with stale feedback.
 

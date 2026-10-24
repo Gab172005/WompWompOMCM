@@ -27,9 +27,10 @@ OpenStreetMap works without a key. Have desktop and 390px screenshots available.
    outperform every possible manual arrangement under the visual heuristic.
 5. **Flood and publication (60 seconds).** Return to Plan clinics. Select the
    25-year layer and regenerate to show blue flagged-barangay outlines. Explain
-   return periods and operational exclusion. Approve the matching next-day draft
+   return periods and operational exclusion. Choose tomorrow or a date within seven days, approve the fresh draft,
    and open Public View to see approved locations; rehearse emergency revision
-   only in the isolated demonstration database.
+   only in the isolated demonstration database. The emergency button requires a
+   trimmed notice of 10+ characters and the confirmation checkbox.
 
 ## Presentation slides
 

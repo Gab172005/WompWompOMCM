@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, CalendarCheck, Check, Globe } from "lucide-react";
 import type { Plan, Schedule } from "../../types";
@@ -11,6 +11,7 @@ import {
   useAppStore,
 } from "../../store/useAppStore";
 import { Button } from "../../components/ui/Button";
+export const SCHEDULE_WINDOW_DAYS = 7;
 
 export function DeploymentApproval({ plan }: { plan: Plan }) {
   const { adminUser, publishedSchedules, requestAdminView, setViewMode } =
@@ -18,6 +19,9 @@ export function DeploymentApproval({ plan }: { plan: Plan }) {
   const navigate = useNavigate();
   const today = getManilaToday();
   const tomorrow = addIsoDays(today, 1);
+  const latestDate = addIsoDays(today, SCHEDULE_WINDOW_DAYS);
+  const requirementsId = useId();
+  const noticeHelpId = useId();
 
   const forecastTarget = plan.notes
     .find((note) => note.startsWith("Forecast target date: "))
@@ -37,6 +41,17 @@ export function DeploymentApproval({ plan }: { plan: Plan }) {
 
   const activeSchedule = publishedSchedules[date];
   const matches = Boolean(publishedMessage);
+  const noticeLength = emergencyNotice.trim().length;
+  const blockers = [
+    ...(!plan.plan_id || !plan.optimized.clinics.length ? ["Generate a clinic plan first."] : []),
+    ...(!services.length ? ["Select at least one service."] : []),
+    ...(!date || date < (emergency ? today : tomorrow) || date > latestDate
+      ? [`Choose a date from ${emergency ? today : tomorrow} to ${latestDate}.`] : []),
+    ...(!startTime || !endTime || endTime <= startTime ? ["Choose a closing time after the opening time."] : []),
+    ...(forecastTarget && forecastTarget !== tomorrow ? ["This forecast is out of date. Generate a fresh plan before publishing."] : []),
+    ...(emergency && noticeLength < 10 ? ["Write a public emergency notice of at least 10 characters."] : []),
+    ...(emergency && !confirmed ? ["Check the emergency revision confirmation box."] : []),
+  ];
 
   function toggleService(service: string, checked: boolean) {
     setServices((prev) =>
@@ -51,14 +66,11 @@ export function DeploymentApproval({ plan }: { plan: Plan }) {
       requestAdminView("optimization");
       return;
     }
-    if (
-      !plan.plan_id ||
-      !plan.optimized.clinics.length ||
-      !services.length ||
-      publishing
-    )
+    if (publishing || matches) return;
+    if (blockers.length) {
+      setError(blockers.join(" "));
       return;
-    if (emergency && (!confirmed || emergencyNotice.trim().length < 10)) return;
+    }
 
     setPublishing(true);
     setError("");
@@ -71,7 +83,7 @@ export function DeploymentApproval({ plan }: { plan: Plan }) {
           start_time: startTime,
           end_time: endTime,
           services,
-          ...(emergency ? { notice: emergencyNotice, confirmed } : {}),
+          ...(emergency ? { notice: emergencyNotice.trim(), confirmed } : {}),
         },
         AbortSignal.timeout(15000),
       );
@@ -126,7 +138,7 @@ export function DeploymentApproval({ plan }: { plan: Plan }) {
             aria-label="Deployment date"
             required
             min={emergency ? today : tomorrow}
-            max={emergency ? undefined : forecastTarget}
+            max={latestDate}
             value={date}
             onChange={(e) => {
               setDate(e.target.value);
@@ -135,10 +147,12 @@ export function DeploymentApproval({ plan }: { plan: Plan }) {
           />
           {forecastTarget && (
             <p className="workspace-note">
-              This saved forecast is for {forecastTarget}. Generate a new plan
-              for a different forecast date.
+              Latest demand estimate: {forecastTarget}. You may book this plan
+              through {latestDate}; later bookings use this same estimate, not
+              a forecast for their date. Review conditions before deployment.
             </p>
           )}
+          {!forecastTarget && <p className="workspace-note">Choose a booking date within the next 7 days.</p>}
         </label>
 
         <div className="approval-time-grid">
@@ -205,14 +219,15 @@ export function DeploymentApproval({ plan }: { plan: Plan }) {
         {emergency && (
           <div className="workspace-subcard emergency-override-box">
             <p className="workspace-note">
-              <AlertTriangle size={15} aria-hidden="true" /> Replaces the
-              published schedule for {date} and displays an emergency alert
-              banner in Public View.
+              <AlertTriangle size={15} aria-hidden="true" /> Publishes emergency
+              clinic arrangements for {date}, replacing any existing schedule.
+              Residents will see the notice in Public View.
             </p>
             <label className="workspace-field">
               Public emergency notice
               <textarea
                 aria-label="Public emergency notice"
+                aria-describedby={noticeHelpId}
                 required
                 minLength={10}
                 maxLength={400}
@@ -224,6 +239,11 @@ export function DeploymentApproval({ plan }: { plan: Plan }) {
                 }}
                 placeholder="Describe the revised clinic locations or weather disruption for residents (min 10 characters)."
               />
+              <small id={noticeHelpId} aria-live="polite">
+                {noticeLength < 10
+                  ? `${noticeLength}/10 characters minimum. Describe what changed and where residents should go.`
+                  : `${noticeLength} characters · Minimum met.`}
+              </small>
             </label>
             <label className="approval-checkbox">
               <input
@@ -240,16 +260,19 @@ export function DeploymentApproval({ plan }: { plan: Plan }) {
           </div>
         )}
 
+        {!matches && blockers.length > 0 && (
+          <div id={requirementsId} className="approval-requirements" role="status">
+            <strong>Before you can publish</strong>
+            <ul>{blockers.map((message) => <li key={message}>{message}</li>)}</ul>
+          </div>
+        )}
+
         <div className="workspace-button-row">
           <Button
             type="submit"
-            disabled={
-              Boolean(matches) ||
-              publishing ||
-              !plan.optimized.clinics.length ||
-              !services.length ||
-              (emergency && (!confirmed || emergencyNotice.trim().length < 10))
-            }
+            disabled={Boolean(matches) || publishing || blockers.length > 0}
+            aria-describedby={blockers.length > 0 ? requirementsId : undefined}
+            aria-busy={publishing}
           >
             <Check size={16} aria-hidden="true" />
             {publishing

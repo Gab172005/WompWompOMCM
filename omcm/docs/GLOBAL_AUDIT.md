@@ -5,6 +5,14 @@ Reviewed 2026-10-24 on `audit/omcm-features-and-views`, based on fetched main
 branches. No original data, model artifacts, agreed coefficients, administrator
 credentials or database schemas were changed in this pass.
 
+## Subsequent scheduling refinement
+
+The next-day-only approval restriction has been superseded by the
+[seven-day booking policy](SCHEDULING.md). Freshness is still checked against
+tomorrow's forecast target; booking a later date does not generate a later-day
+forecast. Today's changes remain explicit emergency revisions. That document
+records the separate branch's exact files, tests and unchanged schema/model.
+
 ## Verified data and calculations
 
 - 681 unique barangays across 30 LGUs; bundled population total 3,687,345.

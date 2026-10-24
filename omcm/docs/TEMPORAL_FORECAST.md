@@ -82,16 +82,18 @@ in temporary directories on the tested environment.
 ## Publication and limits
 
 Forecast dates, provenance and baselines use existing plan notes/metadata;
-no API schema or database migration was introduced. Ordinary approval must
-match the saved forecast target date and existing future-date rules. Generate
-a fresh plan after the date changes. Confirmed emergency override can revise
-today/future schedules with a notice. Older undated drafts retain existing rules.
+no API schema or database migration was introduced. The current
+[seven-day scheduling policy](SCHEDULING.md) permits bookings tomorrow through
+Day 7 using a fresh next-day forecast. Later bookings do not represent a forecast
+for that date. Generate a fresh plan after the issue date changes. Confirmed
+emergency override can revise today through Day 7 with a meaningful notice;
+older undated drafts use the same date window.
 
 Published locations, assignments, hours and services flow to public schedules;
 draft notes and raw forecast features do not. See PUBLIC_VISITS.md for the public
 consumer update. Authentication and configured credentials remain unchanged.
 Automatic nightly scheduling, capacity/route unification of the separate 30-day browser
-simulation and connected planner, and the broader endpoint/privacy audit remain pending.
+simulation and connected planner remain pending. The endpoint/privacy review is documented in GLOBAL_AUDIT.md.
 
 ## Exact file and logic inventory
 
