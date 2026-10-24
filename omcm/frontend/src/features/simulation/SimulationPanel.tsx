@@ -41,11 +41,11 @@ function scenarioChange(
 ) {
   const change =
     strategy === "none" ? baselineHni - startHni : baselineHni - hni;
-  if (Math.abs(change) < 0.05)
+  if (Math.abs(change) < 0.005)
     return strategy === "none" ? "Baseline" : "No clinic impact yet";
   return strategy === "none"
-    ? `${change > 0 ? "+" : ""}${change.toFixed(1)} since start`
-    : `${change.toFixed(1)} pts below baseline`;
+    ? `${change > 0 ? "+" : ""}${change.toFixed(2)} since start`
+    : `${change.toFixed(2)} pts below baseline`;
 }
 
 export function SimulationPanel() {
@@ -61,6 +61,16 @@ export function SimulationPanel() {
   const snapshot = run.snapshots[run.day - 1];
   const period = operationalPeriod(run.day);
   const canAllocate = canEditAllocation(s.strategy, run);
+  const optimizedDay = Object.keys(s.runs.optimizer.history)
+    .map(Number)
+    .filter((day) => day <= run.day)
+    .sort((a, b) => b - a)[0];
+  const manualSites = s.runs.manual.snapshots[run.day - 1].allocation
+    .map((a) => a.psgc)
+    .sort();
+  const comparedSites = [
+    ...(s.runs.optimizer.comparisons?.[optimizedDay] ?? []),
+  ].sort();
 
   return (
     <div className="simulation-panel">
@@ -100,7 +110,7 @@ export function SimulationPanel() {
                 key={strategy}
                 type="button"
                 aria-pressed={s.strategy === strategy}
-                aria-label={`${STRATEGIES[strategy]}, day ${scenarioRun.day}, HNI ${current.metrics.hni.toFixed(1)}`}
+                aria-label={`${STRATEGIES[strategy]}, day ${scenarioRun.day}, HNI ${current.metrics.hni.toFixed(2)}`}
                 onClick={() => {
                   if (s.strategy !== strategy) s.setStrategy(strategy);
                 }}
@@ -108,7 +118,7 @@ export function SimulationPanel() {
                 <span className="simulation-scenario-name">
                   {shortNames[strategy]}
                 </span>
-                <strong>{current.metrics.hni.toFixed(1)}</strong>
+                <strong>{current.metrics.hni.toFixed(2)}</strong>
                 <span className="simulation-scenario-score-label">
                   HNI / 100
                 </span>
@@ -117,13 +127,25 @@ export function SimulationPanel() {
                   {strategy === "none"
                     ? "No clinic service"
                     : clinicAreas > 0
-                      ? `${clinicAreas} areas in reach`
+                      ? `${clinicAreas} areas receiving service`
                       : "No clinics deployed"}
                 </span>
               </button>
             );
           })}
         </div>
+        <p className="workspace-note">
+          HNI weights each barangay by population. Area counts describe reach;
+          they do not measure the amount of need reduced.
+        </p>
+        {optimizedDay !== undefined && (
+          <p className="workspace-note">
+            Locations optimized for Day {optimizedDay}. Held locations use each
+            day's updated mock demand.
+            {manualSites.join() !== comparedSites.join() &&
+              " Manual locations have changed since this comparison; generate a fresh comparison in the next placement window."}
+          </p>
+        )}
       </section>
 
       <section
@@ -239,7 +261,7 @@ export function SimulationPanel() {
           {s.strategy === "optimizer" && (
             <button
               className="primary simulation-generate-button"
-              disabled={!canAllocate || s.recommendBusy}
+              disabled={!canAllocate || s.recommendBusy || s.applyBusy}
               onClick={() => void s.recommend()}
             >
               <Sparkles size={16} aria-hidden="true" />
@@ -270,17 +292,32 @@ export function SimulationPanel() {
               </div>
               <div className="simulation-proposal-metrics">
                 <span>
-                  <strong>{s.proposal.demandServedPercent?.toFixed(1)}%</strong>{" "}
-                  appointment demand served
+                  <strong>
+                    {s.proposal.evaluation.days[
+                      run.day - 1
+                    ].metrics.hni.toFixed(2)}
+                  </strong>{" "}
+                  HNI after service
                 </span>
                 <span>
-                  <strong>{s.proposal.capacityUtilization?.toFixed(1)}%</strong>{" "}
-                  capacity use
+                  <strong>
+                    {(
+                      s.proposal.evaluation.days[run.day - 1].metrics
+                        .baselineHni -
+                      s.proposal.evaluation.days[run.day - 1].metrics.hni
+                    ).toFixed(2)}
+                  </strong>{" "}
+                  points reduced
                 </span>
               </div>
               <p className="workspace-note">
-                These backend planning metrics are separate from the simulator’s
-                HNI reduction.
+                Optimized for Day {s.proposal.day} using the same HNI
+                calculation as the map.
+                {s.proposal.comparisonHni !== null &&
+                  ` Manual comparison: ${s.proposal.comparisonHni.toFixed(2)} HNI. Ties are valid.`}{" "}
+                {s.proposal.optimal
+                  ? "Optimal within this model."
+                  : "Search limit reached; best verified plan kept."}
               </p>
               <ol className="simulation-proposal-list">
                 {s.proposal.recommendations.map((recommendation) => {
@@ -301,48 +338,42 @@ export function SimulationPanel() {
                             ? `${needLevel(host.hni)} baseline HNI · ${host.hni.toFixed(1)}/100${host.provisional ? " · Some data missing" : ""}`
                             : "Baseline estimate unavailable"}
                         </p>
-                        <p>{recommendation.reason}</p>
-                        <details className="simulation-assignment-detail">
-                          <summary>
-                            Backend assignments (
-                            {recommendation.assignedBarangays?.length ?? 0})
-                          </summary>
-                          <ul>
-                            {recommendation.assignedBarangays?.map((name) => (
-                              <li key={name}>{name}</li>
-                            ))}
-                          </ul>
-                        </details>
                       </details>
                     </li>
                   );
                 })}
               </ol>
               <span className="simulation-plan-id">
-                Draft {s.proposal.planId}
+                Simulation proposal {s.proposal.planId}
               </span>
             </div>
           )}
 
           <fieldset
             className="simulation-allocation"
-            disabled={!canAllocate || s.recommendBusy || (s.strategy === "optimizer" && !s.proposal)}
+            disabled={
+              !canAllocate ||
+              s.recommendBusy ||
+              s.applyBusy ||
+              (s.strategy === "optimizer" && !s.proposal)
+            }
           >
             <legend>
               {s.strategy === "manual"
                 ? "Manual clinic locations"
-                : "Review or edit locations"}
+                : "Solver-selected locations"}
             </legend>
             <p className="simulation-guidance">
               {s.strategy === "manual"
                 ? "Choose a barangay below or click the map to place the selected clinic."
                 : s.proposal
-                  ? "The map previews these locations. Adjust any site before applying the plan."
+                  ? "The map previews these locations. Use Manual to try your own placements."
                   : "Generate optimized locations first. You can review the proposal before applying it."}
             </p>
             <label className="workspace-field">
               Click the map to place
               <select
+                disabled={s.strategy === "optimizer"}
                 value={s.editingClinic}
                 onChange={(e) =>
                   useForecastStore.setState({
@@ -362,6 +393,7 @@ export function SimulationPanel() {
                 MC-{i + 1}
                 <select
                   aria-label={`MC-${i + 1} barangay`}
+                  disabled={s.strategy === "optimizer"}
                   value={value}
                   onChange={(e) => s.setDraft(i, e.target.value)}
                 >
@@ -388,12 +420,19 @@ export function SimulationPanel() {
             ))}
             <button
               className="primary"
-              disabled={!canAllocate || s.draft.some((value) => !value)}
-              onClick={s.apply}
+              disabled={
+                !canAllocate ||
+                s.applyBusy ||
+                s.recommendBusy ||
+                s.draft.some((value) => !value)
+              }
+              onClick={() => void s.apply()}
             >
-              {s.strategy === "manual"
-                ? "Apply my clinic locations"
-                : "Apply these clinic locations"}
+              {s.applyBusy
+                ? "Calculating clinic impact…"
+                : s.strategy === "manual"
+                  ? "Apply my clinic locations"
+                  : "Apply these clinic locations"}
             </button>
           </fieldset>
 
@@ -433,16 +472,20 @@ export function SimulationPanel() {
           changes are synthetic sample data; missing factors remain unavailable.
         </p>
         <p>
-          Clinic service lowers the completed Balanced score by up to 35% at the
-          host barangay and tapers to 17.5% at the 3 km edge. Overlapping
-          clinics use the strongest single service estimate. Locations can be
-          applied once per weekly window and take effect from the selected day.
+          Both scenarios reserve up to 180 modeled appointments per clinic
+          across demand within 3 km and a safe modeled path of at most 25
+          minutes. The 35% host deduction and 17.5% edge deduction are ceilings,
+          scaled down when catchment demand exceeds capacity. Overlaps keep the
+          strongest reservation. Locations can be applied once per weekly
+          window.
         </p>
         <p>
-          The connected XGBoost and capacity-aware CP-SAT planner estimates
-          next-day appointment demand province-wide. It is not a clinical
-          forecast for each simulator date. These are planning estimates, not
-          patient counts or guaranteed outcomes.
+          The backend uses unchanged XGBoost models with dated mock history and
+          minimizes population-weighted HNI on the selected simulation day. A
+          feasible manual plan is included as a comparison. More areas alone
+          does not mean more need reduced. Held locations can rank differently
+          as daily demand changes; generate a new plan in the next placement
+          window. These are planning estimates, not patient counts.
         </p>
       </details>
       <button

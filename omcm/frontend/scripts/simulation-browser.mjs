@@ -102,7 +102,7 @@ try {
   let plannerResponse;
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("response", (response) => {
-    if (response.url().includes("/api/planning/optimize"))
+    if (response.url().includes("/api/planning/simulation/optimize"))
       plannerResponse = response;
   });
   await page.route("https://tile.openstreetmap.org/**", (route) =>
@@ -149,7 +149,10 @@ try {
   await panel.locator(".workspace-panel-body").evaluate((element) => {
     element.scrollTop = 0;
   });
-  await page.screenshot({ path: "/tmp/omcm-simulation-desktop.png", animations: "disabled" });
+  await page.screenshot({
+    path: "/tmp/omcm-simulation-desktop.png",
+    animations: "disabled",
+  });
 
   const baselineDay1 = await page.evaluate(async () => {
     const { useForecastStore } = await import("/src/store/useForecastStore.ts");
@@ -188,7 +191,9 @@ try {
   expect(baselineDay3.color).not.toBe(baselineDay1.color);
   const sharedDay = await page.evaluate(async () => {
     const { useForecastStore } = await import("/src/store/useForecastStore.ts");
-    return Object.values(useForecastStore.getState().runs).map((run) => run.day);
+    return Object.values(useForecastStore.getState().runs).map(
+      (run) => run.day,
+    );
   });
   expect(sharedDay).toEqual([3, 3, 3]);
 
@@ -220,9 +225,20 @@ try {
     .getByLabel("MC-1 barangay", { exact: true })
     .selectOption(manualSites.host);
   await expect(page.locator(".clinic-staging-marker")).toHaveCount(1);
+  const manualResponse = page.waitForResponse(
+    (response) => response.url().includes("/api/planning/simulation/evaluate"),
+    { timeout: 90000 },
+  );
   await panel
     .getByRole("button", { name: "Apply my clinic locations", exact: true })
     .click();
+  expect((await manualResponse).status()).toBe(200);
+  await expect(
+    panel.getByRole("button", {
+      name: "Apply my clinic locations",
+      exact: true,
+    }),
+  ).toBeDisabled();
   const manualImpact = await page.evaluate(async (sites) => {
     const { useForecastStore } = await import("/src/store/useForecastStore.ts");
     const { getSimulationNeedColor } =
@@ -281,11 +297,35 @@ try {
   expect(manualReach).toEqual({ host: true, neighbor: true, outside: false });
 
   await panel.getByLabel("Available mobile clinics").fill("3");
+  const comparisonSites = await page.evaluate(async () => {
+    const { useForecastStore } = await import("/src/store/useForecastStore.ts");
+    return [...useForecastStore.getState().coverage.keys()].slice(0, 3);
+  });
+  for (let index = 0; index < 3; index++)
+    await panel
+      .getByLabel(`MC-${index + 1} barangay`, { exact: true })
+      .selectOption(comparisonSites[index]);
+  const comparisonEvaluation = page.waitForResponse(
+    (response) => response.url().includes("/api/planning/simulation/evaluate"),
+    { timeout: 90000 },
+  );
+  await panel
+    .getByRole("button", { name: "Apply my clinic locations", exact: true })
+    .click();
+  expect((await comparisonEvaluation).status()).toBe(200);
+  await expect(
+    panel.getByRole("button", {
+      name: "Apply my clinic locations",
+      exact: true,
+    }),
+  ).toBeDisabled();
   await panel
     .getByRole("button", { name: /^Optimized clinic allocation, day 1, HNI/ })
     .click();
-  const generatedPlan = page.waitForResponse((response) =>
-    response.url().includes("/api/planning/optimize"), { timeout: 90000 });
+  const generatedPlan = page.waitForResponse(
+    (response) => response.url().includes("/api/planning/simulation/optimize"),
+    { timeout: 90000 },
+  );
   await panel
     .getByRole("button", { name: "Generate optimized locations", exact: true })
     .click();
@@ -294,10 +334,19 @@ try {
   expect(response.status()).toBe(200);
   const plan = await response.json();
   expect(response.request().postDataJSON()).toMatchObject({ clinic_count: 3 });
-  expect(plan.notes.join(" ")).toContain("XGBoost");
-  expect(plan.notes.join(" ")).toContain("Agreed Balanced HNI");
-  expect(plan.optimized.clinics).toHaveLength(3);
-  await expect(panel.getByText("Draft " + plan.plan_id), await panel.innerText()).toBeVisible();
+  expect(plan.evaluation.notes.join(" ")).toContain("XGBoost");
+  expect(plan.evaluation.notes.join(" ")).toContain("Agreed Balanced HNI");
+  expect(plan.locations).toHaveLength(3);
+  expect(response.request().postDataJSON().comparison_sites).toEqual(
+    comparisonSites,
+  );
+  expect(plan.evaluation.days[0].metrics.hni).toBeLessThanOrEqual(
+    plan.comparison_hni + 1e-9,
+  );
+  await expect(
+    panel.getByText("Simulation proposal " + plan.proposal_id),
+    await panel.innerText(),
+  ).toBeVisible();
   await expect(page.locator(".clinic-staging-marker")).toHaveCount(3);
   const unconfirmed = await page.evaluate(async () => {
     const { useForecastStore } = await import("/src/store/useForecastStore.ts");
@@ -319,19 +368,51 @@ try {
     return {
       deployed: snapshot.allocation.length,
       allHostsLower: hosts.every((record) => record.scenarioHni < record.hni),
+      hni: snapshot.metrics.hni,
+      manualHni: state.runs.manual.snapshots[0].metrics.hni,
+      mapHni:
+        snapshot.records.reduce(
+          (sum, record) => sum + record.scenarioHni * record.population,
+          0,
+        ) /
+        snapshot.records.reduce((sum, record) => sum + record.population, 0),
       affectedAreas: snapshot.records.filter(
         (record) => record.serviceFraction > 0,
       ).length,
     };
   });
   expect(optimizedImpact.deployed).toBe(3);
+  expect(optimizedImpact.hni).toBeLessThanOrEqual(
+    optimizedImpact.manualHni + 1e-9,
+  );
+  expect(optimizedImpact.mapHni).toBeCloseTo(optimizedImpact.hni, 9);
+  await expect(
+    panel.getByLabel("MC-1 barangay", { exact: true }),
+  ).toBeDisabled();
+  console.log(
+    "Connected comparison:",
+    JSON.stringify({
+      manualHni: optimizedImpact.manualHni,
+      optimizedHni: optimizedImpact.hni,
+      affectedAreas: optimizedImpact.affectedAreas,
+    }),
+  );
   expect(optimizedImpact.allHostsLower).toBe(true);
   expect(optimizedImpact.affectedAreas).toBeGreaterThan(3);
   await expect(page.locator(".clinic-staging-marker")).toHaveCount(3);
+  await panel.locator(".workspace-panel-body").evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  await page.screenshot({
+    path: "/tmp/omcm-simulation-hni-comparison.png",
+    animations: "disabled",
+  });
   await page.getByRole("button", { name: "Next day", exact: true }).click();
   const synchronizedDay = await page.evaluate(async () => {
     const { useForecastStore } = await import("/src/store/useForecastStore.ts");
-    return Object.values(useForecastStore.getState().runs).map((run) => run.day);
+    return Object.values(useForecastStore.getState().runs).map(
+      (run) => run.day,
+    );
   });
   expect(synchronizedDay).toEqual([2, 2, 2]);
 
@@ -343,20 +424,29 @@ try {
     ),
   ).toBe(true);
   const panelBox = await panel.boundingBox();
-  const playbackBox = await page.getByRole("region", { name: "Simulation playback" }).boundingBox();
-  const legendBox = await page.getByRole("region", { name: "Map legend" }).boundingBox();
+  const playbackBox = await page
+    .getByRole("region", { name: "Simulation playback" })
+    .boundingBox();
+  const legendBox = await page
+    .getByRole("region", { name: "Map legend" })
+    .boundingBox();
   expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(playbackBox.y);
   expect(playbackBox.y + playbackBox.height).toBeLessThanOrEqual(legendBox.y);
-  await page.screenshot({ path: "/tmp/omcm-simulation-mobile.png", animations: "disabled" });
+  await page.screenshot({
+    path: "/tmp/omcm-simulation-mobile.png",
+    animations: "disabled",
+  });
   await panel.getByRole("button", { name: "Collapse tool panel" }).click();
   await expect(panel.locator(".workspace-panel-body")).toBeHidden();
   await expect(page.locator(".clinic-staging-marker")).toHaveCount(3);
-  await expect(page.getByRole("region", { name: "Simulation playback" })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Simulation playback" }),
+  ).toBeVisible();
   await panel.getByRole("button", { name: "Expand tool panel" }).click();
   await expect(panel.locator(".workspace-panel-body")).toBeVisible();
   expect(errors, logs).toEqual([]);
   console.log(
-    "Simulation browser checks passed: rising no-intervention HNI, manual host and neighbor impact, backend XGBoost/CP-SAT placements, optimized multi-area impact, clinic markers, and mobile layout.",
+    "Simulation browser checks passed: rising baseline, authenticated manual evaluation, host/neighbor map impact, shared population-weighted HNI, real XGBoost/CP-SAT optimization no worse than manual, clinic markers, and mobile layout.",
   );
 } catch (error) {
   const page = browser?.contexts()[0]?.pages()[0];

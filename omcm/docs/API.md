@@ -14,6 +14,8 @@ Pydantic schemas. The existing route names are retained.
 | POST `/api/risk/calculate` | Recalculate weighted scores | Basic auth |
 | POST `/api/optimize` | Compute and persist a draft, return comparison | Basic auth |
 | POST `/api/planning/optimize` | Compute and persist a province-wide draft | Basic auth |
+| POST `/api/planning/simulation/evaluate` | Evaluate transient manual placement history and HNI | Basic auth |
+| POST `/api/planning/simulation/optimize` | Minimize transient simulation HNI for a selected day | Basic auth |
 | POST `/api/simulate` | Before/after allocation, no schedule mutation | Basic auth |
 | GET `/api/schedules` | Published schedules, notices, current Manila day | Public |
 | POST `/api/schedules/approve` | Publish a stored fresh draft within seven days | Basic auth |
@@ -40,11 +42,56 @@ values `moderate` and `severe` retain compatibility and select the supplied
 flagged sites and touching adjacency links are excluded. No numeric water-depth
 contract or exact flood-extent polygons are present.
 
-The 30-day timeline is browser state. `/api/simulate` is the retained legacy
-before/after allocation API, not a backend endpoint for this timeline. The
-optimization map's service preview also uses browser impact calculations;
-backend appointment metrics are independent. See [simulation ownership and
-formulas](SIMULATION_MODE.md).
+The 30-day viewing timeline remains browser state, while service deductions and
+metrics now come from authenticated simulation APIs. `/api/simulate` remains the
+legacy before/after allocation endpoint. The ordinary optimization map preview
+retains its separately labeled geographic illustration.
+
+## Transient HNI simulation
+
+`POST /api/planning/simulation/evaluate` accepts:
+
+```json
+{
+  "clinic_count": 1,
+  "conditions": {"floodOverrides": {}, "morbiditySpikes": {}, "closedRoadIds": []},
+  "history": {"1": [{"clinicId": "MC-1", "psgc": "403402001"}]}
+}
+```
+
+The selected PSGC must be eligible under the same flood/access/land rules used
+by optimization. Counts are 1–10; history days are 1–30; there can be one placement
+per weekly window. Conditions use municipality PSGCs. Flood values are `none`,
+`moderate` (25-year layer), or `severe` (100-year layer); illness multipliers are
+1–5. Road IDs remain reference markers and do not change modeled access.
+Capacity is currently 180 per clinic and modeled travel is limited to 25 minutes.
+
+The response has `days` (30 ordered entries) and `notes`. Each day includes
+`impacts`, keyed by affected barangay PSGC, with `scenarioHni` and
+`serviceFraction`, plus `metrics`: population-weighted `baselineHni`, `hni`,
+`uhni`, `totalUnmetPriority`, `servedBarangays`, `coveredPercent`, `relocations`,
+`cumulativeUnmetPriority`, `servedAppointments`, `totalAppointments`,
+`capacityUtilization` and `reachedPopulation`. Appointment fields are synthetic
+capacity estimates; HNI/UHNI are indices, not patients.
+
+`POST /api/planning/simulation/optimize` adds `day` and `comparison_sites` to
+that request. `history` is the optimizer's prior placements; the selected weekly
+window must be unused. A nonempty comparison must contain the same number of
+feasible sites as the fleet. The response includes transient `proposal_id`,
+`day`, `locations`, `evaluation` (the same timeline format), `solver_status`,
+`optimal`, nullable `comparison_hni`, and explanatory `notes`.
+
+The backend minimizes the same HNI displayed by the map. The unrounded result
+is no worse than its feasible manual incumbent on the selected day. A tie is
+valid; the guarantee does not extend to changed inputs or all later days.
+`FEASIBLE_INCUMBENT` identifies a real retained marginal-gain/manual plan when
+the solver cannot supply a better valid candidate within its bounds. `optimal`
+refers to the integer-scaled CP-SAT objective, not clinical certainty.
+
+Both routes require Basic auth, reject invalid histories/conditions with 422,
+and return 503 when required XGBoost artifacts fail. No database entry or public
+schedule is created. Simulation proposal IDs are not stored draft IDs and cannot
+be approved. See [deduction mathematics](SIMULATION_MODE.md).
 
 ## PlacementRequest
 

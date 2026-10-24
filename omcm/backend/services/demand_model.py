@@ -66,19 +66,27 @@ def load_demand_model():
         raise ModelUnavailable("XGBoost appointment-demand model unavailable. Restore the existing validated artifact.") from error
 
 
-def forecast_illness(frame):
-    """Forecast tomorrow using only the history available on today's issue date."""
+def forecast_illness(frame, issue=None, history_through=None):
+    """Forecast from the issue-date prefix, optionally reusing a mock series.
+
+    A simulation can generate one prefix-stable series through its final issue
+    date. Every feature and rolling burden still stops at the current issue.
+    Ordinary planning defaults to today's history exactly as before.
+    """
     booster, metadata = load_model()
     import xgboost as xgb
-    issue = today()
+    issue = today() if issue is None else issue
+    if history_through is not None and history_through < issue:
+        raise ValueError("Synthetic history must include the forecast issue date.")
+    issue_index = (issue - EPOCH).days
     target = issue + timedelta(days=1)
     rows = frame.to_dict("records")
     histories, features = [], []
     for row in rows:
-        series = dated_history(*profile(row), issue)
+        series = dated_history(*profile(row), history_through or issue)
         histories.append(series)
         scenario_flood = row.get("scenario_flood_exposure", series["flood"])
-        features.append(feature_row(series, (issue - EPOCH).days, scenario_flood))
+        features.append(feature_row(series, issue_index, scenario_flood))
     matrix = xgb.DMatrix(np.asarray(features), feature_names=FEATURES, nthread=1)
     rates = booster.predict(matrix)
     if not np.isfinite(rates).all():
@@ -87,7 +95,7 @@ def forecast_illness(frame):
     for row, series, rate in zip(rows, histories, rates):
         rate = float(np.clip(rate, .01, 12))
         # Tomorrow's rolling 30-day burden: 29 known mock days + one forecast.
-        burden = float(series["case_rate"][-29:].sum() + rate)
+        burden = float(series["case_rate"][issue_index - 28:issue_index + 1].sum() + rate)
         predictions[row["id"]] = dict(next_day_case_rate=rate, rolling_burden=burden)
         burdens.append(max(0, math.floor(row["population"] * burden / 1000 + .5)))
     forecast_frame = frame.copy()

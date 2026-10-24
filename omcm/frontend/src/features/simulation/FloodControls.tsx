@@ -4,7 +4,7 @@ export function FloodControls({ psgc }: { psgc: string }) {
   const { scenario, updateFlood } = useAppStore();
   return (
     <label className="workspace-field">
-      Flood screen for optimized locations
+      Flood screen for clinic locations
       <select
         aria-label="Flood severity"
         value={scenario.floodOverrides[psgc] ?? "baseline"}

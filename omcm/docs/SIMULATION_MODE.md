@@ -2,103 +2,123 @@
 
 ## User flow and shared time
 
-Admin View → **30-day simulation** opens a side sheet over the same map.
-Select No intervention, Manual or Optimized to view that run's map. All three
-cards, chart series, logs and snapshots refer to the same viewed day. Playback
-advances them together, pauses at Days 8, 15 and 22, and stops on Day 30.
-Scrubbing reviews reached days only; earlier decisions cannot be edited. The
-side sheet can be collapsed to inspect the map while keeping clinics, colors and
-playback active.
+Admin View → **30-day simulation** opens a side sheet on the same map. Select
+No intervention, Manual or Optimized to view its heatmap. Cards, chart, logs and
+snapshots share one viewed day. Playback advances all scenarios, pauses at Days
+8, 15 and 22, and stops on Day 30. Scrubbing reviews reached days only. Collapse
+the sheet to retain the clinics, colors and timeline while inspecting the map.
 
-The reproducible experiment starts on 2026-10-24 in Manila time with seed 42.
-It projects all 681 barangays. Changing environmental assumptions or fleet size
-restarts all runs and cancels stale proposals. Fleet size is 1–10, matching the
-backend maximum. The baseline uses the agreed Balanced HNI factors and fixed
-baseline percentiles with a small deterministic daily morbidity increase.
+The reproducible experiment begins on 2026-10-24 in Manila time, seed 42, across
+681 barangays. Changing conditions or fleet size resets every run and cancels
+pending requests. The fleet is 1–10 clinics. Each scenario permits one placement
+per weekly window (1–7, 8–14, 15–21, 22–30), on its latest reached day. Placements
+persist until replaced; later decisions preserve earlier snapshots.
 
-## Scenarios
-
-| Scenario | Placement | Expected map behavior |
+| Scenario | Placement and evaluation | Map behavior |
 | --- | --- | --- |
-| No intervention | No clinic service | Need rises along the common morbidity projection; capped factors may plateau. |
-| Manual | Distinct eligible barangays chosen by the user | Host and nearby barangays lighten; other areas follow the baseline. |
-| Optimized | Actual authenticated FastAPI XGBoost/CP-SAT proposal, then explicit Apply | Multiple returned locations create simultaneous service areas. |
+| No intervention | Common baseline; no service | Deterministic morbidity growth raises HNI; capped factors can plateau. |
+| Manual | User chooses distinct sites; authenticated backend evaluates Apply | Host and reachable neighbors improve; other areas retain the common baseline. |
+| Optimized | Authenticated backend minimizes scenario HNI; user explicitly applies proposal | Multiple solver-selected service areas improve through the same evaluation used for Manual. |
 
-Draft markers are distinct from deployed markers. A connected proposal is
-required before optimized placement controls become available. The user may
-review/edit proposed sites for rehearsal; backend metrics describe the original
-proposal, not an independently solved edited draft. Manual placements remain
-local. Neither Apply nor playback publishes a schedule.
+Manual Apply now requires the connected service. Failed requests preserve the
+existing run; no local deductions substitute for a failed evaluation. Optimized
+locations are read-only; use Manual to try alternatives. Draft markers remain
+separate from applied markers. Neither scenario creates a publishable plan or
+changes approved public schedules. Credentials and public/admin routing remain
+unchanged.
 
-Each scenario permits one placement per weekly window (1–7, 8–14, 15–21, 22–30)
-on its latest reached day. Locations remain active until a later placement
-replaces them. Weekly windows permit a new decision; they do not automatically
-remove deployed clinics. Earlier snapshots are preserved when a later decision
-recalculates the remaining days.
+## Baseline and unchanged group weights
 
-## HNI policy and service deductions
+Both browser baseline and backend evaluation preserve the agreed six factors:
+35% morbidity, 30% hospital distance, 15% density, 10% municipal income class,
+5% clinic distance, 5% clinic provision deficit. Missing factors rescale the
+available weights. Flood risk adds no HNI weight. The baseline retains fixed
+percentile references and the existing deterministic daily morbidity increase.
+The correction changes service evaluation and placement objectives, not these
+percentages, source records, or trained model artifacts.
 
-The baseline reads `defaultNeedWeights()` from `healthcareNeed.ts`:
-35% morbidity, 30% hospital distance, 15% density, 10% income class,
-5% clinic distance and 5% clinic provision deficit. Missing factors rescale
-available weights. Flood hazard has no direct HNI term.
+The existing illness and appointment XGBoost models supply appointment demand
+for each synthetic simulation date. History generation is reused across the
+month for speed, but feature windows and rolling burden stop at each date's
+issue-day prefix. No future mock observations enter an earlier forecast. This
+is still a rehearsal using synthetic illness/weather, not a validated clinical
+or live weather forecast. Baseline HNI growth itself remains deterministic.
 
-For a barangay centroid within 3 km of an eligible host centroid, the modeled
-service fraction is:
+## One backend service deduction
 
-```text
-fraction = 0.35 × (1 − 0.5 × distanceKm / 3)
-scenario HNI = baseline HNI × (1 − fraction)
-```
+For each eligible host `j`, reach includes barangays whose centroids are within
+3 km **and** have a safe modeled adjacency path of at most 25 minutes. The same
+flood and land restrictions apply to Manual and Optimized. Border adjacency is
+not verified road access; distances and travel remain estimates. Road reference
+markers do not alter modeled paths.
 
-The host receives a 35% score reduction; the catchment edge receives 17.5%.
-Affected neighboring areas use centroid distance, not shared-border membership
-or verified road access. Outside 3 km the deduction is zero. Overlapping clinics
-use the strongest single fraction rather than adding deductions. The original
-factor percentages and baseline records remain intact. For example, baseline
-HNI 80 becomes 52 at the host. This is a modeled score adjustment, not removal
-of 35 percentage points from an HNI factor weight.
-
-Uncovered need carries forward a separate backlog:
+For an in-reach barangay `i`:
 
 ```text
-untreated demand index = min(100, baseline HNI + 0.15 × previous UHNI)
-UHNI = untreated demand index × (1 − fraction)
+rawFraction[i,j] = 0.35 × (1 − 0.5 × distanceKm[i,j] / 3)
+capacityScale[j] = min(1, 180 / total XGBoost appointment demand in j's catchment)
+serviceFraction[i] = max(rawFraction[i,j] × capacityScale[j]) over opened clinics
+scenarioHni[i] = baselineHni[i] × (1 − serviceFraction[i])
+overallHni = Σ(population[i] × scenarioHni[i]) / Σ(population[i])
 ```
 
-HNI, UHNI and population-weighted totals are planning indices, not counts of
-patients. Capacity-aware backend appointments and browser service fractions are
-different calculations. Host/neighbor deduction currently runs in the browser's
-shared `interventions.ts`; no backend 30-day deduction contract exists yet.
-Backend ownership is an explicit remaining architecture gap, not a verified
-feature. Changing that API/data model requires separate approval.
+The 35% host and 17.5% catchment-edge deductions are **ceilings**, attained when
+capacity covers catchment demand. Smaller capacity produces proportionately
+smaller deductions. Each barangay receives the strongest single reservation;
+service fractions are never added across overlapping clinics. Appointment demand
+is attributed only to the winning clinic. Each clinic stays within 180 modeled
+appointments and no barangay's demand is counted twice. Ties break by host ID,
+so reordering clinic IDs does not change scores.
 
-## Backend requests and operational context
+This is a conservative capacity reservation model. Overlap can leave reserved
+capacity unused; spare reservations are not redistributed. It does not claim
+optimal appointment scheduling or individual treatment outcomes.
 
-The optimized run calls authenticated `/api/planning/optimize` with fleet and
-supported municipality outbreak/flood conditions. It validates draft identity,
-XGBoost/Balanced provenance and returned locations. A response with fewer usable
-sites than requested gives an actionable error; no fabricated sites fill the gap.
-The planner forecasts the next real Manila day, not the selected synthetic
-future simulation day. A new weekly request therefore does not claim to be a
-week-ahead XGBoost forecast.
+Areas outside service retain baseline HNI. Uncovered need separately carries a
+backlog: `min(100, baselineHni + 0.15 × previousUHNI) × (1 − serviceFraction)`.
+The backend returns all 30 days' metrics and affected-barangay HNI patches. The
+browser renders those patches and checks that the map's population-weighted
+average equals the returned card value before accepting a placement. Colors
+share the same opacity; served areas no longer become darker just because an
+impact outline is present.
 
-Flood controls use no additional screen, the 25-year layer or the 100-year layer.
-They affect connected optimized planning exclusions; they do not add HNI weight
-or change the manual straight-line catchment. Road reference markers in the
-30-day rehearsal do not recompute road access. Operational model-link exclusions
-are configured in **Plan clinics**. No measured flood depth is available.
+## Optimization and fair comparisons
 
-## Files and verification
+The ordinary **Plan clinics** endpoint maximizes priority-weighted appointments.
+The **simulation** endpoint instead maximizes total population-weighted HNI
+reduction, using exactly the capacity-scaled fractions above. CP-SAT selects the
+requested number of eligible sites. It receives a real marginal-gain incumbent
+and the current feasible manual plan. The returned candidate is compared with
+those incumbents using unrounded HNI benefits; a time-limited or rounded solver
+result cannot replace a better manual comparison. Solver optimality, when
+reported, refers to the finite-precision CP-SAT objective.
 
-Core files: `forecasting/forecast.ts`, `forecasting/interventions.ts`,
-`forecasting/optimizer.ts`, `store/useForecastStore.ts`, simulation components,
-`useSimulationMap.ts`, and both map renderers. Optimization also reuses the
-service formula for its map preview. Scenario cards, selected-run details,
-chart, activity log, numbered markers and HNI/UHNI colors share those snapshots.
+The guarantee is **no worse HNI than the supplied feasible Manual plan on the
+selected optimization day**, with equal fleet, baseline, demand and constraints.
+A tie is valid. Reaching more barangays does not mathematically guarantee a
+larger reduction: population, baseline need, distance and capacity matter.
 
-The [current verification record](VERIFICATION.md) records unit and browser
-checks for rising baseline, host/neighbor impact, overlap, synchronized days,
-weekly history, a real backend proposal, manual-pretending-to-be-optimized
-rejection, fleet limits, markers and responsive layout. Google Maps live
-verification needs a configured key. Refreshing clears in-memory rehearsals.
+Locations remain held between decisions. Daily demand can change their ranking;
+new manual placements also change the comparison. The UI identifies the day a
+plan was optimized and flags changed manual locations. It does not claim a
+fixed plan stays optimal on every later day. Generate a new comparison in the
+next placement window. Two-decimal HNI cards show smaller capacity-limited gains.
+
+## API and ownership
+
+- `POST /api/planning/simulation/evaluate`: fleet, conditions and placement history → backend timeline.
+- `POST /api/planning/simulation/optimize`: those inputs plus selected day and manual comparison sites → locations, timeline, comparison HNI and solver status.
+
+Both require existing administrator authentication. Histories must contain one
+distinct eligible site per clinic and at most one placement per weekly window.
+Unknown municipalities, duplicate sites, unavailable/flooded sites and invalid
+counts/days are rejected. Model failures return 503, never invented placements.
+Proposal IDs are transient and cannot be approved through public scheduling.
+`/api/simulate` remains the separate legacy before/after comparison endpoint.
+
+The ordinary Plan clinics map preview retains its older geographic illustration
+and is explicitly labeled separately; its appointment planner is unchanged.
+Simulation backend ownership does not change that draft preview's API contract.
+
+See [API](API.md), [changed-file inventory](SIMULATION_HNI_FIX.md), and the
+[current verification record](VERIFICATION.md). Refresh clears rehearsals.

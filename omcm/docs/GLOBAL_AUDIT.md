@@ -58,20 +58,17 @@ search may use a verified facility across its boundary.
 
 ## Shared service impact, without changing weights
 
-Manual, optimized rehearsal and the real-plan map preview use the same
-`interventions.ts` formula: up to 35% HNI reduction at a host centroid, tapering
-to 17.5% at a 3 km centroid-distance edge. Areas beyond that reach receive no
-deduction. Multiple clinics use the strongest single effect, avoiding duplicate
-credit. Uncovered need separately carries 15% of the previous UHNI, capped at
-100 before service. Neither formula rewrites the six agreed factor percentages.
+The simulation HNI correction supersedes the audit's earlier browser-only
+service implementation. Manual and Optimized now use backend-owned,
+capacity-scaled host/neighbor deductions and one population-weighted HNI formula.
+The simulator optimizes that same HNI, keeping a feasible manual comparison if
+better. Agreed factor weights and trained artifacts remain unchanged. The
+ordinary Plan clinics preview remains a separately labeled geographic estimate.
 
-The three scenario histories share one day. At weekly placement windows a new
-plan may replace existing sites; otherwise locations remain active. No
-intervention follows the common increasing morbidity baseline. A manual plan
-changes its local catchments, while optimized locations affect multiple
-catchments together. A wider improvement is scenario-dependent: the same sites
-must produce the same result regardless of whether they were manually selected.
-The UI does not force optimized outcomes to beat every manual arrangement.
+See [SIMULATION_MODE.md](SIMULATION_MODE.md) for capacity reservations, overlap,
+selected-day guarantees and held-plan limitations; [SIMULATION_HNI_FIX.md](SIMULATION_HNI_FIX.md)
+records exact changed files. Equal sites produce equal service effects through
+both API paths; no arbitrary optimized bonus or count-based deduction is used.
 
 ## Proposal alignment and remaining limits
 
@@ -89,15 +86,15 @@ its UI field would not remove the need for a defined access rule.
 | Stable approved public visits | Authenticated stored-draft approval, protected same-day emergency revisions, read-only public refresh. |
 | Flood/road scenarios | Point-based 25-/100-year exclusion screens and model-link closures. Province links are adjacency estimates, not verified roads. |
 | Nightly automation | Next-day generation is user-triggered; no unattended scheduled job is claimed. |
-| Service deductions | Working browser formula and dynamic map. Backend-authoritative 30-day deductions remain unimplemented; adding that API contract requires data-model approval. |
+| Service deductions | Shared backend-owned 30-day evaluation and HNI objective, with capacity-scaled host/neighbor service. The additive API contract was approved; no storage migration. |
 | Durable public operation | Local persistent SQLite works; Vercel `/tmp` SQLite is temporary and unshared. A persistent deployment/storage arrangement remains necessary for durable shared publication. |
 
-The 30-day simulation uses deterministic morbidity growth rather than XGBoost
-for each simulated future day. Its 3 km service footprint ignores terrain and
-capacity; backend appointment assignment uses its own capacity and travel model.
-Flood options do not imply measured water depths. Blue outlines show flagged
-barangays, not exact inundation extent. Live Google Maps rendering needs a key;
-Leaflet is the browser verification renderer. All health data remains synthetic.
+The 30-day HNI baseline still uses deterministic morbidity growth. Its service
+scaling now uses dated mock XGBoost demand and modeled safe access; it remains a
+conservative reservation model, not validated treatment outcomes. Flood options
+do not imply measured depths. Blue outlines are flagged barangays, not exact
+inundation extent. Live Google Maps verification needs a key; local connected
+browser evidence uses Leaflet. All health/weather histories remain synthetic.
 
 ## Public/admin boundary
 

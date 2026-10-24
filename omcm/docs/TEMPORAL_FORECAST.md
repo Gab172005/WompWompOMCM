@@ -92,8 +92,10 @@ older undated drafts use the same date window.
 Published locations, assignments, hours and services flow to public schedules;
 draft notes and raw forecast features do not. See PUBLIC_VISITS.md for the public
 consumer update. Authentication and configured credentials remain unchanged.
-Automatic nightly scheduling, capacity/route unification of the separate 30-day browser
-simulation and connected planner remain pending. The endpoint/privacy review is documented in GLOBAL_AUDIT.md.
+Automatic nightly scheduling remains pending. The 30-day simulation now uses
+backend-owned capacity/access deductions and dated synthetic XGBoost demand; its
+HNI objective differs explicitly from the ordinary appointment planner. See
+SIMULATION_MODE.md and GLOBAL_AUDIT.md for the current contracts and limits.
 
 ## Exact file and logic inventory
 

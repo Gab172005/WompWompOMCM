@@ -398,9 +398,7 @@ export function LagunaGoogleMap({
           : isBarangay
             ? publicMode
               ? 0.45
-              : hasClinicImpact
-                ? 0.72
-                : 0.62
+              : 0.62
             : 0,
         strokeColor: isSelected
           ? "#102c43"
@@ -468,7 +466,7 @@ export function LagunaGoogleMap({
           : null;
         const draftImpact = activeMetric === "score" ? planningImpact?.get(barangay.psgc) : undefined;
         const valDisplay = projected
-          ? `Day ${forecastOverlay!.day} · ${simulationMetricLabels[forecastOverlay!.metric]}: ${simulationValue!.toFixed(1)}/100${forecastOverlay!.metric === "hni" ? ` · Baseline ${projected.hni.toFixed(1)}` : ""} · Estimate${projected.provisional ? " · Some data missing" : ""}`
+          ? `Day ${forecastOverlay!.day} · ${simulationMetricLabels[forecastOverlay!.metric]}: ${simulationValue!.toFixed(2)}/100${forecastOverlay!.metric === "hni" ? ` · Baseline ${projected.hni.toFixed(2)}` : ""} · Estimate${projected.provisional ? " · Some data missing" : ""}`
           : publicMode
             ? `Population: ${barangay.population.toLocaleString()} · Click for nearby clinics & hospitals`
             : draftImpact

@@ -25,7 +25,7 @@ export function SimulationPlayback() {
             ? "Pause on this day"
             : "Advance all scenarios; pauses at weekly placement windows"
         }
-        disabled={run.day === 30}
+        disabled={run.day === 30 || s.applyBusy || s.recommendBusy}
         onClick={() => useForecastStore.setState({ playing: !s.playing })}
       >
         {s.playing ? <Pause size={16} /> : <Play size={16} />}
@@ -51,7 +51,10 @@ export function SimulationPlayback() {
         />
       </label>
       <output>Day {run.day}/30</output>
-      <button disabled={run.day === 30} onClick={s.advance}>
+      <button
+        disabled={run.day === 30 || s.applyBusy || s.recommendBusy}
+        onClick={s.advance}
+      >
         Next day
       </button>
       <label>

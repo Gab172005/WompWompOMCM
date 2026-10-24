@@ -87,9 +87,7 @@ export function BarangayBoundaryLayer({
         ? 0.7
         : isPublic
           ? 0.45
-          : hasClinicImpact
-            ? 0.72
-            : 0.62,
+          : 0.62,
       color: isSelected
         ? "#102c43"
         : hasFloodImpact
@@ -154,7 +152,7 @@ export function BarangayBoundaryLayer({
               const record = overlay.records.get(b.psgc);
               const value =
                 overlay.metric === "hni" ? record?.scenarioHni : record?.uhni;
-              label.textContent = `${b.name}, ${b.municipality} · Day ${overlay.day} · ${simulationMetricLabels[overlay.metric]}: ${value?.toFixed(1) ?? "Unavailable"}/100${overlay.metric === "hni" && record ? ` · Baseline ${record.hni.toFixed(1)}` : ""} · Estimate${record?.provisional ? " · Some data missing" : ""}`;
+              label.textContent = `${b.name}, ${b.municipality} · Day ${overlay.day} · ${simulationMetricLabels[overlay.metric]}: ${value?.toFixed(2) ?? "Unavailable"}/100${overlay.metric === "hni" && record ? ` · Baseline ${record.hni.toFixed(2)}` : ""} · Estimate${record?.provisional ? " · Some data missing" : ""}`;
               return label;
             }
             if (current.current.publicMode) {

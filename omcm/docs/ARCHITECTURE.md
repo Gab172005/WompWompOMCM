@@ -47,18 +47,25 @@ solver status, saved draft ID and model provenance. Failed inference never
 substitutes browser-generated placements. Search is bounded; FEASIBLE is not a
 claim of proven global optimality.
 
-The 30-day browser rehearsal has its own deterministic morbidity projection;
-it is not the next-day XGBoost forecast repeated thirty times. Manual and
-Optimized share a 3 km centroid catchment and service deduction formula, with
-35% maximum host reduction, 17.5% at the edge, and strongest-effect overlap.
-The optimized scenario requires a real backend proposal before Apply. The
-clinic count is capped at 10 to match the API. See [simulation](SIMULATION_MODE.md).
+The 30-day rehearsal retains its deterministic Balanced HNI baseline. New
+`models/hni_simulation.py`, `services/hni_simulation.py` and authenticated
+simulation routes own dated XGBoost appointment demand, capacity-scaled service,
+per-barangay deductions and full timeline metrics. Manual Apply requests backend
+evaluation. Optimized generation minimizes population-weighted HNI rather than
+the ordinary planner's appointment objective. A feasible manual comparison and
+a marginal-gain plan provide solver incumbents; unrounded evaluation retains
+the better plan on the requested day. Held locations can rank differently later.
 
-The optimization map preview reuses the same illustrative service code after a
-real plan succeeds. It uses baseline map HNI for comparison; backend appointment
-and travel metrics remain independently labeled. No API or database schema was
-changed by this audit. Backend-authoritative 30-day deductions remain a gap;
-adding that contract requires data-model approval.
+`useForecastStore` stores these transient results, cancels stale requests and
+verifies the rendered map average against backend HNI. Optimized locations are
+read-only. Service uses the existing 3 km taper, now limited by capacity and safe
+modeled access. Both renderers use consistent fill opacity. No database migration
+or model retraining is needed. The additive API contract was explicitly approved
+for this correction. See [simulation](SIMULATION_MODE.md) and [API](API.md).
+
+The ordinary optimization map preview retains its geographic illustration and
+is labeled separately from the capacity-aware simulation. Its saved draft,
+appointment objective and publication workflow are unchanged.
 
 ## Map rendering and UI
 

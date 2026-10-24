@@ -1,18 +1,29 @@
-import { defaultConfig } from "../defaults";
 import { LAGUNA_BARANGAYS } from "../providedData";
-import type { Config, Plan } from "../../types";
 import type { SimulationScenario } from "../../types/simulation";
-import type { Assignment } from "./interventions";
+import type { Assignment, DailyMetrics } from "./interventions";
+
+export interface BackendDayImpact {
+  day: number;
+  impacts: Record<string, { scenarioHni: number; serviceFraction: number }>;
+  metrics: DailyMetrics;
+}
+export interface SimulationEvaluation {
+  days: BackendDayImpact[];
+  notes: string[];
+}
+export interface SimulationBackendProposal {
+  proposal_id: string;
+  day: number;
+  locations: Assignment[];
+  evaluation: SimulationEvaluation;
+  solver_status: string;
+  optimal: boolean;
+  comparison_hni: number | null;
+  notes: string[];
+}
 export interface Recommendation extends Assignment {
   name: string;
   municipality: string;
-  lat: number;
-  lng: number;
-  coveredBarangays: number;
-  reason: string;
-  servedAppointments: number;
-  dailyCapacity: number;
-  assignedBarangays: string[];
 }
 export interface AllocationProposal {
   day: number;
@@ -21,106 +32,72 @@ export interface AllocationProposal {
   planId: string;
   solverStatus: string;
   optimal: boolean;
-  demandServedPercent: number;
-  capacityUtilization: number;
-  averageTravelMinutes: number;
-  totalAppointments: number;
-  servedAppointments: number;
+  evaluation: SimulationEvaluation;
+  comparisonHni: number | null;
   notes: string[];
 }
 export function buildSimulationPlacementRequest(
   clinicCount: number,
   conditions: SimulationScenario,
-): Config {
-  const municipalityByPsgc = new Map(
-    LAGUNA_BARANGAYS.map((barangay) => [
-      barangay.municipalityPsgc,
-      barangay.municipality,
-    ]),
-  );
-  const municipalityOutbreakMultipliers = Object.fromEntries(
-    Object.entries(conditions.morbiditySpikes).flatMap(([psgc, multiplier]) => {
-      const name = municipalityByPsgc.get(psgc);
-      return name ? [[name, multiplier]] : [];
-    }),
-  );
-  const municipalityFloodLevels = Object.fromEntries(
-    Object.entries(conditions.floodOverrides).flatMap(([psgc, level]) => {
-      const name = municipalityByPsgc.get(psgc);
-      return name && (level === "moderate" || level === "severe")
-        ? [[name, level]]
-        : [];
-    }),
-  );
+  day: number,
+  history: Record<number, Assignment[]>,
+  comparisonSites: string[],
+) {
   return {
-    ...defaultConfig,
-    // The province endpoint enforces its Balanced HNI policy independently;
-    // this legacy field is required by the shared pilot request schema.
-    weights: { ...defaultConfig.weights },
     clinic_count: clinicCount,
-    capacity: 180,
-    max_travel_minutes: 25,
-    eligible_sites: null,
-    flooded_sites: [],
-    closed_roads: [],
-    outbreak_barangays: [],
-    outbreak_multiplier: 1,
-    municipality_outbreak_multipliers: municipalityOutbreakMultipliers,
-    municipality_flood_levels: municipalityFloodLevels,
-    manual_sites: null,
-    flood_level: "none",
+    conditions,
+    day,
+    history,
+    comparison_sites: comparisonSites,
   };
 }
-export function proposalFromBackendPlan(
-  plan: Plan,
+
+export function proposalFromBackendSimulation(
+  response: SimulationBackendProposal,
   day: number,
   clinicCount: number,
 ): AllocationProposal {
   if (
-    !plan.plan_id ||
-    !plan.notes.some((note) => note.includes("XGBoost")) ||
-    !plan.notes.some((note) => note.includes("Agreed Balanced HNI"))
+    !response.proposal_id ||
+    response.day !== day ||
+    !Array.isArray(response.locations) ||
+    response.locations.length !== clinicCount ||
+    !Array.isArray(response.evaluation?.days) ||
+    response.evaluation.days.length !== 30 ||
+    response.evaluation.days.some(
+      (value, index) =>
+        value?.day !== index + 1 ||
+        !Number.isFinite(value.metrics?.hni) ||
+        !Number.isFinite(value.metrics?.baselineHni),
+    ) ||
+    !Array.isArray(response.evaluation.notes) ||
+    !Array.isArray(response.notes)
   )
     throw new Error(
-      "The planning service did not return a complete XGBoost and CP-SAT allocation. Please retry or contact your system administrator.",
+      "The simulation service returned an incomplete proposal. Generate fresh locations.",
     );
-  if (plan.optimized.clinics.length !== clinicCount)
-    throw new Error(
-      `The service found ${plan.optimized.clinics.length} usable locations for ${clinicCount} clinics. Reduce the clinic count or relax the access constraints, then generate a fresh plan.`,
-    );
-  const barangays = new Map(LAGUNA_BARANGAYS.map((barangay) => [barangay.psgc, barangay]));
-  const recommendations = plan.optimized.clinics.map((clinic, index) => {
-    const barangay = barangays.get(clinic.barangay_id);
+  const barangays = new Map(LAGUNA_BARANGAYS.map((b) => [b.psgc, b]));
+  const recommendations = response.locations.map((location) => {
+    const barangay = barangays.get(location.psgc);
     if (!barangay)
       throw new Error(
-        "The planning service returned a location outside the Laguna barangay dataset.",
+        "The simulation service returned a location outside Laguna.",
       );
     return {
-      clinicId: `MC-${index + 1}`,
-      psgc: clinic.barangay_id,
+      ...location,
       name: barangay.name,
       municipality: barangay.municipality,
-      lat: clinic.lat,
-      lng: clinic.lng,
-      coveredBarangays: clinic.assignments.length,
-      reason: clinic.reason,
-      servedAppointments: clinic.served,
-      dailyCapacity: clinic.daily_capacity,
-      assignedBarangays: clinic.assignments.map((assignment) => assignment.name),
     };
   });
   return {
     day,
     k: clinicCount,
     recommendations,
-    planId: plan.plan_id,
-    solverStatus: plan.optimized.solver_status,
-    optimal: plan.optimized.optimal,
-    demandServedPercent: plan.optimized.metrics.demand_served_pct,
-    capacityUtilization: plan.optimized.metrics.capacity_utilization,
-    averageTravelMinutes: plan.optimized.metrics.average_travel_minutes,
-    totalAppointments: plan.optimized.metrics.total_demand,
-    servedAppointments: plan.optimized.metrics.residents_served,
-    notes: plan.notes,
+    planId: response.proposal_id,
+    solverStatus: response.solver_status,
+    optimal: response.optimal,
+    evaluation: response.evaluation,
+    comparisonHni: response.comparison_hni,
+    notes: [...response.notes, ...response.evaluation.notes],
   };
 }

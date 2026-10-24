@@ -47,17 +47,22 @@ OpenStreetMap works without a key. Have desktop and 390px screenshots available.
 
 XGBoost is the chosen implementation; the proposal does not name it. The
 proposal describes transparent estimation plus maximal covering with capacity
-and maximum travel time. The 30-day rehearsal is a deterministic experiment,
-while the connected model forecasts tomorrow from synthetic history. Clinic
+and maximum travel time. The 30-day rehearsal retains deterministic HNI growth and now evaluates dated
+XGBoost demand for each mock day. The ordinary connected planner forecasts
+tomorrow from synthetic history. Clinic
 service reduces scenario scores, not the agreed HNI factor percentages. Host
-impact reaches 35%, tapering to 17.5% at a 3 km centroid edge; overlaps take the
+impact has a 35% ceiling, tapering to 17.5% at a 3 km centroid edge before
+capacity scaling; safe modeled access also applies. Overlaps take the
 strongest effect.
 
 Flood options select mapped 25-/100-year scenarios (about 4%/1% annual chance),
 not water depths. Barangay outlines do not establish exact flood extents. Travel
 is adjacency-based, not verified driving time. Model metrics measure fictional
 training generators; no clinical validity, live weather, GPS or automatic
-nightly scheduling is claimed. Service deductions currently run in the browser.
+nightly scheduling is claimed. Simulation service deductions now run on the backend. Its objective minimizes
+the same population-weighted HNI shown on the map, with a feasible manual
+comparison retained when better on the selected day. Held plans need not stay
+optimal as demand or manual decisions change.
 The final deployment decision belongs to LGU officers.
 
 Use [current verification](VERIFICATION.md) for exact results and
