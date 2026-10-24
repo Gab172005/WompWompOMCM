@@ -27,6 +27,12 @@
   background: #fff;
   box-shadow: var(--map-shadow);
 }
+.map-search-card:focus-within {
+  box-shadow: var(--map-shadow), 0 0 0 2px var(--map-accent);
+}
+.workspace .map-search-card .map-icon-button:focus-visible {
+  outline-offset: -3px;
+}
 .workspace .map-icon-button {
   display: inline-flex;
   align-items: center;
@@ -53,6 +59,7 @@
   display: flex;
   flex: 1;
   align-items: center;
+  height: 44px;
   gap: 0;
   width: auto;
   min-width: 0;
@@ -62,15 +69,20 @@
   margin: 0;
 }
 .workspace .map-search-card .workspace-search input {
-  width: 100%;
+  flex: 1 1 0;
+  width: 0;
   min-width: 0;
   height: 44px;
+  margin: 0;
   border: 0;
   padding: 0 8px;
-  border-radius: 4px;
+  border-radius: 0;
   background: transparent;
+  outline: none;
+  box-shadow: none;
   color: #202124;
   font-size: 16px;
+  line-height: 24px;
 }
 .workspace-search input::placeholder {
   color: var(--map-muted);

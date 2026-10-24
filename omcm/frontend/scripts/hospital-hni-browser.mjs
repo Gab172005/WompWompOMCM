@@ -60,10 +60,67 @@ try {
     "Verified hospital",
   );
   await mkdir(`${frontend}/test-results`, { recursive: true });
+  async function verifySearchAlignment(name) {
+    const input = page.getByRole("combobox", {
+      name: "Find municipality or barangay",
+    });
+    await input.focus();
+    const metrics = await page.locator(".map-search-card").evaluate((card) => {
+      const input = card.querySelector("input");
+      const bounds = (element) => {
+        const rect = element.getBoundingClientRect();
+        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+      };
+      return {
+        card: bounds(card),
+        form: bounds(card.querySelector("form")),
+        input: bounds(input),
+        inputMargin: getComputedStyle(input).margin,
+        formAlign: getComputedStyle(card.querySelector("form")).alignItems,
+        buttons: [...card.querySelectorAll(".map-icon-button")].map(bounds),
+        inputOutline: getComputedStyle(input).outlineStyle,
+        cardShadow: getComputedStyle(card).boxShadow,
+      };
+    });
+    expect(metrics.inputOutline).toBe("none");
+    expect(metrics.cardShadow).toContain("rgb(26, 115, 232)");
+    const center = metrics.card.y + metrics.card.height / 2;
+    const controls = [metrics.input, ...metrics.buttons].sort(
+      (a, b) => a.x - b.x,
+    );
+    for (const [index, control] of controls.entries()) {
+      expect(control.height).toBe(44);
+      expect(
+        Math.abs(control.y + control.height / 2 - center),
+        JSON.stringify(metrics),
+      ).toBeLessThan(0.5);
+      expect(control.x).toBeGreaterThanOrEqual(metrics.card.x);
+      expect(control.x + control.width).toBeLessThanOrEqual(
+        metrics.card.x + metrics.card.width,
+      );
+      if (index)
+        expect(
+          controls[index - 1].x + controls[index - 1].width,
+        ).toBeLessThanOrEqual(control.x + 0.5);
+    }
+    await page.screenshot({
+      path: `${frontend}/test-results/search-alignment-${name}.png`,
+      clip: {
+        x: metrics.card.x - 4,
+        y: metrics.card.y - 4,
+        width: metrics.card.width + 8,
+        height: metrics.card.height + 8,
+      },
+    });
+    await input.press("Escape");
+  }
+  await verifySearchAlignment("public-empty");
   const publicSearch = page.getByRole("combobox", {
     name: "Find municipality or barangay",
   });
   await publicSearch.fill("Pangil");
+  await verifySearchAlignment("public-filled");
+  await publicSearch.press("ArrowDown");
   await expect(
     page.getByRole("option", { name: /^Pangil Municipality/ }),
   ).toBeVisible();
@@ -100,7 +157,11 @@ try {
   const search = page.getByRole("combobox", {
     name: "Find municipality or barangay",
   });
+  await page.getByRole("button", { name: "Clear municipality search" }).click();
+  await verifySearchAlignment("admin-empty");
   await search.fill("Pangil");
+  await verifySearchAlignment("admin-filled");
+  await search.press("ArrowDown");
   await page.getByRole("option", { name: /^Pangil Municipality/ }).click();
   const selection = page.getByRole("region", { name: "Selected place" });
   await expect(selection).toContainText(
@@ -255,6 +316,10 @@ try {
   await page.screenshot({
     path: `${frontend}/test-results/hospital-hni-desktop.png`,
   });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await verifySearchAlignment("mobile-390");
+  await page.setViewportSize({ width: 320, height: 740 });
+  await verifySearchAlignment("mobile-320");
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(selection).toBeVisible();
   const mobileSearch = await page.locator(".map-search-card").boundingBox();
