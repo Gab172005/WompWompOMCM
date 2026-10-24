@@ -59,6 +59,7 @@ def audit(actor=Depends(require_admin)):
 @router.get("/api/health")
 def health():
     return dict(status="ok", synthetic=True, today=today().isoformat(), demo_auth=True,
+                storage=repo.storage_info(),
                 admin_configured=os.getenv("OMCM_DEMO_AUTH", "false").lower() == "true" and bool(os.getenv("OMCM_ADMIN_USERNAME")) and len(os.getenv("OMCM_ADMIN_PASSWORD", "")) >= 12)
 
 

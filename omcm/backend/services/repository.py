@@ -2,14 +2,45 @@
 import json
 import os
 import sqlite3
+import logging
+import tempfile
+from pathlib import Path
 from datetime import datetime, timezone
 from uuid import uuid4
 from contextlib import contextmanager
 
 
+def database_path():
+    """Use writable scratch storage for relative paths on Vercel.
+
+    Keep explicit absolute locations and ordinary local/server paths intact.
+    A Vercel scratch database is a per-instance demo, never durable storage.
+    """
+    configured = (os.getenv("OMCM_DATABASE_PATH") or "omcm.db").strip() or "omcm.db"
+    if configured == ":memory:":
+        return configured
+    path = Path(configured)
+    if os.getenv("VERCEL") == "1" and not path.is_absolute():
+        path = Path(tempfile.gettempdir()) / "omcm" / path.name
+    return path
+
+
+def storage_info():
+    path = database_path()
+    temporary = path == ":memory:" or (
+        os.getenv("VERCEL") == "1"
+        and isinstance(path, Path)
+        and path.resolve().is_relative_to(Path(tempfile.gettempdir()).resolve())
+    )
+    return {"engine": "sqlite", "temporary": temporary}
+
+
 @contextmanager
 def connect():
-    connection = sqlite3.connect(os.getenv("OMCM_DATABASE_PATH", "omcm.db"), timeout=15)
+    path = database_path()
+    if isinstance(path, Path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(path, timeout=15)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
     try:
@@ -20,6 +51,12 @@ def connect():
 
 
 def initialize():
+    if storage_info()["temporary"]:
+        logging.getLogger(__name__).warning(
+            "Using temporary SQLite demo storage. Plans, schedules and audit "
+            "records are not shared across Vercel instances or retained across "
+            "restarts. Use a persistent database for durable server publication."
+        )
     with connect() as db:
         db.executescript("""
         CREATE TABLE IF NOT EXISTS plans (id TEXT PRIMARY KEY, payload TEXT NOT NULL, created_at TEXT NOT NULL);
