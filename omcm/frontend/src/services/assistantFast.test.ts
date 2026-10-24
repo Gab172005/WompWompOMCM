@@ -28,7 +28,16 @@ describe("Fast, grounded assistant requests", () => {
   ])("handles navigation directly: %s", (text) => {
     useAppStore.getState().signInAdmin("test");
     expect(run(text)?.text).toContain("Opened 30-day simulation");
-    expect(navigate).toHaveBeenCalledWith("/simulator");
+    expect(navigate).not.toHaveBeenCalled();
+    expect(useAppStore.getState().panel).toBe("simulation");
+  });
+  it("explains the agreed HNI and the shared simulation profile", () => {
+    const text = run("Explain the need score")?.text;
+    expect(text).toContain("Illness rate (sample data): 35%");
+    expect(text).toContain("People per square kilometre: 15%");
+    expect(text).toContain("same Balanced weights");
+    expect(text).not.toContain("Disaster risk level:");
+    expect(execute).not.toHaveBeenCalled();
   });
   it("retrieves a real place and its nearest facilities in one local turn", () => {
     const reply = run("Show Los Baños and the nearest hospitals");

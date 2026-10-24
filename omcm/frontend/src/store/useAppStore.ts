@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { isBrowserDemo } from "../services/api";
 import type {
   ClinicPlan,
   PublishedSchedule,
@@ -139,7 +140,9 @@ export const useAppStore = create<AppState>()(
       loginModalOpen: false,
       pendingAdminPanel: null,
       selectedScheduleDate: getManilaToday(),
-      publishedSchedules: createInitialPublishedSchedules(),
+      publishedSchedules: isBrowserDemo()
+        ? createInitialPublishedSchedules()
+        : {},
       selectedPsgc: null,
       selectedBarangayPsgc: null,
       selectionRevision: 0,
@@ -319,6 +322,13 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "omcm-workspace-v1",
+      merge: (saved, current) => ({
+        ...current,
+        ...(saved as Partial<AppState>),
+        ...(!isBrowserDemo()
+          ? { adminUser: null, approvedPlan: null, publishedSchedules: {} }
+          : {}),
+      }),
       partialize: (s) => ({
         approvedPlan: s.approvedPlan,
         publishedSchedules: s.publishedSchedules,

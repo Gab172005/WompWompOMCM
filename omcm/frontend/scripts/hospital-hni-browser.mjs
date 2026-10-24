@@ -62,13 +62,16 @@ try {
     "fill",
     "#d1d5db",
   );
-  await expect(page.locator(".forest-land-marker")).toHaveCount(1);
+  await expect(page.locator(".forest-land-marker")).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Map legend" })).toContainText(
     "Verified hospital",
   );
   await mkdir(`${frontend}/test-results`, { recursive: true });
-  await page.locator(".forest-land-marker").hover();
-  const forestLabel = page.locator(".forest-land-label");
+  await page.locator(".forest-land-area").hover();
+  const forestLabel = page.locator(".laguna-map-tooltip").filter({
+    hasText: "Sierra Madre Mountains Forest Land",
+  });
+  await expect(forestLabel).toBeVisible();
   const normalLabel = await forestLabel.screenshot({
     animations: "disabled",
     path: `${frontend}/test-results/map-label-over-mask.png`,
@@ -353,7 +356,8 @@ try {
     exact: true,
   });
   await expect(summary).toBeVisible();
-  await expect(summary).toContainText("Some data is missing in 2 barangays");
+  await expect(summary).not.toContainText("Some data is missing");
+  await expect(summary).toContainText("does not contribute to this HNI");
   const expected = await page.evaluate(async () => {
     const data = await import("/src/services/providedData.ts");
     const barangay = data.LAGUNA_BARANGAYS.find(
@@ -411,7 +415,8 @@ try {
       exact: true,
     }),
   ).toHaveAttribute("value", String(expected.barangay.needScore));
-  await expect(detail).toContainText("Share of score factors available85%");
+  await expect(detail).toContainText("Share of score factors available100%");
+  await expect(detail).toContainText("All six Balanced HNI factors are available");
   await expect(detail).toContainText(expected.barangay.nearestHospital.name);
   await expect(detail).toContainText(
     `${expected.barangay.nearestHospital.distanceKm.toFixed(2)} km straight-line distance`,
@@ -525,16 +530,12 @@ try {
     exact: true,
   });
   await expect(planner).toBeVisible();
-  await planner
-    .getByRole("button", { name: "Generate recommendations", exact: true })
-    .click();
-  await expect(planner.getByRole("status").first()).toContainText(
-    "Suggested locations refreshed",
-  );
-  await expect(planner).toContainText(
-    "Municipality’s estimated healthcare need",
-  );
-  await expect(planner).toContainText("Up to");
+  await expect(planner).toContainText("Los Baños–Bay · 20-barangay pilot");
+  await expect(
+    planner.getByRole("region", { name: "Backend allocation results" }),
+  ).toHaveCount(0);
+  // This explicit browser-demo suite verifies the map and the empty planner.
+  // The connected suite generates real allocations with its isolated backend.
   await page
     .getByRole("button", { name: "30-day simulation", exact: true })
     .click();

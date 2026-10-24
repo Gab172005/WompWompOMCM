@@ -2,6 +2,15 @@ import { requestFeedback } from "./requestFeedback";
 const base = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 let authorization = "";
 let browserDemo = import.meta.env.VITE_DEMO_MODE === "true";
+export class BackendApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "BackendApiError";
+  }
+}
 export function enableBrowserDemo() {
   browserDemo = true;
   authorization = "";
@@ -21,6 +30,9 @@ export function setCredentials(username: string, password: string) {
 export function clearCredentials() {
   authorization = "";
 }
+export function hasCredentials() {
+  return Boolean(authorization);
+}
 export async function api<T>(
   path: string,
   body?: unknown,
@@ -32,8 +44,20 @@ export async function api<T>(
     signal?.throwIfAborted();
     return data as T;
   }
+  return backendApi<T>(path, body, signal);
+}
+
+/** Always reaches FastAPI, including when the rest of the app uses demo mode. */
+export async function backendApi<T>(
+  path: string,
+  body?: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
   const response = await fetch(`${base}/api${path}`, {
     method: body === undefined ? "GET" : "POST",
+    // Authentication uses the explicit in-memory header, not browser-managed
+    // credentials or a native Basic-auth prompt after a rejected sign-in.
+    credentials: "omit",
     signal,
     headers: {
       ...(body === undefined ? {} : { "Content-Type": "application/json" }),
@@ -50,12 +74,16 @@ export async function api<T>(
   try {
     data = await response.json();
   } catch {
-    throw new Error(
+    throw new BackendApiError(
+      response.status,
       "We could not read the planning service’s response. Please try again. If the problem continues, contact your system administrator.",
     );
   }
   if (!response.ok) {
-    throw new Error(requestFeedback(path, response.status, data?.detail));
+    throw new BackendApiError(
+      response.status,
+      requestFeedback(path, response.status, data?.detail),
+    );
   }
   return data as T;
 }

@@ -28,19 +28,17 @@ import {
 } from "../../frontend/src/services/providedData";
 
 const PRODUCTION: Record<NeedFactor, number> = {
-  morbidity: 0.25,
+  morbidity: 0.35,
   hospitalAccess: 0.3,
-  disasterRisk: 0.15,
-  density: 0.1,
+  density: 0.15,
   incomeClass: 0.1,
   clinicDistance: 0.05,
   clinicProvision: 0.05,
 };
 const ALTERNATIVE: Record<NeedFactor, number> = {
-  morbidity: 0.2,
+  morbidity: 0.3,
   hospitalAccess: 0.4,
-  disasterRisk: 0.15,
-  density: 0.05,
+  density: 0.1,
   incomeClass: 0.1,
   clinicDistance: 0.05,
   clinicProvision: 0.05,
@@ -153,7 +151,7 @@ const factorSum = (b: { needContributions: Record<NeedFactor, number | null> }) 
 
 describe("Healthcare need weights", () => {
   it("freezes the production weights at 1 and keeps hospital access", () => {
-    expect(HEALTHCARE_NEED_VERSION).toBe("barangay-healthcare-need-v3");
+    expect(HEALTHCARE_NEED_VERSION).toBe("barangay-healthcare-need-v4-balanced");
     expect(defaultNeedWeights()).toEqual(PRODUCTION);
     for (const [key, factor] of Object.entries(HEALTHCARE_NEED_FACTORS))
       expect(factor.weight).toBe(PRODUCTION[key as NeedFactor]);
@@ -162,6 +160,7 @@ describe("Healthcare need weights", () => {
       "Fewer mapped clinics per resident",
     );
     expect(Object.keys(HEALTHCARE_NEED_FACTORS)).not.toContain("urbanRural");
+    expect(Object.keys(HEALTHCARE_NEED_FACTORS)).not.toContain("disasterRisk");
     expect(
       Object.values(HEALTHCARE_NEED_FACTORS).reduce(
         (sum, factor) => sum + factor.weight,
@@ -184,12 +183,13 @@ describe("Healthcare need weights", () => {
     expect(() => call({ ...PRODUCTION, density: 0.2 })).toThrow(
       "must be non-negative and total 1",
     );
+    expect(() => call({ ...PRODUCTION, disasterRisk: 0.15 } as Record<NeedFactor, number>)).toThrow("Unknown healthcare need factor");
     // A complete identical copy is accepted; partial overrides are completed.
     expect(call({ ...PRODUCTION }).map((b) => b.needScore)).toEqual(
       computeBarangayHealthcareNeed(rows, [hospital]).map((b) => b.needScore),
     );
     expect(
-      call({ ...PRODUCTION, disasterRisk: 0.2, density: 0.05 }).map(
+      call({ ...PRODUCTION, morbidity: 0.4, density: 0.1 }).map(
         (b) => b.needCoverage,
       ),
     ).toEqual([90, 90, 90]);
@@ -221,25 +221,21 @@ describe("Barangay healthcare need model", () => {
     expect(scored.map((b) => b.needRank)).toEqual([3, 2, 1]);
     for (const b of scored) expect(factorSum(b)).toBeCloseTo(b.needScore, 0);
   });
-  it("rescales risk coverage and keeps invalid risk unavailable", () => {
-    const invalidRiskRows = rows.map((b) => ({
-      ...b,
-      disasterRisk: b.psgc === "B" ? Number.NaN : b.disasterRisk,
+  it("keeps hazard values out of HNI scores, coverage and ranking", () => {
+    const baseline = computeBarangayHealthcareNeed(rows, [hospital]);
+    const scores = (records: typeof baseline) => records.map((b) => ({
+      score: b.needScore, rank: b.needRank, coverage: b.needCoverage,
+      provisional: b.needProvisional, factors: b.needFactors,
+      contributions: b.needContributions,
     }));
-    const scored = computeBarangayHealthcareNeed(invalidRiskRows, [hospital]);
-    expect(scored[1].needCoverage).toBe(75);
-    expect(scored[1].needFactors.disasterRisk).toBeNull();
-    expect(scored[1].needContributions.disasterRisk).toBeNull();
-    expect(scored[1].needScore).toBe(50);
-    const outOfRange = computeBarangayHealthcareNeed(
-      rows.map((b) => ({
-        ...b,
-        disasterRisk: b.psgc === "B" ? 101 : b.disasterRisk,
-      })),
-      [hospital],
-    )[1];
-    expect(outOfRange.needCoverage).toBe(75);
-    expect(outOfRange.needFactors.disasterRisk).toBeNull();
+    for (const disasterRisk of [0, 100, null, Number.NaN, -1, 101]) {
+      const result = computeBarangayHealthcareNeed(
+        rows.map((b) => ({ ...b, disasterRisk })), [hospital],
+      );
+      expect(scores(result)).toEqual(scores(baseline));
+      expect(result[0].needFactors).not.toHaveProperty("disasterRisk");
+      expect(result[0].needContributions).not.toHaveProperty("disasterRisk");
+    }
   });
   it("uses Haversine kilometers and code-point ordering for tied raw IDs", () => {
     expect(distanceKm({ lat: 0, lng: 0 }, { lat: 0, lng: 1 })).toBeCloseTo(
@@ -285,7 +281,6 @@ describe("Barangay healthcare need model", () => {
     ]);
     expect(scored[0].needFactors).toMatchObject({
       morbidity: 0,
-      disasterRisk: 0,
       density: 0,
       hospitalAccess: 0,
       incomeClass: 0,
@@ -302,32 +297,16 @@ describe("Barangay healthcare need model", () => {
     expect(scored.map((b) => b.needScore)).toEqual([3.8, 48.8, 97.5]);
     expect(scored.map((b) => b.needRank)).toEqual([3, 2, 1]);
   });
-  it("rescales a missing disaster risk instead of treating it as zero", () => {
+  it("marks missing agreed inputs provisional without treating them as zero", () => {
     const missing = computeBarangayHealthcareNeed(
-      rows.map((b) => ({
-        ...b,
-        disasterRisk: b.psgc === "B" ? null : b.disasterRisk,
-      })),
+      rows.map((b) => ({ ...b, incomeClass: b.psgc === "B" ? null : b.incomeClass })),
       [hospital],
     )[1];
-    const zero = computeBarangayHealthcareNeed(
-      rows.map((b) => ({
-        ...b,
-        disasterRisk: b.psgc === "B" ? 0 : b.disasterRisk,
-      })),
-      [hospital],
-    )[1];
-    expect(missing).toMatchObject({
-      needCoverage: 75,
-      needProvisional: true,
-    });
-    expect(missing.needContributions.disasterRisk).toBeNull();
-    // B without risk: the 75% that remains is rescaled, so all-50 inputs stay 50.
+    // Unavailable income (10%) and clinic evidence (10%) leave 80% coverage.
+    expect(missing.needCoverage).toBe(80);
+    expect(missing.needProvisional).toBe(true);
+    expect(missing.needContributions.incomeClass).toBeNull();
     expect(missing.needScore).toBe(50);
-    // Zero risk is observed, while the absent clinic snapshot still excludes 10%.
-    expect(zero.needScore).toBe(41.7); // (50 × 0.75 + 0 × 0.15) / 0.90
-    expect(zero.needProvisional).toBe(true);
-    expect(zero.needCoverage).toBe(90);
   });
   it("withholds only clinic factors when the snapshot is invalid or missing", () => {
     const clinics = [clinic({ lat: 0, lng: 0, barangayPsgc: "B", id: "node/9" })];
@@ -582,7 +561,7 @@ describe("Barangay healthcare need model", () => {
       expect(defaultNeedWeights()).not.toHaveProperty("urbanRural");
     }
   });
-  it("keeps income observed-class min–max scaling and rejects invalid risk", () => {
+  it("keeps income observed-class min–max scaling independent of hazards", () => {
     expect(incomeClassOrdinal(" 3rd CLASS ")).toBe(3);
     expect(incomeClassOrdinal("unverified")).toBeNull();
     expect(incomeClassOrdinal(null)).toBeNull();
@@ -606,7 +585,7 @@ describe("Barangay healthcare need model", () => {
       [hospital],
       dataset([clinic({ id: "node/income", lat: 0, lng: 1, barangayPsgc: "B" })]),
     )[0];
-    // Income alone is unavailable, so the other six factors cover 90%.
+    // Income alone is unavailable, so the other five factors cover 90%.
     expect(withMissingIncome).toMatchObject({
       needCoverage: 90,
       needProvisional: true,
@@ -614,8 +593,8 @@ describe("Barangay healthcare need model", () => {
     const invalidRisk = computeBarangayHealthcareNeed(
       [{ ...rows[0], disasterRisk: 101 }], [],
     )[0];
-    expect(invalidRisk.needFactors.disasterRisk).toBeNull();
-    expect(invalidRisk.needCoverage).toBe(45); // no hospitals (30%), clinics (10%) or risk (15%)
+    expect(invalidRisk.needFactors).not.toHaveProperty("disasterRisk");
+    expect(invalidRisk.needCoverage).toBe(60); // only hospitals (30%) and clinics (10%) are missing
     expect(invalidRisk.needProvisional).toBe(true);
   });
   it("keeps tied percentiles and competition ranking independent of input order", () => {
@@ -671,7 +650,6 @@ describe("Supplied 681 barangays with their clinic bundle", () => {
       expect(barangayMetric(b, "score")).toBe(b.needScore);
       expect(Object.keys(b.needFactors)).toEqual([
         "morbidity",
-        "disasterRisk",
         "density",
         "hospitalAccess",
         "incomeClass",
@@ -689,7 +667,7 @@ describe("Supplied 681 barangays with their clinic bundle", () => {
       );
       expect(factorSum(b)).toBeCloseTo(b.needScore, 0);
       expect(b.needProvisional).toBe(
-        b.disasterRisk === null || !snapshotUsable,
+        !snapshotUsable,
       );
       expect(b.needCoverage).toBe(
         Math.round(Object.entries(PRODUCTION).reduce(
@@ -773,7 +751,7 @@ describe("Supplied 681 barangays with their clinic bundle", () => {
     expect(alternative.map((b) => b.needCoverage)).toEqual(
       production.map((b) => b.needCoverage),
     );
-    // A missing risk excludes 15 points of weight under either weight set.
+    // Missing hazard context excludes no weight under either HNI profile.
     const missingRisk = alternative.filter((b) => b.disasterRisk === null);
     expect(missingRisk.map((b) => b.psgc)).toEqual([
       "403421002",
@@ -781,7 +759,7 @@ describe("Supplied 681 barangays with their clinic bundle", () => {
       "403427008",
       "403427014",
     ]);
-    for (const b of missingRisk) expect(b.needCoverage).toBe(85);
+    for (const b of missingRisk) expect(b.needCoverage).toBe(100);
     expect(
       alternative.filter(
         (b, index) => b.needScore !== production[index].needScore,

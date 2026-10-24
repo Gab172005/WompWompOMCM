@@ -42,6 +42,7 @@ export function ClinicMarkers({
             key={c.clinicId}
             position={[pos.lat, pos.lng]}
             icon={icon}
+            zIndexOffset={selectedClinicId === c.clinicId ? 1100 : 1000}
             title={`Track ${c.clinicId}`}
             alt={`Track ${c.clinicId}`}
             eventHandlers={{

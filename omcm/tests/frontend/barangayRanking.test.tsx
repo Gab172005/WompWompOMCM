@@ -56,9 +56,9 @@ describe("Barangay healthcare need ranking interface", () => {
     );
     expect(useAppStore.getState().selectedBarangayPsgc).toBe(top.psgc);
   }, 20000);
-  it("shows the seven weighted factors, raw clinic metrics and no urban/rural contribution", () => {
+  it("shows six Balanced factors without penalizing missing hazard context", () => {
     const b = RANKED_BARANGAYS.find(
-      (item) => item.needProvisional && item.clinicCount !== null,
+      (item) => item.disasterRisk === null && item.clinicCount !== null,
     )!;
     render(<BarangayRanking municipalityPsgc={b.municipalityPsgc} />);
     const region = screen.getByRole("region", {
@@ -93,6 +93,10 @@ describe("Barangay healthcare need ranking interface", () => {
       `Share of score factors available${b.needCoverage}%`,
     );
     expect(detail).toHaveTextContent(b.needScore.toFixed(1));
+    expect(detail).toHaveTextContent("All six Balanced HNI factors are available");
+    expect(detail).toHaveTextContent("Illness rate (sample data) · 35% base weight");
+    expect(detail).toHaveTextContent("People per square kilometre · 15% base weight");
+    expect(detail).not.toHaveTextContent("Disaster risk level · 15% base weight");
     expect(detail).toHaveTextContent(
       "Municipal resources (income class) · 10% base weight",
     );
@@ -129,7 +133,7 @@ describe("Barangay healthcare need ranking interface", () => {
     // Method text must not claim every factor is a percentile or that a zero
     // mapped count proves unmet need.
     expect(detail).toHaveTextContent(
-      "Disaster risk uses the supplied 0–100 index directly, not a percentile",
+      "Disaster risk is separate map context and does not contribute to HNI",
     );
     expect(detail).toHaveTextContent("not a percentile");
     expect(detail).toHaveTextContent("not verified absence");

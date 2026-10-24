@@ -5,13 +5,16 @@ from models.clinic import ApproveRequest, EmergencyRequest
 from models.results import SchedulesResult, ScheduleResult
 from services.data import load_data
 from services import repository as repo
+from services.deployment_rules import deployment_restricted
+from services.demand_model import TARGET_PREFIX
 router = APIRouter()
 
 
 @router.get("/api/clinics")
 def clinics():
     _, network, metadata = load_data()
-    return dict(sites=network["sites"], roads=network["roads"], metadata=metadata)
+    sites = [dict(site, eligible=site["eligible"] and not deployment_restricted(site)) for site in network["sites"]]
+    return dict(sites=sites, roads=network["roads"], metadata=metadata)
 
 
 @router.get("/api/schedules", response_model=SchedulesResult)
@@ -28,6 +31,9 @@ def approved_payload(request, emergency=False):
     plan = repo.get_plan(request.plan_id)
     if plan is None:
         raise HTTPException(404, "Draft plan not found. Generate a placement first.")
+    target = next((note[len(TARGET_PREFIX):] for note in plan.get("notes", []) if note.startswith(TARGET_PREFIX)), None)
+    if not emergency and target and request.deployment_date.isoformat() != target:
+        raise HTTPException(422, "This draft forecast is for " + target + ". Generate a fresh next-day plan before approving another schedule date.")
     if not plan["optimized"]["clinics"]:
         raise HTTPException(422, "Cannot publish an empty deployment.")
     return dict(date=request.deployment_date.isoformat(), plan_id=request.plan_id, status="Emergency revised" if emergency else "Approved",

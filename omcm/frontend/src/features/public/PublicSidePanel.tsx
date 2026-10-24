@@ -1,6 +1,5 @@
 import {
   AlertTriangle,
-  CalendarDays,
   Clock,
   HeartPulse,
   MapPin,
@@ -8,11 +7,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import {
-  addIsoDays,
-  getManilaToday,
-  useAppStore,
-} from "../../store/useAppStore";
+import { useAppStore } from "../../store/useAppStore";
 import { BARANGAYS_BY_PSGC, distanceKm } from "../../services/providedData";
 import { LAGUNA_BASE_DATA } from "../../services/lagunaData";
 import {
@@ -20,7 +15,11 @@ import {
   PanelExpandButton,
   PlaceHeader,
 } from "../municipalities/PlaceDetails";
-import { Button } from "../../components/ui/Button";
+import { PublicVisitSummary } from "./PublicVisitSummary";
+import {
+  assignedCommunities,
+  usePublicScheduleStore,
+} from "../../store/usePublicScheduleStore";
 
 export function PublicSidePanel() {
   const [expanded, setExpanded] = useState(false);
@@ -31,14 +30,13 @@ export function PublicSidePanel() {
     selectedScheduleDate,
     publishedSchedules,
     selectedClinicId,
-    setSelectedScheduleDate,
     selectMunicipality,
   } = useAppStore();
 
+  const publicData = usePublicScheduleStore((s) => s.data);
+
   if (!sidePanelOpen) return null;
 
-  const today = getManilaToday();
-  const tomorrow = addIsoDays(today, 1);
   const schedule = publishedSchedules[selectedScheduleDate] ?? null;
   const clinics = schedule?.plan.clinics ?? [];
 
@@ -94,22 +92,25 @@ export function PublicSidePanel() {
         className="workspace-panel-body"
         key={selectedBarangayPsgc ?? selectedPsgc ?? selectedScheduleDate}
       >
-        <PlaceHeader
-          title={
-            selectedBarangay?.name ??
-            selectedMunicipality?.name ??
-            "Care near you"
-          }
-          kind="Public care guide"
-          subtitle={
-            selectedBarangay
-              ? `${selectedBarangay.municipality}, Laguna`
-              : "Approved clinic visits and nearby care across Laguna."
-          }
-        />
+        {(selectedBarangay || selectedMunicipality) && (
+          <PlaceHeader
+            title={
+              selectedBarangay?.name ??
+              selectedMunicipality?.name ??
+              "Care near you"
+            }
+            kind="Public care guide"
+            subtitle={
+              selectedBarangay
+                ? `${selectedBarangay.municipality}, Laguna`
+                : "Approved clinic visits and nearby care across Laguna."
+            }
+          />
+        )}
+        <PublicVisitSummary />
         <p className="place-intro">
-          Choose a date to find published clinic visits, operating hours and
-          services for your community.
+          Search for your community to find nearby care. Clinic locations and
+          services are listed below.
         </p>
 
         {schedule?.status === "Emergency Override" &&
@@ -132,55 +133,6 @@ export function PublicSidePanel() {
               </small>
             </div>
           )}
-
-        <section
-          className="workspace-subcard public-date-card"
-          aria-label="Schedule date filter"
-        >
-          <label className="workspace-field">
-            <span>
-              <CalendarDays size={15} aria-hidden="true" /> Schedule date
-            </span>
-            <input
-              type="date"
-              aria-label="Schedule date"
-              value={selectedScheduleDate}
-              onChange={(e) => setSelectedScheduleDate(e.target.value)}
-            />
-          </label>
-          <div className="workspace-button-row">
-            <Button
-              type="button"
-              variant={selectedScheduleDate === today ? "primary" : "secondary"}
-              onClick={() => setSelectedScheduleDate(today)}
-            >
-              Today ({today})
-            </Button>
-            <Button
-              type="button"
-              variant={
-                selectedScheduleDate === tomorrow ? "primary" : "secondary"
-              }
-              onClick={() => setSelectedScheduleDate(tomorrow)}
-            >
-              Tomorrow
-            </Button>
-          </div>
-          <div className="public-schedule-meta" role="status">
-            <span
-              className={`badge ${schedule?.status === "Emergency Override" ? "badge-danger" : ""}`}
-            >
-              {schedule ? schedule.status : "No schedule published"}
-            </span>
-            {schedule && (
-              <small>
-                {schedule.startTime}–{schedule.endTime} PH Time ·{" "}
-                {clinics.length} approved{" "}
-                {clinics.length === 1 ? "clinic" : "clinics"}
-              </small>
-            )}
-          </div>
-        </section>
 
         {(selectedBarangay || selectedMunicipality) && (
           <section
@@ -228,7 +180,7 @@ export function PublicSidePanel() {
                   {nearestClinic.distance.toFixed(1)} km straight-line distance
                 </span>
                 {targetMunicipalityName === nearestClinic.municipality && (
-                  <span className="badge">Serving your municipality</span>
+                  <span className="badge">Located in your municipality</span>
                 )}
                 <small>
                   Hours: {schedule.startTime}–{schedule.endTime} PH Time ·{" "}
@@ -276,52 +228,63 @@ export function PublicSidePanel() {
             {clinics.length})
           </h3>
           {schedule && clinics.length > 0 ? (
-            clinics.map((clinic) => (
-              <article
-                key={clinic.clinicId}
-                className={`workspace-subcard public-clinic-card ${selectedClinicId === clinic.clinicId ? "is-active" : ""}`}
-              >
-                <div className="public-clinic-header">
-                  <strong>
-                    {clinic.clinicId} · {clinic.siteName}
-                  </strong>
-                  <span
-                    className={`badge ${schedule.status === "Emergency Override" ? "badge-danger" : ""}`}
-                  >
-                    {schedule.status}
-                  </span>
-                </div>
-                <p className="public-clinic-location">
-                  {clinic.municipality}, Laguna
-                </p>
-                <p className="public-clinic-hours">
-                  <Clock size={14} aria-hidden="true" />
-                  <span>
-                    {schedule.startTime}–{schedule.endTime} · Philippine time
-                  </span>
-                </p>
-                <div className="public-service-tags">
-                  {schedule.services.map((service) => (
-                    <span className="public-service-tag" key={service}>
-                      {service}
-                    </span>
-                  ))}
-                </div>
-                <p className="workspace-note">
-                  Assigned communities: {clinic.municipality} and neighboring
-                  barangays · Daily capacity: {clinic.capacity} appointments.
-                </p>
-                <button
-                  type="button"
-                  className="workspace-text-button"
-                  onClick={() =>
-                    useAppStore.setState({ selectedClinicId: clinic.clinicId })
-                  }
+            clinics.map((clinic) => {
+              const communities = assignedCommunities(
+                publicData,
+                selectedScheduleDate,
+                clinic.siteId,
+              );
+              return (
+                <article
+                  key={clinic.clinicId}
+                  className={`workspace-subcard public-clinic-card ${selectedClinicId === clinic.clinicId ? "is-active" : ""}`}
                 >
-                  View clinic details
-                </button>
-              </article>
-            ))
+                  <div className="public-clinic-header">
+                    <strong>
+                      {clinic.clinicId} · {clinic.siteName}
+                    </strong>
+                    <span
+                      className={`badge ${schedule.status === "Emergency Override" ? "badge-danger" : ""}`}
+                    >
+                      {schedule.status}
+                    </span>
+                  </div>
+                  <p className="public-clinic-location">
+                    {clinic.municipality}, Laguna
+                  </p>
+                  <p className="public-clinic-hours">
+                    <Clock size={14} aria-hidden="true" />
+                    <span>
+                      {schedule.startTime}–{schedule.endTime} · Philippine time
+                    </span>
+                  </p>
+                  <div className="public-service-tags">
+                    {schedule.services.map((service) => (
+                      <span className="public-service-tag" key={service}>
+                        {service}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="workspace-note">
+                    {communities.length
+                      ? `Planned service area: ${communities.join(", ")}.`
+                      : "Service-area details will be confirmed by the LGU."}{" "}
+                    Daily capacity: {clinic.capacity} appointments.
+                  </p>
+                  <button
+                    type="button"
+                    className="workspace-text-button"
+                    onClick={() =>
+                      useAppStore.setState({
+                        selectedClinicId: clinic.clinicId,
+                      })
+                    }
+                  >
+                    View clinic details
+                  </button>
+                </article>
+              );
+            })
           ) : (
             <div className="workspace-subcard public-empty-schedule">
               <strong>

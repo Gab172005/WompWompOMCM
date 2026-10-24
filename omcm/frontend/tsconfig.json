@@ -32,6 +32,9 @@
       ],
       "react-leaflet": [
         "./node_modules/react-leaflet"
+      ],
+      "react-router-dom": [
+        "./node_modules/react-router-dom"
       ]
     }
   },

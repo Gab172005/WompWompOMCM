@@ -43,8 +43,8 @@ export function MunicipalityMetrics({
           )}
         </NeedScoreCard>
         <p className="place-evidence-note">
-          Illness rates are sample data, not reported cases. Disaster risk
-          coverage has not been verified.
+          Illness rates are sample data, not reported cases. Disaster risk is
+          separate map context and does not contribute to this HNI.
         </p>
         <PlaceStats
           items={[
@@ -99,9 +99,8 @@ export function MunicipalityMetrics({
               ),
             )}
           <p className="place-evidence-note">
-            Illness rates are sample data. Disaster risk coverage has not been
-            verified. This score estimates planning priority, not confirmed
-            illness.
+            The agreed Balanced weights estimate planning priority, not
+            confirmed illness. Disaster risk is excluded from this HNI.
           </p>
         </details>
       </section>

@@ -11,7 +11,7 @@ import {
   useForecastStore,
   type Strategy,
 } from "../store/useForecastStore";
-import { computeLagunaMunicipalities, runClinicOptimizer } from "./lagunaData";
+import { computeLagunaMunicipalities } from "./lagunaData";
 import {
   BARANGAYS_BY_PSGC,
   LAGUNA_BARANGAYS,
@@ -20,7 +20,8 @@ import {
   MUNICIPALITY_HEALTHCARE_NEED,
   normalizeMunicipality,
 } from "./providedData";
-import { distanceKm } from "./healthcareNeed";
+import { distanceKm, HEALTHCARE_NEED_VERSION } from "./healthcareNeed";
+import { useOptimizationStore } from "../store/useOptimizationStore";
 
 const municipalities = computeLagunaMunicipalities(emptyScenario());
 const byMunicipality = new Map(municipalities.map((m) => [m.psgc, m]));
@@ -173,6 +174,15 @@ export function executeAssistantTool(
       throw new Error("Invalid action arguments.");
     const state = useAppStore.getState();
     const go = (path: string) => {
+      if (mapRoutes.has(path)) {
+        const current = useAppStore.getState();
+        current.setViewMode(path === "/public" || path === "/" ? "public" : "admin");
+        if (path === "/optimization") current.openPanel("optimization");
+        if (path === "/simulator") current.openPanel("simulation");
+        // Map tools change state in place; only return to the map from legacy pages.
+        if (!mapRoutes.has(pathname)) void navigate("/");
+        return;
+      }
       void navigate(path);
     };
     switch (call.name) {
@@ -281,7 +291,7 @@ export function executeAssistantTool(
             total: rows.length,
             places: rows.slice(0, limitOf(a)),
             model:
-              "Baseline barangay-healthcare-need-v3 (municipal values are population-weighted rollups).",
+              `Baseline ${HEALTHCARE_NEED_VERSION} (municipal values are population-weighted rollups).`,
           },
         };
       }
@@ -375,25 +385,17 @@ export function executeAssistantTool(
             return { ok: true, data: simulationResults() };
           case "plan": {
             requireAdmin();
-            const scenario =
-              state.panel === "simulation" ? state.scenario : emptyScenario();
-            const towns = computeLagunaMunicipalities(scenario);
-            const base = runClinicOptimizer(state.clinicCount, towns, scenario);
-            const plan = Object.keys(state.manualSiteOverrides).length
-              ? runClinicOptimizer(
-                  state.clinicCount,
-                  towns,
-                  scenario,
-                  base.clinics.map(
-                    (c) => state.manualSiteOverrides[c.clinicId] ?? c.siteId,
-                  ),
-                )
-              : base;
+            const { result, config, busy, error } = useOptimizationStore.getState();
             return {
               ok: true,
               data: {
-                ...plan,
-                note: "Municipal placement heuristic; capacity and appointment estimates are illustrative. This is not the 30-day simulation.",
+                plan: result,
+                inputs: config,
+                busy,
+                error,
+                note: result
+                  ? "Saved FastAPI draft: dated synthetic XGBoost forecasts and capacity-aware CP-SAT for the Los Baños–Bay road pilot. This is not a published schedule."
+                  : "No backend allocation has been generated. Open Plan clinics and select Generate recommendations; no browser allocation substitutes for the server.",
               },
             };
           }
@@ -423,6 +425,7 @@ export function executeAssistantTool(
                 "Administrator sign-in is required. The sign-in form is open; the requested page has not opened yet.",
             };
           }
+          if (page === "public") useAppStore.setState({ sidePanelOpen: true });
           go(routes[page]);
         }
         return {
@@ -489,12 +492,13 @@ export function executeAssistantTool(
         )
           throw new Error("Clinic planning supports 1–5 available clinics.");
         state.setClinicCount(Number(a.clinic_count));
+        useOptimizationStore.getState().updateConfig({ clinic_count: Number(a.clinic_count), manual_sites: null });
         state.openPanel("optimization");
         go("/optimization");
         return {
           ok: true,
-          summary: `Updated the planning draft to ${a.clinic_count} clinics.`,
-          data: { published: false },
+          summary: `Set planning inputs to ${a.clinic_count} clinics. Select Generate recommendations to request a new backend draft.`,
+          data: { published: false, allocationGenerated: false },
         };
       }
       case "configure_simulation": {

@@ -180,8 +180,6 @@ const driverContext: Record<NeedFactor, string> = {
     "Higher sample illness rates add more points. These are not reported cases.",
   hospitalAccess:
     "Being farther from a verified hospital can add more points. Distances are straight lines.",
-  disasterRisk:
-    "Mapped hazards at a reference point can add more points. Coverage has not been verified.",
   density: "More people living close together can add more points.",
   incomeClass:
     "The municipality’s income class estimates local resources, not household income.",

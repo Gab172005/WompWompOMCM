@@ -58,15 +58,14 @@ The retained server pilot is separate from these provincial map inputs.
 
 The default healthcare need layer calculates a separate score for every barangay
 using supplied inputs, joined boundary area, and a validated offline OSM clinic snapshot.
-The model is [barangay-healthcare-need-v3](../frontend/src/services/healthcareNeed.ts).
+The model is [barangay-healthcare-need-v4-balanced](../frontend/src/services/healthcareNeed.ts).
 Its policy weights are explicit planning assumptions:
 
 | Factor | Weight | Value used |
 | --- | --- | --- |
-| Synthetic morbidity | 25% | Province-wide tied percentile of the supplied rate |
+| Synthetic morbidity | 35% | Province-wide tied percentile of the supplied rate |
 | Hospital distance | 30% | Province-wide tied percentile of straight-line km to the nearest verified, located hospital |
-| Disaster risk | 15% | Supplied disaster risk index, 0–100 |
-| Population density | 10% | Province-wide tied percentile of population / boundary area |
+| Population density | 15% | Province-wide tied percentile of population / boundary area |
 | Municipality income class | 10% | Class number scaled linearly over the known classes in the supplied records |
 | Clinic distance | 5% | Province-wide tied percentile of straight-line km to the nearest active, located in-province OSM clinic |
 | Clinic provision deficit | 5% | 100 minus the province-wide tied percentile of assigned active OSM clinics / population × 10,000 |
@@ -75,11 +74,11 @@ Percentiles use zero-based average tied ranks divided by `n - 1`, where `n`
 is the number of available values for that factor. Untied endpoints are 0 and
 100; ties share their average percentile. All equal values, or a single available
 value, receive 50. The full score is
-`0.25*M + 0.30*H + 0.15*R + 0.10*D + 0.10*I + 0.05*C + 0.05*P`,
-rounded to one decimal. Higher values indicate greater estimated need. The four
-unresolved risk records exclude risk and divide the remaining weighted terms by
-0.85 when all other inputs are present; they show 85% available input weight and
-provisional scores/ranks. Missing hospital access and unrecognized income class
+`0.35*M + 0.30*H + 0.15*D + 0.10*I + 0.05*C + 0.05*P`,
+rounded to one decimal. Higher values indicate greater estimated need. This is
+the agreed Balanced profile. Disaster risk remains separate map context and
+does not affect HNI, rank or available-weight coverage, including when missing.
+Missing hospital access and unrecognized income class
 are similarly excluded. An invalid or unavailable clinic snapshot excludes both
 clinic factors; no eligible located clinics excludes distance, while invalid
 population excludes provision. Missing values are never replaced by zero.
@@ -95,9 +94,9 @@ class codes are unavailable. This treats lower municipal income class as a
 resource-constraint proxy. The barangay `urban_rural` field is retained as
 source demographic context only. It contributes nothing to healthcare need,
 available-weight coverage, or ranking; changing that classification alone cannot
-change the score. Disaster risk is retained at 15%.
+change the score. Disaster risk likewise contributes no HNI weight.
 
-The seven production weights are explicit policy choices, not fitted or clinically
+The six Balanced production weights are explicit policy choices, not fitted or clinically
 validated coefficients. Hospital distance and clinic measures overlap as access
 proxies. OSM mapping is incomplete and does not verify facility capacity,
 services, operating status, or patient access. Distances permit cross-barangay

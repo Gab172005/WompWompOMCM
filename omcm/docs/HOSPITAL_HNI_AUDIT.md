@@ -1,5 +1,9 @@
 # Step A — hospital dataset and HNI map audit
 
+Current policy update: [the agreed Balanced HNI](BALANCED_HNI.md) supersedes
+historical v3/seven-factor weights in this record. Active HNI uses six factors
+with no disaster-risk contribution; the earlier audit details below are history.
+
 Date: 2026-10-24. Review branch: `feat/omcm-refinements`.
 Baseline: `a850cef`. Scope: hospital evidence, baseline HNI consistency,
 municipality map summaries and the regression checks needed to validate them.

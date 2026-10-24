@@ -1,5 +1,13 @@
 # Gemini app assistant
 
+Integration update: the assistant uses the agreed six-factor Balanced HNI shared
+by the map and 30-day HNI projection. It reads saved FastAPI drafts instead of
+constructing municipal allocations. Changing clinic count updates inputs and
+requires Generate recommendations for a new server allocation. Map planning,
+simulation and public tools open in place without routing between map pages.
+See [the integration inventory and verification](BALANCED_MAIN_INTEGRATION.md).
+Historical verification and account-specific configuration notes below are retained.
+
 Use **Planning help** or the floating **Ask OMCM** button. The assistant stays
 open across routes and retains its conversation until **New conversation** or
 a page reload. It works in Public View as well as Admin View.

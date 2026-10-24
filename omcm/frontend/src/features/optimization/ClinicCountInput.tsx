@@ -1,4 +1,5 @@
 import { useAppStore } from "../../store/useAppStore";
+import { useOptimizationStore } from "../../store/useOptimizationStore";
 export function ClinicCountInput() {
   const { clinicCount, setClinicCount } = useAppStore();
   return (
@@ -11,7 +12,10 @@ export function ClinicCountInput() {
         max={5}
         step={1}
         value={clinicCount}
-        onChange={(e) => setClinicCount(Number(e.target.value))}
+        onChange={(e) => {
+          useOptimizationStore.getState().invalidate();
+          setClinicCount(Number(e.target.value));
+        }}
       />
     </label>
   );

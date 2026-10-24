@@ -102,14 +102,13 @@ Neither confirmation authorizes malformed/error responses or fabricated metadata
 
 ## Healthcare need policy
 
-[The v3 scorer](../frontend/src/services/healthcareNeed.ts) uses:
+[The Balanced scorer](../frontend/src/services/healthcareNeed.ts) uses:
 
 | Factor | Production weight |
 | --- | --- |
-| Synthetic morbidity | 25% |
+| Synthetic morbidity | 35% |
 | Nearest verified hospital distance | 30% |
-| Disaster risk | 15% |
-| Population density | 10% |
+| Population density | 15% |
 | Municipality income class | 10% |
 | Nearest active located OSM clinic distance | 5% |
 | OSM clinic provision deficit | 5% |
@@ -120,9 +119,9 @@ kilometers. More distance adds estimated need. Provision is
 resident lowers estimated need. Tied rates share average percentile; all equal
 rates (including all zeros), or a single valid rate, receive neutral 50.
 
-Urban/rural remains source demographic context, not a score factor. Missing risk
-excludes its 15% weight; an unavailable/invalid snapshot excludes both clinic
-weights. Invalid population excludes provision; no eligible clinic location
+Urban/rural and disaster risk remain context, outside HNI. Missing hazard data
+therefore excludes no HNI weight. An unavailable/invalid snapshot excludes both
+clinic weights. Invalid population excludes provision; no eligible clinic location
 excludes distance. Remaining weights are rescaled and the score/rank labeled
 provisional. A valid zero count is **zero OSM observations**, not verified absence.
 
