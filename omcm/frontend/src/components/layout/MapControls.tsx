@@ -15,6 +15,7 @@ import { clearCredentials } from "../../services/api";
 import { MunicipalitySearch } from "../../features/municipalities/MunicipalitySearch";
 import { MapSelectionStatus } from "../../features/municipalities/MapSelectionStatus";
 import { useAssistantStore } from "../../store/useAssistantStore";
+import { MapFilterChips } from "../../features/filters/MapFilterChips";
 
 export function MapControls() {
   const {
@@ -105,6 +106,7 @@ export function MapControls() {
       </div>
 
       <MapSelectionStatus />
+      <MapFilterChips />
 
       {isPublic ? (
         <nav className="map-tool-buttons" aria-label="Public view controls">

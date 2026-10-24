@@ -29,6 +29,11 @@ export function PlacementRecommendations({ plan }: { plan: Plan }) {
         needs. Review local access and facility readiness before approving.
       </p>
       <p className="workspace-note">
+        The map previews illustrative HNI reductions around the proposed clinics,
+        using the simulator’s shared service assumptions. Appointment and travel
+        metrics below come from the backend allocation.
+      </p>
+      <p className="workspace-note">
         Server draft {plan.plan_id} · {plan.metadata.region}
       </p>
       <div className="workspace-metrics">

@@ -22,6 +22,7 @@ export function BarangayBoundaryLayer({
   publicMode = false,
   forecastOverlay,
   floodOverlay,
+  planningImpact,
 }: {
   data: FeatureCollection;
 } & Pick<
@@ -32,6 +33,7 @@ export function BarangayBoundaryLayer({
   | "publicMode"
   | "forecastOverlay"
   | "floodOverlay"
+  | "planningImpact"
 >) {
   const ref = useRef<LeafletGeoJSON>(null);
   const current = useRef({
@@ -41,6 +43,7 @@ export function BarangayBoundaryLayer({
     publicMode,
     forecastOverlay,
     floodOverlay,
+    planningImpact,
   });
   current.current = {
     activeMetric,
@@ -49,6 +52,7 @@ export function BarangayBoundaryLayer({
     publicMode,
     forecastOverlay,
     floodOverlay,
+    planningImpact,
   };
   function style(feature?: Feature): PathOptions {
     const b = BARANGAYS_BY_PSGC.get(String(feature?.properties?.adm4_psgc));
@@ -58,14 +62,15 @@ export function BarangayBoundaryLayer({
       publicMode: isPublic,
       forecastOverlay: overlay,
       floodOverlay: flood,
+      planningImpact: impact,
     } = current.current;
     const isSelected = b?.psgc === selected;
-    const record = overlay && b ? overlay.records.get(b.psgc) : undefined;
+    const record = b ? overlay?.records.get(b.psgc) ?? (metric === "score" ? impact?.get(b.psgc) : undefined) : undefined;
     const hasClinicImpact = Boolean(record && record.serviceFraction > 0);
     const hasFloodImpact = Boolean(b && flood?.barangayIds.has(b.psgc));
     return {
       fillColor:
-        isSelected && !overlay
+        isSelected && !overlay && !impact
           ? "#facc15"
           : isPublic
             ? "#f8fafc"
@@ -75,7 +80,9 @@ export function BarangayBoundaryLayer({
                     ? (overlay.records.get(b.psgc)?.scenarioHni ?? null)
                     : (overlay.records.get(b.psgc)?.uhni ?? null),
                 )
-              : getMetricColor(metric, b ? barangayMetric(b, metric) : null),
+              : record && metric === "score"
+                ? getSimulationNeedColor(record.scenarioHni)
+                : getMetricColor(metric, b ? barangayMetric(b, metric) : null),
       fillOpacity: isSelected
         ? 0.7
         : isPublic
@@ -105,9 +112,8 @@ export function BarangayBoundaryLayer({
         String(path.feature.properties?.adm4_psgc),
       );
       const element = path.getElement();
-      const record = current.current.forecastOverlay?.records.get(
-        b?.psgc ?? "",
-      );
+      const record = current.current.forecastOverlay?.records.get(b?.psgc ?? "") ??
+        (activeMetric === "score" ? planningImpact?.get(b?.psgc ?? "") : undefined);
       const hasFloodImpact = Boolean(
         b && current.current.floodOverlay?.barangayIds.has(b.psgc),
       );
@@ -126,7 +132,7 @@ export function BarangayBoundaryLayer({
         String(b?.psgc === selectedBarangayPsgc),
       );
     });
-  }, [activeMetric, selectedBarangayPsgc, publicMode, forecastOverlay, floodOverlay]);
+  }, [activeMetric, selectedBarangayPsgc, publicMode, forecastOverlay, floodOverlay, planningImpact]);
   return (
     <GeoJSON
       ref={ref}
@@ -156,6 +162,13 @@ export function BarangayBoundaryLayer({
               return label;
             }
             const metric = current.current.activeMetric;
+            const impact = current.current.planningImpact?.get(b.psgc);
+            if (metric === "score" && impact) {
+              label.textContent = `${b.name}, ${b.municipality} · Draft service HNI: ${impact.scenarioHni.toFixed(1)}/100 · Baseline: ${impact.hni.toFixed(1)} · Illustrative clinic effect`;
+              if (current.current.floodOverlay?.barangayIds.has(b.psgc))
+                label.textContent += ` · Flagged by ${current.current.floodOverlay.returnPeriodYears}-year flood screen`;
+              return label;
+            }
             const value = barangayMetric(b, metric);
             label.textContent = `${b.name}, ${b.municipality} · ${barangayMetricLabel(metric)}: ${value === null ? "Information unavailable" : `${value.toLocaleString()}${metric === "density" ? "/km²" : metric === "morbidity" ? " / 1,000" : "/100"}`}`;
             if (metric === "score")

@@ -40,10 +40,10 @@ const routes: Record<string, string> = {
   optimization: "/optimization",
   simulation: "/simulator",
   public: "/public",
-  analytics: "/analytics",
-  settings: "/settings",
-  driver: "/driver",
-  workspace: "/workspace",
+  analytics: "/optimization",
+  settings: "/optimization",
+  driver: "/simulator",
+  workspace: "/admin",
 };
 const normalized = (value: string) =>
   normalizeMunicipality(value).replace(/^(barangay|brgy)/, "");
@@ -67,7 +67,8 @@ const limitOf = (args: Record<string, unknown>) => {
 const place = (psgc: string) =>
   BARANGAYS_BY_PSGC.get(psgc) ?? byMunicipality.get(psgc);
 function requireAdmin() {
-  if (!useAppStore.getState().adminUser)
+  const state = useAppStore.getState();
+  if (!state.adminUser || state.viewMode !== "admin")
     throw new Error("Sign in to Admin View to use this planning action.");
 }
 function municipalityId(query: string) {
@@ -82,6 +83,18 @@ function municipalityId(query: string) {
 }
 function placeSummary(psgc: string) {
   const barangay = BARANGAYS_BY_PSGC.get(psgc);
+  const state = useAppStore.getState();
+  if (state.viewMode !== "admin" || !state.adminUser) {
+    const publicPlace = barangay ?? byMunicipality.get(psgc);
+    if (!publicPlace) throw new Error("Place not found. Search for its PSGC first.");
+    return {
+      psgc,
+      name: publicPlace.name,
+      municipality: barangay?.municipality,
+      level: barangay ? "barangay" : "municipality",
+      population: publicPlace.population,
+    };
+  }
   if (barangay)
     return {
       psgc,
@@ -150,9 +163,11 @@ export function assistantContext(pathname: string) {
     view: s.viewMode,
     signedIn: Boolean(s.adminUser),
     selectedPlace: s.selectedBarangayPsgc ?? s.selectedPsgc,
-    metric: s.activeMetric,
-    panel: s.panel,
-    clinicCount: s.clinicCount,
+    ...(s.viewMode === "admin" && s.adminUser ? {
+      metric: s.activeMetric,
+      panel: s.panel,
+      clinicCount: s.clinicCount,
+    } : {}),
     layers: {
       hospitals: s.showHospitals,
       mobileClinics: s.showClinics,
@@ -227,6 +242,8 @@ export function executeAssistantTool(
           m = byMunicipality.get(psgc);
         if (!b && !m)
           throw new Error("Place not found. Search for its PSGC first.");
+        if (state.viewMode !== "admin" || !state.adminUser)
+          return { ok: true, data: placeSummary(psgc) };
         return {
           ok: true,
           data: b
@@ -255,6 +272,7 @@ export function executeAssistantTool(
       case "rank_places": {
         const level = text(a, "level") || "barangay",
           metric = text(a, "metric") || "score";
+        if (metric !== "population") requireAdmin();
         if (
           !["municipality", "barangay"].includes(level) ||
           (!metrics.has(metric) && metric !== "population")

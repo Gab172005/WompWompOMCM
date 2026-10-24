@@ -104,6 +104,7 @@ export const useOptimizationStore = create<OptimizationState>((set, get) => ({
           "The backend did not return a saved XGBoost allocation. Check the backend version.",
         );
       set({ result, busy: false });
+      useAppStore.setState({ activeMetric: "score" });
     } catch (error) {
       if (current === revision)
         set({

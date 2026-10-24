@@ -149,7 +149,7 @@ try {
   await panel.locator(".workspace-panel-body").evaluate((element) => {
     element.scrollTop = 0;
   });
-  await page.screenshot({ path: "/tmp/omcm-simulation-desktop.png" });
+  await page.screenshot({ path: "/tmp/omcm-simulation-desktop.png", animations: "disabled" });
 
   const baselineDay1 = await page.evaluate(async () => {
     const { useForecastStore } = await import("/src/store/useForecastStore.ts");
@@ -284,19 +284,20 @@ try {
   await panel
     .getByRole("button", { name: /^Optimized clinic allocation, day 1, HNI/ })
     .click();
+  const generatedPlan = page.waitForResponse((response) =>
+    response.url().includes("/api/planning/optimize"), { timeout: 90000 });
   await panel
     .getByRole("button", { name: "Generate optimized locations", exact: true })
     .click();
-  await expect(panel.getByText(/^Draft /)).toBeVisible({ timeout: 90000 });
+  const response = await generatedPlan;
   expect(plannerResponse, logs).toBeTruthy();
-  const response = plannerResponse;
   expect(response.status()).toBe(200);
   const plan = await response.json();
   expect(response.request().postDataJSON()).toMatchObject({ clinic_count: 3 });
   expect(plan.notes.join(" ")).toContain("XGBoost");
   expect(plan.notes.join(" ")).toContain("Agreed Balanced HNI");
   expect(plan.optimized.clinics).toHaveLength(3);
-  await expect(panel.getByText("Draft " + plan.plan_id)).toBeVisible();
+  await expect(panel.getByText("Draft " + plan.plan_id), await panel.innerText()).toBeVisible();
   await expect(page.locator(".clinic-staging-marker")).toHaveCount(3);
   const unconfirmed = await page.evaluate(async () => {
     const { useForecastStore } = await import("/src/store/useForecastStore.ts");
@@ -341,7 +342,18 @@ try {
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await page.screenshot({ path: "/tmp/omcm-simulation-mobile.png" });
+  const panelBox = await panel.boundingBox();
+  const playbackBox = await page.getByRole("region", { name: "Simulation playback" }).boundingBox();
+  const legendBox = await page.getByRole("region", { name: "Map legend" }).boundingBox();
+  expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(playbackBox.y);
+  expect(playbackBox.y + playbackBox.height).toBeLessThanOrEqual(legendBox.y);
+  await page.screenshot({ path: "/tmp/omcm-simulation-mobile.png", animations: "disabled" });
+  await panel.getByRole("button", { name: "Collapse tool panel" }).click();
+  await expect(panel.locator(".workspace-panel-body")).toBeHidden();
+  await expect(page.locator(".clinic-staging-marker")).toHaveCount(3);
+  await expect(page.getByRole("region", { name: "Simulation playback" })).toBeVisible();
+  await panel.getByRole("button", { name: "Expand tool panel" }).click();
+  await expect(panel.locator(".workspace-panel-body")).toBeVisible();
   expect(errors, logs).toEqual([]);
   console.log(
     "Simulation browser checks passed: rising no-intervention HNI, manual host and neighbor impact, backend XGBoost/CP-SAT placements, optimized multi-area impact, clinic markers, and mobile layout.",
