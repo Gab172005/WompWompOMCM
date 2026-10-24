@@ -1,4 +1,6 @@
-import { Circle, CircleMarker, Popup } from "react-leaflet";
+import { divIcon } from "leaflet";
+import { Circle, Marker, Popup } from "react-leaflet";
+import { mobileClinicSvg } from "./facilityIcons";
 import type { SimulationOverlay } from "./mapTypes";
 import { COVERAGE_RADIUS_KM } from "../../../services/forecasting/interventions";
 export function SimulationLayers({ overlay }: { overlay: SimulationOverlay }) {
@@ -15,17 +17,16 @@ export function SimulationLayers({ overlay }: { overlay: SimulationOverlay }) {
       ))}
       {(["active", "recommended"] as const).flatMap((kind) =>
         overlay[kind].map((a) => (
-          <CircleMarker
+          <Marker
             key={`${kind}-${a.clinicId}`}
-            center={[a.lat, a.lng]}
-            radius={kind === "active" ? 11 : 16}
-            pathOptions={{
-              color: kind === "active" ? "#047857" : "#7c3aed",
-              fillColor: kind === "active" ? "#059669" : "#ede9fe",
-              fillOpacity: kind === "active" ? 1 : 0.3,
-              weight: 3,
-              dashArray: kind === "recommended" ? "4 3" : undefined,
-            }}
+            position={[a.lat, a.lng]}
+            title={`${kind === "active" ? "Active clinic" : "Recommendation (not deployed)"}: ${a.clinicId}`}
+            icon={divIcon({
+              className: "clinic-staging-marker",
+              html: mobileClinicSvg(undefined, kind),
+              iconSize: [40, 36],
+              iconAnchor: [17, 19],
+            })}
           >
             <Popup>
               <strong>
@@ -39,7 +40,7 @@ export function SimulationLayers({ overlay }: { overlay: SimulationOverlay }) {
                 PSGC {a.psgc}
               </p>
             </Popup>
-          </CircleMarker>
+          </Marker>
         )),
       )}
     </>

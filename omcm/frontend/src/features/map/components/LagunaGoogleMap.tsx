@@ -10,6 +10,12 @@ import {
 
 import type { MapProps } from "./mapTypes";
 import {
+  clinicMarkerSvg,
+  hospitalMarkerSvg,
+  mobileClinicSvg,
+  svgDataUrl,
+} from "./facilityIcons";
+import {
   BARANGAYS_BY_PSGC,
   OSM_CLINIC_SNAPSHOT,
   barangayMetric,
@@ -566,10 +572,9 @@ export function LagunaGoogleMap({
         map,
         title: `${h.name} (${h.municipality})`,
         icon: {
-          path: "M 0,-12 L 0,12 M -12,0 L 12,0",
-          strokeColor: "#ef4444",
-          strokeWeight: 4,
-          scale: 1,
+          url: svgDataUrl(hospitalMarkerSvg),
+          scaledSize: new google.maps.Size(32, 32),
+          anchor: new google.maps.Point(16, 16),
         },
         zIndex: 15,
       });
@@ -635,14 +640,11 @@ export function LagunaGoogleMap({
       const marker = new google.maps.Marker({
         position: { lat: clinic.lat, lng: clinic.lng },
         map,
-        title: `OSM clinic ${osmClinicReference(clinic)}`,
+        title: clinic.name || "Clinic",
         icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 6,
-          fillColor: "#7c3aed",
-          fillOpacity: 1,
-          strokeColor: "#ffffff",
-          strokeWeight: 1.5,
+          url: svgDataUrl(clinicMarkerSvg),
+          scaledSize: new google.maps.Size(30, 30),
+          anchor: new google.maps.Point(15, 15),
         },
         zIndex: 12,
       });
@@ -683,19 +685,10 @@ export function LagunaGoogleMap({
         position: { lat: c.lat, lng: c.lng },
         map,
         title: `${c.clinicId}: ${c.siteName}`,
-        label: {
-          text: String(i + 1),
-          color: "#ffffff",
-          fontWeight: "bold",
-          fontSize: "12px",
-        },
         icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 14,
-          fillColor: "#059669",
-          fillOpacity: 1,
-          strokeColor: "#ffffff",
-          strokeWeight: 2,
+          url: svgDataUrl(mobileClinicSvg(i + 1)),
+          scaledSize: new google.maps.Size(40, 36),
+          anchor: new google.maps.Point(17, 19),
         },
         zIndex: 20,
       });
@@ -726,16 +719,14 @@ export function LagunaGoogleMap({
             title: `${kind === "active" ? "Active clinic" : "Recommendation (not deployed)"}: ${a.clinicId} · ${a.name} · PSGC ${a.psgc}`,
             label: {
               text: a.clinicId,
-              color: kind === "active" ? "#ffffff" : "#6d28d9",
+              color: kind === "active" ? "#047857" : "#6d28d9",
               fontSize: "10px",
             },
             icon: {
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: kind === "active" ? 15 : 22,
-              fillColor: kind === "active" ? "#059669" : "#ede9fe",
-              fillOpacity: kind === "active" ? 1 : 0.4,
-              strokeColor: kind === "active" ? "#047857" : "#7c3aed",
-              strokeWeight: 2,
+              url: svgDataUrl(mobileClinicSvg(undefined, kind)),
+              scaledSize: new google.maps.Size(40, 36),
+              anchor: new google.maps.Point(17, 19),
+              labelOrigin: new google.maps.Point(17, 43),
             },
             zIndex: kind === "active" ? 40 : 39,
           }),
@@ -830,19 +821,12 @@ export function LagunaGoogleMap({
         position: { lat: pos.lat, lng: pos.lng },
         map,
         title: `${clinic.clinicId} (${clinic.municipality} Deployment)`,
-        label: {
-          text: `✚ ${idx + 1}`,
-          color: "#ffffff",
-          fontWeight: "bold",
-          fontSize: "11px",
-        },
         icon: {
-          path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-          scale: isSelected ? 8 : 6,
-          fillColor: isSelected ? "#38bdf8" : "#2563eb",
-          fillOpacity: 1,
-          strokeColor: "#ffffff",
-          strokeWeight: 2,
+          url: svgDataUrl(
+            mobileClinicSvg(idx + 1, isSelected ? "selected" : "active"),
+          ),
+          scaledSize: new google.maps.Size(40, 36),
+          anchor: new google.maps.Point(17, 19),
         },
         zIndex: 35,
       });

@@ -32,7 +32,7 @@ export function LayerToggles() {
             useAppStore.setState({ showOsmClinics: e.target.checked })
           }
         />{" "}
-        OSM clinics
+        Clinics
       </label>
     </div>
   );

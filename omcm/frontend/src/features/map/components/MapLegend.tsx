@@ -2,6 +2,16 @@ import { useForecastStore } from "../../../store/useForecastStore";
 import { getMetricColor } from "../../../services/lagunaData";
 import { useAppStore } from "../../../store/useAppStore";
 import { metricLabels } from "../../filters/HeatmapSelector";
+import {
+  clinicMarkerSvg,
+  hospitalMarkerSvg,
+  mobileClinicSvg,
+  svgDataUrl,
+} from "./facilityIcons";
+
+const clinicIconUrl = svgDataUrl(clinicMarkerSvg);
+const carIconUrl = svgDataUrl(mobileClinicSvg());
+const hospitalIconUrl = svgDataUrl(hospitalMarkerSvg);
 
 export interface ClinicSnapshotProvenance {
   valid: boolean;
@@ -32,11 +42,6 @@ export function MapLegend({
   const simulation = useAppStore(
     (v) => v.panel === "simulation" && v.viewMode === "admin",
   );
-  const restrictionKey = (
-    <span className="workspace-restriction-key">
-      <i aria-hidden="true" /> Gray: No mobile clinic deployment
-    </span>
-  );
   const osmClinicAttribution = showOsmClinics && (
     <small
       className="workspace-attribution workspace-osm-clinic-attribution"
@@ -51,7 +56,7 @@ export function MapLegend({
       Clinic type:{" "}
       {clinicSnapshot?.valid === false
         ? "unavailable"
-        : "OSM clinic · amenity=clinic or healthcare=clinic"}{" "}
+        : "Clinics · amenity=clinic or healthcare=clinic"}{" "}
       · {clinicSnapshot?.attribution || "© OpenStreetMap contributors"} ·{" "}
       {clinicSnapshot?.license || "ODbL 1.0"} ·{" "}
       {clinicSnapshot?.retrievedAt
@@ -72,12 +77,14 @@ export function MapLegend({
         <div className="workspace-boundary-keys">
           {showClinics && (
             <span>
-              <i className="public-clinic-key" /> Approved clinic
+              <img src={carIconUrl} width={22} height={20} alt="" /> Approved
+              mobile clinic
             </span>
           )}
           {showHospitals && (
             <span>
-              <i className="public-hospital-key" /> Verified hospital
+              <img src={hospitalIconUrl} width={20} height={20} alt="" />{" "}
+              Verified hospital
             </span>
           )}
           <span>
@@ -93,21 +100,17 @@ export function MapLegend({
             aria-label="Facility layer keys"
           >
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <i
+              <img
                 className="facility-key osm-clinic-facility-key"
-                aria-hidden="true"
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: "#7c3aed",
-                }}
+                src={clinicIconUrl}
+                width={20}
+                height={20}
+                alt=""
               />{" "}
-              OSM clinic · fixed facility, not an approved mobile clinic
+              Clinics
             </span>
           </div>
         )}
-        {restrictionKey}
         {osmClinicAttribution}
       </section>
     );
@@ -132,7 +135,6 @@ export function MapLegend({
         </div>
         <span>Green: active clinic & 3 km catchment</span>
         <span>Purple: recommended, awaiting confirmation</span>
-        {restrictionKey}
       </section>
     );
   const steps =
@@ -199,51 +201,41 @@ export function MapLegend({
       >
         {showHospitals && (
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <i
+            <img
               className="facility-key hospital-facility-key"
-              aria-hidden="true"
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: "#ef4444",
-              }}
+              src={hospitalIconUrl}
+              width={20}
+              height={20}
+              alt=""
             />{" "}
             Hospital
           </span>
         )}
         {showClinics && (
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <i
+            <img
               className="facility-key mobile-clinic-facility-key"
-              aria-hidden="true"
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: "#059669",
-              }}
+              src={carIconUrl}
+              width={22}
+              height={20}
+              alt=""
             />{" "}
-            Mobile clinic (numbered)
+            Mobile clinics
           </span>
         )}
         {showOsmClinics && (
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <i
+            <img
               className="facility-key osm-clinic-facility-key"
-              aria-hidden="true"
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: "#7c3aed",
-              }}
+              src={clinicIconUrl}
+              width={20}
+              height={20}
+              alt=""
             />{" "}
-            OSM clinic · fixed facility, not a mobile clinic
+            Clinics
           </span>
         )}
       </div>
-      {restrictionKey}
       {osmClinicAttribution}
     </section>
   );

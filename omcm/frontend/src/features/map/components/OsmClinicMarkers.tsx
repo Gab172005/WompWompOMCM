@@ -1,6 +1,7 @@
 import { divIcon } from "leaflet";
 import { Marker, Popup } from "react-leaflet";
 import type { LocatedOsmClinic } from "../../../types/osmClinic";
+import { clinicMarkerSvg } from "./facilityIcons";
 import {
   osmClinicLink,
   osmClinicPopupText,
@@ -8,20 +9,12 @@ import {
   isDrawableOsmClinic,
 } from "./osmClinicPopup";
 
-/*
- * Fixed OSM clinics are a reference layer: purple, unnumbered and separate from
- * the red hospital and green numbered mobile clinic markers. The icon HTML is a
- * static constant with inline styling, so it stays visible without a stylesheet
- * change and no OSM tag text ever reaches Leaflet's HTML sink.
- */
+// Static medical-building artwork; no OSM tag text enters Leaflet's HTML sink.
 const icon = divIcon({
   className: "osm-clinic-marker-custom",
-  html:
-    '<span class="osm-clinic-marker-dot" style="display:block;width:12px;height:12px;' +
-    "background:#7c3aed;border:2px solid #ffffff;border-radius:50%;" +
-    'box-shadow:0 0 0 1px #4c1d95,0 1px 4px rgba(16,44,67,.4);"></span>',
-  iconSize: [22, 22],
-  iconAnchor: [11, 11],
+  html: clinicMarkerSvg,
+  iconSize: [30, 30],
+  iconAnchor: [15, 15],
 });
 
 /** Centres, not entrances: ways and relations use the Overpass bounding-box center. */
@@ -44,8 +37,8 @@ export function OsmClinicMarkers({
             key={clinic.id}
             position={[clinic.lat, clinic.lng]}
             icon={icon}
-            title={`OSM clinic ${osmClinicReference(clinic)}`}
-            alt={`Fixed OSM clinic ${osmClinicReference(clinic)}`}
+            title={clinic.name || "Clinic"}
+            alt={`Clinic: ${clinic.name || "Unnamed clinic"}`}
             zIndexOffset={-200}
           >
             {/* React escapes every text node below; no tags are interpolated. */}
@@ -70,7 +63,9 @@ export function OsmClinicMarkers({
                   OpenStreetMap {osmClinicReference(clinic)}
                 </a>
               </p>
-              <small>Fixed facility · not a mobile clinic or simulated position.</small>
+              <small>
+                Fixed facility · not a mobile clinic or simulated position.
+              </small>
             </Popup>
           </Marker>
         );
