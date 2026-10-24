@@ -79,6 +79,12 @@ authentication was disabled. Authorization and health use the same validation.
 Whitespace around the flag and username is normalized; password characters are
 preserved exactly. In the Vercel editor, enter `true` without wrapping quotes.
 
+The connected sign-in form allows 15 seconds for a server response, including
+startup, and distinguishes HTTP 503 (server sign-in unavailable), HTTP 401
+(incorrect credentials), timeouts and connection errors. Increasing that limit
+does not enable an unconfigured account: the server must still pass all three
+administrator checks before it can accept credentials.
+
 If configuration remains false after editing the settings:
 
 1. Confirm the variables are on the backend project associated with

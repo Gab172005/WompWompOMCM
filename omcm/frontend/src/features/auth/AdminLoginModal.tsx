@@ -75,7 +75,7 @@ export function AdminLoginModal() {
         const me = await api<{ username: string }>(
           "/auth/me",
           undefined,
-          AbortSignal.timeout(3000),
+          AbortSignal.timeout(15000),
         );
         signInAdmin(me.username);
         setPassword("");
@@ -91,11 +91,26 @@ export function AdminLoginModal() {
       );
     } catch (error) {
       clearCredentials();
-      setError(
-        error instanceof BackendApiError && error.status === 401
-          ? "The username or password is incorrect for this workspace. Check your configured administrator account and try again."
-          : "Administrator sign-in is unavailable. Check the server connection and try again.",
-      );
+      if (error instanceof BackendApiError && error.status === 401) {
+        setError(
+          "The username or password is incorrect for this workspace. Check your configured administrator account and try again.",
+        );
+      } else if (error instanceof BackendApiError && error.status === 503) {
+        setError(
+          "Administrator sign-in is unavailable on the server. Contact the workspace administrator to check the sign-in settings.",
+        );
+      } else if (
+        (error instanceof Error || error instanceof DOMException) &&
+        error.name === "TimeoutError"
+      ) {
+        setError(
+          "The sign-in server took too long to respond. Please try again.",
+        );
+      } else {
+        setError(
+          "Administrator sign-in is unavailable. Check the server connection and try again.",
+        );
+      }
     } finally {
       setBusy(false);
     }
