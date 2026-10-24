@@ -22,30 +22,38 @@ def solve(barangays, sites, times, request, selected=None):
         for site_id, var in active.items():
             model.add(var == int(site_id in selected))
     allocations, minutes = {}, {}
+    by_barangay = {b["id"]: [] for b in barangays}
+    by_site = {s["id"]: [] for s in sites}
     for b in barangays:
         for s in sites:
             travel = times.get(b["id"], {}).get(s["barangay_id"])
             if travel is not None and travel <= request.max_travel_minutes:
                 key = (b["id"], s["id"])
-                allocations[key] = model.new_int_var(0, b["demand"], f"demand_{key}")
+                allocations[key] = model.new_int_var(0, min(b["demand"], s["capacity"], request.capacity), f"demand_{key}")
                 minutes[key] = travel
+                by_barangay[b["id"]].append(allocations[key])
+                by_site[s["id"]].append(allocations[key])
                 model.add(allocations[key] <= b["demand"] * active[s["id"]])
     for b in barangays:
-        model.add(sum(v for (bid, _), v in allocations.items() if bid == b["id"]) <= b["demand"])
+        model.add(sum(by_barangay[b["id"]]) <= b["demand"])
     for s in sites:
-        used = sum(v for (_, sid), v in allocations.items() if sid == s["id"])
+        used = sum(by_site[s["id"]])
         model.add(used <= min(request.capacity, s["capacity"]) * active[s["id"]])
         model.add(used >= active[s["id"]])
     # Lexicographic integer objective: priority demand, then shorter travel, then fewer sites.
     # Every weighted unit outweighs the maximum possible total secondary penalty.
     priority = {b["id"]: max(1, round(b["score"] * 100)) for b in barangays}
-    travel_scale = len(sites) + 1
-    scale = sum(b["demand"] for b in barangays) * 120 * travel_scale + len(sites) + 1
+    maximum_open = min(request.clinic_count, len(sites))
+    maximum_served = min(sum(b["demand"] for b in barangays),
+                         sum(sorted((min(s["capacity"], request.capacity) for s in sites), reverse=True)[:maximum_open]))
+    travel_scale = maximum_open + 1
+    scale = maximum_served * request.max_travel_minutes * travel_scale + maximum_open + 1
     model.maximize(sum(v * (priority[bid] * scale - minutes[(bid, sid)] * travel_scale)
                        for (bid, sid), v in allocations.items()) - sum(active.values()))
     solver = cp_model.CpSolver()
     # Bound search work reproducibly; allow the larger provincial model to presolve.
     solver.parameters.max_deterministic_time = 10.0
+    solver.parameters.max_time_in_seconds = 20.0
     solver.parameters.num_search_workers = 1
     solver.parameters.random_seed = 42
     status = solver.solve(model)
@@ -85,11 +93,18 @@ def solve(barangays, sites, times, request, selected=None):
                 solver_status=solver.status_name(status), optimal=status == cp_model.OPTIMAL)
 
 
-def optimize(request):
-    frame, network, metadata = load_data()
+def optimize(request, provincial=False):
+    if provincial:
+        from services.provincial_planning import load_provincial_data, provincial_evidence, calculate_provincial_scores
+        frame, network, metadata = load_provincial_data()
+    else:
+        frame, network, metadata = load_data()
     validate_references(request, frame, network)
     excluded = set(request.flooded_sites)
-    if "routes" in network:
+    if provincial:
+        times, excluded, affected = provincial_evidence(frame, network, request)
+        frame["scenario_flood_exposure"] = [100 if row["id"] in affected else row["flood_exposure"] for row in frame.to_dict("records")]
+    elif "routes" in network:
         times, excluded = road_evidence(network, request)
         hazards = active_hazards(network, request.flood_level, request.municipality_flood_levels)
         affected = {h["properties"]["barangay_id"] for h in network["hazards"]["features"] if h["properties"]["id"] in hazards}
@@ -104,7 +119,8 @@ def optimize(request):
     else:
         times = travel_times(road_graph(frame, network, request.closed_roads))
     frame, forecast_context = forecast_illness(frame)
-    barangays = calculate_scores(frame, network, times, request.weights, request.outbreak_barangays, request.outbreak_multiplier, request.municipality_outbreak_multipliers)
+    barangays = (calculate_provincial_scores(frame, forecast_context, request) if provincial else
+                 calculate_scores(frame, network, times, request.weights, request.outbreak_barangays, request.outbreak_multiplier, request.municipality_outbreak_multipliers))
     model = estimate_demands(barangays, request, forecast_context)
     metadata = dict(metadata, disease=metadata["disease"] + f"; {model['model_id']} XGBoost next-day synthetic illness forecast for {model['target_date']}")
     sites = [s for s in network["sites"] if s["eligible"] and s["id"] not in excluded
@@ -127,7 +143,7 @@ def optimize(request):
             for s in open_sites))
         total = allocation["metrics"]["total_demand"]
         allocation["metrics"]["flood_safe_accessibility_pct"] = round(reachable_demand / total * 100, 2) if total else 0
-    return dict(optimized=optimum, baseline=baseline, improvement_pct=gain, barangays=barangays,
+    result = dict(optimized=optimum, baseline=baseline, improvement_pct=gain, barangays=barangays,
                 inputs=request.model_dump(), metadata=metadata,
                 notes=["Demand represents estimated daily appointments, not total population coverage.",
                        TARGET_PREFIX + model["target_date"],
@@ -141,6 +157,24 @@ def optimize(request):
                        "Paete's approximate user-configured forest-land exclusion is enforced server-side; it is not an official land classification.",
                        "Flood safety is based only on selected demo exclusions, not verified hazard conditions.",
                        f"{len(sites)} viable staging sites under this scenario. Blocked fixture routes are excluded; no diversion is assumed."])
+    if provincial:
+        # Replace pilot-specific claims; preserve the dated model and approval contract.
+        result["notes"] = [note for note in result["notes"] if not any(phrase in note for phrase in
+                           ("six-factor pilot", "Pilot priority", "Agreed factor weights", "Blocked fixture", "six-factor coefficients"))]
+        result["notes"] += [
+            "Scope: all 681 Laguna barangays and all 30 LGUs. One illustrative planning point per barangay; these are not verified operating facilities.",
+            "Agreed Balanced HNI: morbidity 35%, hospital distance 30%, density 15%, municipal income class 10%, clinic distance 5%, clinic provision 5%. Disaster risk has no HNI weight. Legacy pilot request weights do not alter this fixed provincial policy.",
+            "Travel is estimated on supplied barangay adjacency links at 20 km/h, minimum 3 minutes per link. Shared borders are not verified roads; no live traffic, road geometry or provincial OSRM matrix is asserted.",
+            "Flood scenarios exclude planning points and touching model links using supplied positive 25-year (moderate) or 100-year (severe) point flood scores. Coverage is unverified; unknown hazards are not proof of safety.",
+            "Appointment features use synthetic children/elderly shares and a neutral 50% poverty assumption; hospital minutes are a straight-line proxy at 20 km/h, capped at 120. These inputs do not change the agreed HNI weights.",
+            f"Appointment demand uses the unchanged {model['demand_model_id']} XGBoost model and explicit surge controls.",
+            f"{len(sites)} eligible provincial planning points under the selected restrictions. Search times are bounded; Feasible results do not claim global optimality.",
+        ]
+    if provincial:
+        for allocation in (result["optimized"], result["baseline"]):
+            for clinic in allocation["clinics"]:
+                clinic["reason"] = clinic["reason"].replace("road journey", "journey on modeled adjacency links")
+    return result
 
 
 def greedy_baseline(barangays, sites, times, request, selected):

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { backendApi, hasCredentials } from "../services/api";
 import {
   forecastMonth,
   operationalPeriod,
@@ -14,15 +15,18 @@ import {
   type DailySnapshot,
 } from "../services/forecasting/interventions";
 import {
-  optimizeWeek,
+  buildSimulationPlacementRequest,
+  proposalFromBackendPlan,
   type AllocationProposal,
 } from "../services/forecasting/optimizer";
 import type { SimulationScenario } from "../types/simulation";
+import type { Plan } from "../types";
+import { useAppStore } from "./useAppStore";
 export type Strategy = "none" | "manual" | "optimizer";
 export const STRATEGIES: Record<Strategy, string> = {
-  none: "No mobile clinics",
-  manual: "Choose locations yourself",
-  optimizer: "Use recommended locations",
+  none: "No intervention",
+  manual: "Manual clinic allocation",
+  optimizer: "Optimized clinic allocation",
 };
 export interface RunState {
   day: number;
@@ -78,11 +82,19 @@ function initialize(k = 3, conditions = defaultConditions()) {
     coverage,
     runs: { none: createRun(), manual: createRun(), optimizer: createRun() },
     proposal: null,
+    recommendBusy: false,
     draft: Array<string>(k).fill(""),
     playing: false,
     error: "",
     editingClinic: 0,
   };
+}
+let recommendationController: AbortController | undefined;
+let recommendationRevision = 0;
+function cancelRecommendation() {
+  recommendationRevision++;
+  recommendationController?.abort();
+  recommendationController = undefined;
 }
 interface ForecastState {
   k: number;
@@ -93,6 +105,7 @@ interface ForecastState {
   coverage: CoverageMatrix;
   runs: Record<Strategy, RunState>;
   proposal: AllocationProposal | null;
+  recommendBusy: boolean;
   draft: string[];
   editingClinic: number;
   playing: boolean;
@@ -102,7 +115,7 @@ interface ForecastState {
   setK: (k: number) => void;
   reset: () => void;
   setConditions: (conditions: SimulationScenario) => void;
-  recommend: () => void;
+  recommend: () => Promise<void>;
   reject: () => void;
   setDraft: (index: number, psgc: string) => void;
   apply: () => void;
@@ -115,6 +128,7 @@ export const useForecastStore = create<ForecastState>((set, get) => ({
   metric: "hni",
   speed: 1,
   setStrategy: (strategy) => {
+    cancelRecommendation();
     const run = get().runs[strategy];
     const draft = Array.from(
       { length: get().k },
@@ -123,7 +137,14 @@ export const useForecastStore = create<ForecastState>((set, get) => ({
           (a) => a.clinicId === `MC-${i + 1}`,
         )?.psgc ?? "",
     );
-    set({ strategy, playing: false, proposal: null, draft, error: "" });
+    set({
+      strategy,
+      playing: false,
+      proposal: null,
+      recommendBusy: false,
+      draft,
+      error: "",
+    });
   },
   setK: (k) => {
     if (!Number.isInteger(k) || k < 1 || k > get().coverage.size) {
@@ -132,48 +153,98 @@ export const useForecastStore = create<ForecastState>((set, get) => ({
       });
       return;
     }
-    const recalculate = get().strategy === "optimizer";
+    cancelRecommendation();
     set(initialize(k, get().conditions));
-    if (recalculate) get().recommend();
   },
-  reset: () => set(initialize(get().k, get().conditions)),
-  setConditions: (conditions) => set(initialize(get().k, conditions)),
-  recommend: () => {
+  reset: () => {
+    cancelRecommendation();
+    set(initialize(get().k, get().conditions));
+  },
+  setConditions: (conditions) => {
+    cancelRecommendation();
+    set(initialize(get().k, conditions));
+  },
+  recommend: async () => {
     const s = get(),
       run = s.runs[s.strategy];
+    if (
+      s.strategy !== "optimizer" ||
+      run.day !== run.reached ||
+      operationalPeriod(run.day).start !== run.day
+    ) {
+      set({
+        error:
+          "Request optimized locations on the latest decision day: Day 1, 8, 15 or 22.",
+      });
+      return;
+    }
+    const app = useAppStore.getState();
+    if (!app.adminUser || !hasCredentials()) {
+      set({
+        error:
+          "Sign in with connected administrator credentials to request the XGBoost and CP-SAT allocation.",
+        recommendBusy: false,
+      });
+      if (app.adminUser)
+        useAppStore.setState({
+          loginModalOpen: true,
+          pendingAdminPanel: "simulation",
+        });
+      else app.requestAdminView("simulation");
+      return;
+    }
+    cancelRecommendation();
+    const current = recommendationRevision;
+    recommendationController = new AbortController();
+    const signal = AbortSignal.any([
+      recommendationController.signal,
+      AbortSignal.timeout(90000),
+    ]);
+    set({ recommendBusy: true, proposal: null, error: "", playing: false });
     try {
-      if (s.strategy !== "optimizer" || run.day !== run.reached)
-        throw new Error(
-          "You are viewing an earlier day. Return to the latest weekly decision day to choose clinic locations.",
-        );
-      const proposal = optimizeWeek(
+      const plan = await backendApi<Plan>(
+        "/planning/optimize",
+        buildSimulationPlacementRequest(s.k, s.conditions),
+        signal,
+      );
+      if (current !== recommendationRevision) return;
+      const proposal = proposalFromBackendPlan(plan, run.day, s.k);
+      validateAllocation(
+        proposal.recommendations.map(({ clinicId, psgc }) => ({
+          clinicId,
+          psgc,
+        })),
         s.k,
-        run.day,
-        s.forecasts,
-        run.snapshots[run.day - 2],
-        run.snapshots[run.day - 1].allocation,
         s.coverage,
       );
       set({
         proposal,
-        draft: Array.from(
-          { length: s.k },
-          (_, i) =>
-            proposal.recommendations.find((a) => a.clinicId === `MC-${i + 1}`)!
-              .psgc,
-        ),
-        playing: false,
+        draft: proposal.recommendations.map((recommendation) => recommendation.psgc),
+        recommendBusy: false,
         error: "",
       });
     } catch (error) {
-      set({ error: (error as Error).message });
+      if (current !== recommendationRevision) return;
+      set({
+        proposal: null,
+        recommendBusy: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "The planning service could not produce clinic locations.",
+      });
+    } finally {
+      if (current === recommendationRevision)
+        recommendationController = undefined;
     }
   },
   reject: () => {
+    cancelRecommendation();
     const s = get(),
       run = s.runs[s.strategy];
     set({
       proposal: null,
+      recommendBusy: false,
       draft: Array.from(
         { length: s.k },
         (_, i) =>
@@ -229,6 +300,7 @@ export const useForecastStore = create<ForecastState>((set, get) => ({
     }
   },
   seek: (day) => {
+    cancelRecommendation();
     const s = get(),
       run = s.runs[s.strategy];
     const target = Math.max(1, Math.min(run.reached, Math.round(day)));
@@ -236,10 +308,12 @@ export const useForecastStore = create<ForecastState>((set, get) => ({
       runs: { ...s.runs, [s.strategy]: { ...run, day: target } },
       playing: false,
       proposal: null,
+      recommendBusy: false,
       error: "",
     });
   },
   advance: () => {
+    cancelRecommendation();
     const s = get(),
       run = s.runs[s.strategy];
     if (run.day >= 30) {
@@ -255,6 +329,7 @@ export const useForecastStore = create<ForecastState>((set, get) => ({
         [s.strategy]: { ...run, day, reached: Math.max(run.reached, day) },
       },
       proposal: null,
+      recommendBusy: false,
       playing: s.playing && day < 30 && !(decision && s.strategy !== "none"),
       ...(decision
         ? {

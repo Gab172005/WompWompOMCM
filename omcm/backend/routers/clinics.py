@@ -17,6 +17,13 @@ def clinics():
     return dict(sites=sites, roads=network["roads"], metadata=metadata)
 
 
+@router.get("/api/planning/clinics")
+def provincial_clinics():
+    from services.provincial_planning import load_provincial_data
+    _, network, metadata = load_provincial_data()
+    return dict(sites=network["sites"], roads=network["roads"], metadata=metadata)
+
+
 @router.get("/api/schedules", response_model=SchedulesResult)
 def schedules():
     return dict(**repo.schedules(), today=today().isoformat(), synthetic=True)

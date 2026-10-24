@@ -44,7 +44,7 @@ export function PlacementRecommendations({ plan }: { plan: Plan }) {
         </div>
         <div>
           <strong>{metrics.average_travel_minutes.toFixed(1)} min</strong>
-          <span>Mean modeled patient road time</span>
+          <span>Mean modeled patient travel time</span>
         </div>
         <div>
           <strong>{metrics.unserved_demand}</strong>
@@ -97,7 +97,7 @@ export function PlacementRecommendations({ plan }: { plan: Plan }) {
                 {clinic.assignments.map((assignment) => (
                   <li key={assignment.barangay_id}>
                     {assignment.name}: {assignment.residents} appointments ·{" "}
-                    {assignment.minutes} road minutes
+                    {assignment.minutes} modeled travel minutes
                   </li>
                 ))}
               </ul>

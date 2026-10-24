@@ -138,7 +138,7 @@ function simulationResults() {
     })),
     draft: s.proposal,
     units:
-      "Population-weighted planning indices, not patient or appointment counts. Distances are straight-line.",
+      "Population-weighted baseline HNI, scenario HNI after modeled clinic service, and uncovered-need indices; not patient or appointment counts. Distances are straight-line.",
   };
 }
 export function assistantContext(pathname: string) {
@@ -394,7 +394,7 @@ export function executeAssistantTool(
                 busy,
                 error,
                 note: result
-                  ? "Saved FastAPI draft: dated synthetic XGBoost forecasts and capacity-aware CP-SAT for the Los Baños–Bay road pilot. This is not a published schedule."
+                  ? "Saved FastAPI draft: dated synthetic XGBoost forecasts and capacity-aware CP-SAT for all 681 Laguna barangays, using the agreed Balanced HNI and modeled adjacency travel. This is not a published schedule."
                   : "No backend allocation has been generated. Open Plan clinics and select Generate recommendations; no browser allocation substitutes for the server.",
               },
             };
@@ -550,9 +550,11 @@ export function executeAssistantTool(
         if (strategy && strategy !== useForecastStore.getState().strategy)
           useForecastStore.getState().setStrategy(strategy as Strategy);
         const s = useForecastStore.getState();
+        let summary = `Updated 30-day simulation (${action}).`;
         switch (action) {
           case "recommend":
-            s.recommend();
+            summary =
+              "Optimized clinic allocation selected. Use Generate optimized locations in the simulation panel to request the connected XGBoost and CP-SAT draft.";
             break;
           case "apply":
             if (!s.proposal)
@@ -580,7 +582,7 @@ export function executeAssistantTool(
         go("/simulator");
         return {
           ok: true,
-          summary: `Updated 30-day simulation (${action}).`,
+          summary,
           data: simulationResults(),
         };
       }

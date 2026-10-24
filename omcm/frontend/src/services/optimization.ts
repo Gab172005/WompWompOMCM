@@ -17,7 +17,7 @@ export function allocationToMapPlan(
       municipality:
         BARANGAYS_BY_PSGC.get(clinic.barangay_id)?.municipality ??
         barangays.find((b) => b.id === clinic.barangay_id)?.municipality ??
-        "Laguna pilot",
+        "Laguna",
       lat: clinic.lat,
       lng: clinic.lng,
       capacity: clinic.daily_capacity,

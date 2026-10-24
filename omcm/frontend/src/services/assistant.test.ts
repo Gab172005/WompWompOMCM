@@ -133,7 +133,7 @@ describe("Assistant app tools", () => {
     expect(run("get_app_state", { section: "plan" }).data).toMatchObject({ plan: null });
     expect(navigate).not.toHaveBeenCalled();
   });
-  it("retrieves only reached simulation days and distinguishes a draft from application", () => {
+  it("retrieves only reached simulation days and does not fabricate optimizer drafts", () => {
     signIn();
     const result = run("get_app_state", { section: "simulation" });
     const runs = (result.data as { runs: { timeline: unknown[] }[] }).runs;
@@ -141,22 +141,18 @@ describe("Assistant app tools", () => {
     expect(run("configure_simulation", { action: "seek", day: 30 }).ok).toBe(
       false,
     );
-    expect(
-      run("configure_simulation", {
+    const selection = run("configure_simulation", {
         strategy: "optimizer",
         action: "recommend",
-      }).ok,
-    ).toBe(true);
-    expect(useForecastStore.getState().proposal?.recommendations).toHaveLength(
-      3,
-    );
+      });
+    expect(selection.ok).toBe(true);
+    expect(selection.summary).toContain("Generate optimized locations");
+    expect(useForecastStore.getState().proposal).toBeNull();
     expect(
       useForecastStore.getState().runs.optimizer.snapshots[0].allocation,
     ).toHaveLength(0);
-    expect(run("configure_simulation", { action: "apply" }).ok).toBe(true);
-    expect(
-      useForecastStore.getState().runs.optimizer.snapshots[0].allocation,
-    ).toHaveLength(3);
+    expect(run("configure_simulation", { action: "apply" }).ok).toBe(false);
+    expect(useForecastStore.getState().runs.optimizer.snapshots[0].allocation).toHaveLength(0);
   });
 });
 

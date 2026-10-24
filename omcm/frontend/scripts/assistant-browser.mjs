@@ -164,12 +164,11 @@ try {
     page.getByRole("complementary", { name: "Try a 30-day clinic plan" }),
   ).toBeVisible();
   await ask("Get optimizer suggestions for three clinics");
+  await expect(log).toContainText("Generate optimized locations");
   await expect(
-    page.getByRole("heading", { name: "3 recommended locations", exact: true }),
+    page.getByRole("button", { name: "Generate optimized locations", exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Apply these clinic locations" }),
-  ).toBeVisible();
+  await expect(page.getByText(/3 optimized locations/)).toHaveCount(0);
   await ask("Show public schedules for tomorrow");
   await expect(page).toHaveURL(workspaceUrl);
   await expect(widget).toBeVisible();

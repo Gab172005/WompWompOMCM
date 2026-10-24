@@ -861,6 +861,29 @@ export function getMetricColor(
   return "#fef3c7"; // Low
 }
 
+/** Continuous red ramp used by simulation so within-band service changes show on the map. */
+export function getSimulationNeedColor(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return "#cbd5e1";
+  const stops = [
+    { value: 0, color: [254, 226, 226] },
+    { value: 20, color: [248, 113, 113] },
+    { value: 35, color: [239, 68, 68] },
+    { value: 50, color: [185, 28, 28] },
+    { value: 70, color: [127, 29, 29] },
+    { value: 100, color: [69, 10, 10] },
+  ];
+  const score = Math.max(0, Math.min(100, value));
+  const upperIndex = stops.findIndex((stop) => stop.value >= score);
+  if (upperIndex <= 0) return "#fee2e2";
+  const lower = stops[upperIndex - 1];
+  const upper = stops[upperIndex];
+  const progress = (score - lower.value) / (upper.value - lower.value);
+  const channels = lower.color.map((channel, index) =>
+    Math.round(channel + (upper.color[index] - channel) * progress),
+  );
+  return `#${channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+}
+
 /** Optimizer: generates recommendations for placement of K mobile clinics */
 export function runClinicOptimizer(
   k: number,

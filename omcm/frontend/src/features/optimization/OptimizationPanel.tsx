@@ -4,6 +4,7 @@ import { useOptimizationStore } from "../../store/useOptimizationStore";
 import { ClinicCountInput } from "./ClinicCountInput";
 import { PlacementRecommendations } from "./PlacementRecommendations";
 import { DeploymentApproval } from "./DeploymentApproval";
+import { RoadExclusions } from "./RoadExclusions";
 import { Button } from "../../components/ui/Button";
 
 export function OptimizationPanel() {
@@ -33,17 +34,18 @@ export function OptimizationPanel() {
         <p>
           Choose your available clinics and daily appointment capacity, then
           review suggested locations before approving a schedule. Estimates use
-          sample healthcare needs and modeled road access.
+          sample healthcare needs and estimated links between barangays.
         </p>
         <span className="optimizer-scope">
           <ShieldCheck size={15} aria-hidden="true" />
-          Los Baños–Bay · 20-barangay pilot
+          All Laguna · 681 barangays · 30 LGUs
         </span>
         <p className="workspace-note">
-          Locations and capacities need local verification. Recommendations use
-          a separate clinic planning score and next-day XGBoost illness
-          forecasts from simulated case and weather histories. The map's
-          province-wide Healthcare Need Score remains the baseline.
+          Every barangay is considered. Recommendations use the agreed Balanced
+          HNI with next-day XGBoost illness forecasts and appointment demand.
+          Planning points and capacities need LGU verification. Travel uses
+          estimated adjacency links; a complete provincial road matrix is not
+          available. The map retains baseline illness inputs.
         </p>
       </div>
       <form
@@ -71,9 +73,9 @@ export function OptimizationPanel() {
               />
             </label>
             <label className="workspace-field">
-              Maximum road minutes
+              Maximum modeled travel minutes
               <input
-                aria-label="Maximum road minutes"
+                aria-label="Maximum modeled travel minutes"
                 type="number"
                 min={0}
                 max={120}
@@ -103,22 +105,11 @@ export function OptimizationPanel() {
               <option value="severe">Severe flood exclusions</option>
             </select>
           </label>
-          {roads.map((road) => (
-            <label className="approval-checkbox" key={road.id}>
-              <input
-                type="checkbox"
-                checked={config.closed_roads.includes(road.id)}
-                onChange={(event) =>
-                  updateConfig({
-                    closed_roads: event.target.checked
-                      ? [...config.closed_roads, road.id]
-                      : config.closed_roads.filter((id) => id !== road.id),
-                  })
-                }
-              />
-              Close {road.name}
-            </label>
-          ))}
+          <RoadExclusions
+            roads={roads}
+            selected={config.closed_roads}
+            onChange={(closed_roads) => updateConfig({ closed_roads })}
+          />
         </fieldset>
         <div className="workspace-button-row">
           <Button type="submit" disabled={busy || !sites.length}>
