@@ -21,12 +21,17 @@ function Interaction({
   barangayData,
   recenterTrigger,
   zoomDelta,
+  selectionRevision,
 }: {
   data: FeatureCollection | null;
   barangayData: FeatureCollection | null;
 } & Pick<
   MapProps,
-  "selectedPsgc" | "selectedBarangayPsgc" | "recenterTrigger" | "zoomDelta"
+  | "selectedPsgc"
+  | "selectedBarangayPsgc"
+  | "recenterTrigger"
+  | "zoomDelta"
+  | "selectionRevision"
 >) {
   useMapInteraction(
     data,
@@ -35,6 +40,7 @@ function Interaction({
     zoomDelta,
     barangayData,
     selectedBarangayPsgc,
+    selectionRevision,
   );
   return null;
 }
@@ -95,6 +101,7 @@ export function LagunaLeafletMap(props: MapProps) {
           barangayData={barangayData}
           recenterTrigger={props.recenterTrigger}
           zoomDelta={props.zoomDelta}
+          selectionRevision={props.selectionRevision}
         />
         {mask && (
           <GeoJSON
@@ -114,7 +121,9 @@ export function LagunaLeafletMap(props: MapProps) {
         )}
         <ForestLandMarker />
         {props.showHospitals && <HospitalMarkers hospitals={props.hospitals} />}
-        {props.forecastOverlay && props.showClinics && <SimulationLayers overlay={props.forecastOverlay} />}
+        {props.forecastOverlay && props.showClinics && (
+          <SimulationLayers overlay={props.forecastOverlay} />
+        )}
         <RouteLayer {...props} />
         {props.showClinics && <ClinicMarkers {...props} />}
         {props.showOsmClinics && (

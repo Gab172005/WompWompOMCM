@@ -37,6 +37,7 @@ export function MapLegend({
     showHospitals,
     showClinics,
     showOsmClinics,
+    selectedPsgc,
   } = useAppStore();
   const forecast = useForecastStore();
   const simulation = useAppStore(
@@ -56,7 +57,7 @@ export function MapLegend({
       Clinic type:{" "}
       {clinicSnapshot?.valid === false
         ? "unavailable"
-        : "Clinics · amenity=clinic or healthcare=clinic"}{" "}
+        : "OSM clinic · amenity=clinic or healthcare=clinic"}{" "}
       · {clinicSnapshot?.attribution || "© OpenStreetMap contributors"} ·{" "}
       {clinicSnapshot?.license || "ODbL 1.0"} ·{" "}
       {clinicSnapshot?.retrievedAt
@@ -90,6 +91,12 @@ export function MapLegend({
           <span>
             <i className="boundary-key municipality-key" /> Municipality
           </span>
+          {selectedPsgc && (
+            <span>
+              <i className="boundary-key selected-municipality-key" /> Selected
+              municipality
+            </span>
+          )}
           <span>
             <i className="boundary-key selected-key" /> Selected community
           </span>
@@ -107,7 +114,7 @@ export function MapLegend({
                 height={20}
                 alt=""
               />{" "}
-              Clinics
+              OSM clinic · fixed facility, not an approved mobile clinic
             </span>
           </div>
         )}
@@ -172,6 +179,12 @@ export function MapLegend({
         <span>
           <i className="boundary-key municipality-key" /> Municipality
         </span>
+        {selectedPsgc && (
+          <span>
+            <i className="boundary-key selected-municipality-key" /> Selected
+            municipality
+          </span>
+        )}
         <span>
           <i className="boundary-key barangay-key" /> Barangay
         </span>
@@ -208,7 +221,7 @@ export function MapLegend({
               height={20}
               alt=""
             />{" "}
-            Hospital
+            Verified hospital
           </span>
         )}
         {showClinics && (
@@ -220,7 +233,7 @@ export function MapLegend({
               height={20}
               alt=""
             />{" "}
-            Mobile clinics
+            Mobile clinic (numbered)
           </span>
         )}
         {showOsmClinics && (
@@ -232,7 +245,7 @@ export function MapLegend({
               height={20}
               alt=""
             />{" "}
-            Clinics
+            OSM clinic · fixed facility, not a mobile clinic
           </span>
         )}
       </div>

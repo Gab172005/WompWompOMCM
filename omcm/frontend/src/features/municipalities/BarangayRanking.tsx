@@ -34,10 +34,11 @@ export function BarangayRanking({
       className="barangay-need-ranking"
       aria-label="Barangay healthcare need ranking"
     >
-      <h3>Barangay healthcare need ranking</h3>
+      <h3>Explore barangay priorities</h3>
       <p className="workspace-note">
-        Province-wide ranks · {RANKED_BARANGAYS.length} barangays · Highest
-        estimated need first. * Provisional score and rank.
+        Province-wide ranks · {RANKED_BARANGAYS.length} barangays. Compare
+        relative need, then select a community to see its context. * Provisional
+        inputs.
       </p>
       <label className="workspace-field">
         Filter barangay ranking
@@ -51,7 +52,7 @@ export function BarangayRanking({
         />
       </label>
       <div className="barangay-ranking-heading" aria-hidden="true">
-        <span>Rank / Barangay</span>
+        <span>Province rank / Community</span>
         <span>Need / 100</span>
       </div>
       <ol className="barangay-ranking-list" start={start + 1}>
@@ -62,17 +63,17 @@ export function BarangayRanking({
               onClick={() => selectBarangay(b.psgc, b.municipalityPsgc)}
               aria-label={`Rank ${b.needRank}: ${b.name}, ${b.municipality}, healthcare need ${b.needScore.toFixed(1)} out of 100${b.needProvisional ? ", provisional" : ""}`}
             >
+              <span className="place-list-rank">{b.needRank}</span>
               <span className="barangay-ranking-name">
-                <strong>
-                  #{b.needRank} · {b.name}
-                </strong>
+                <strong>{b.name}</strong>
                 <small>
                   {b.municipality} · {b.population.toLocaleString()} residents
                 </small>
               </span>
-              <strong>
+              <strong className="place-list-score">
                 {b.needScore.toFixed(1)}
                 {b.needProvisional ? "*" : ""}
+                <small>HNI / 100</small>
               </strong>
             </button>
           </li>

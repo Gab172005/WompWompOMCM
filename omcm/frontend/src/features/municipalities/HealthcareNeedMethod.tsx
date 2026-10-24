@@ -2,7 +2,7 @@ import { HEALTHCARE_NEED_FACTORS } from "../../services/healthcareNeed";
 
 export function HealthcareNeedMethod() {
   return (
-    <details className="healthcare-need-method">
+    <details className="healthcare-need-method place-disclosure">
       <summary>How healthcare need is calculated</summary>
       <p>
         A relative planning index from 0 to 100 across the 681 barangays of
@@ -63,14 +63,17 @@ export function HealthcareNeedMethod() {
       <p>
         Hospital distance is measured in a straight line to the nearest verified,
         located hospital in the supplied register. It does not measure travel
-        time, bed availability or service capacity. Hospital and clinic records
+        time, bed availability or service capacity. The hospital map layer and
+        nearby lists use this same verified, located set. Unverified, closed and
+        unlocated records remain in the municipal register. Hospital and clinic records
         can describe the same real facility, so the two distances overlap.
       </p>
       <p>
         Scope limits: Laguna only, so barangays near the provincial border may be
         biased toward in-province facilities; clinic mapping in OpenStreetMap is
-        incomplete; coordinates are not travel time; and no record carries
-        verified capacity, services or current operating status.
+        incomplete; coordinates are not travel time; and OSM clinic records do not
+        verify capacity, services or current operating status. Hospital bed counts
+        retain their source dates and are not live availability.
       </p>
       <p>
         Missing factors are excluded and the remaining weights rescaled. Those
@@ -84,8 +87,9 @@ export function HealthcareNeedMethod() {
       <p>
         Morbidity is synthetic and hazard screening coverage is unverified. This
         baseline estimate supports planning; it is not a validated measure of
-        clinical need. Municipality planning estimates and simulation results use
-        their separately displayed formula.
+        clinical need. Municipality HNI summaries are population-weighted means
+        of these barangay scores. Municipal allocation estimates and simulation
+        results use their separately displayed formula.
       </p>
     </details>
   );

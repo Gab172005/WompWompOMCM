@@ -43,7 +43,13 @@ directly from the CSV.
 Municipal risk is a population-weighted mean of available indices, excluding
 unresolved indices from its denominator. The panel reports included record
 counts. Municipal synthetic morbidity is population-weighted across all records.
-The municipal healthcare need estimate retains the existing 35% morbidity, 25%
+Municipality HNI summaries and rankings are population-weighted means of the
+same displayed barangay HNI scores as the heatmap, rounded to one decimal.
+They report provisional barangay counts and population-weighted input coverage;
+equal rounded municipal scores share competition ranks. Density in these details
+uses the combined barangay boundary area, rather than illustrative town areas.
+
+The separate municipal allocation estimate retains the existing 35% morbidity, 25%
 illustrative vulnerability, 20% disaster risk and 20% density weights. Flood scenario adjustments affect municipal planning estimates;
 the supplied barangay risk layer and barangay healthcare need scores stay at baseline.
 The retained server pilot is separate from these provincial map inputs.
@@ -113,18 +119,30 @@ validated. The separate municipal planning heuristic is labeled in its panel.
 
 ## Hospitals
 
-The 61 records with supplied coordinates appear on the map. Five without
-coordinates remain in the barangay panel's municipal hospital register. Missing
-beds remain unavailable. Verification status, capacity source/date and notes are
-preserved, including historical and unverified records. Nearby hospital lists
-include only supplied DOH/PhilHealth-verified records and show straight-line
-distance from the barangay point, rather than travel time.
+The supplied register contains 66 records: 57 have DOH/PhilHealth verification
+labels, 61 have coordinates, and 56 have both. These **56 verified, located
+records** are the hospital map layer and the distance evidence used by HNI and
+nearby hospital lists in both views. The remaining five located records are
+unverified or historical; five other records lack coordinates. All 66 remain
+in the barangay panel's municipal hospital register, including the reported
+closed San Jose Hospital in Calamba. Nine missing bed counts remain unavailable.
+
+The source CSV and generated bundle are unchanged. Verification status is taken
+from the supplied source labels; it does not establish live operating status or
+bed availability. Capacity definitions, dates and notes remain attached. The
+importer rejects incomplete/invalid coordinate pairs, negative bed counts and
+duplicate municipality-qualified hospital names. HNI, markers and nearby lists
+share finite WGS84 and verification eligibility, with deterministic raw-ID ties.
+Distances are province-wide straight-line distances, rather than travel times.
+See [the Step A audit](../docs/HOSPITAL_HNI_AUDIT.md) for evidence and changed logic.
 
 ## Verification
 
 From `frontend/`, run `npm run build`, `npm run lint`, `npm test`, and
-`npm run test:barangays`. Browser checks use Playwright Chromium or an installed
-Chrome with `OMCM_BROWSER_CHANNEL=chrome`. They cover boundary counts, real
-polygon clicks, highlighting, source details, missing/zero risk, layers,
-hospital markers, healthcare need scores, provisional/tied ranks, ranking filters
-and pagination, and mobile layout without depending on street tiles.
+`npm run test:hni`. The Step A browser check uses the retained Playwright
+dependency and an installed Chrome (`OMCM_BROWSER_CHANNEL=chrome` by default).
+It checks hospital eligibility and HNI colors, details, municipality rollups,
+provisional coverage, historical registers, and desktop/mobile rendering.
+The historical `test:barangays` script still references a deleted test file.
+Run `python -m pytest -q` with the backend virtual environment from `backend/`
+for the recovered pilot/API tests and the new offline hospital importer checks.

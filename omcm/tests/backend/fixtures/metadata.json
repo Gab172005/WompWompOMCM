@@ -1,0 +1,8 @@
+{
+  "synthetic": true,
+  "region": "Laguna pilot",
+  "generated_at": "2026-10-14",
+  "source": "Deterministic OMCM demonstration generator",
+  "travel_times": "Synthetic network estimates; not live traffic",
+  "disease": "Synthetic case counts; not clinical predictions"
+}

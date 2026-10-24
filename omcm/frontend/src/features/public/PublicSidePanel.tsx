@@ -3,25 +3,27 @@ import {
   CalendarDays,
   Clock,
   HeartPulse,
-  Hospital,
   MapPin,
   ShieldAlert,
   X,
 } from "lucide-react";
+import { useState } from "react";
 import {
   addIsoDays,
   getManilaToday,
   useAppStore,
 } from "../../store/useAppStore";
-import {
-  BARANGAYS_BY_PSGC,
-  MAPPED_HOSPITALS,
-  distanceKm,
-} from "../../services/providedData";
+import { BARANGAYS_BY_PSGC, distanceKm } from "../../services/providedData";
 import { LAGUNA_BASE_DATA } from "../../services/lagunaData";
+import {
+  NearbyCare,
+  PanelExpandButton,
+  PlaceHeader,
+} from "../municipalities/PlaceDetails";
 import { Button } from "../../components/ui/Button";
 
 export function PublicSidePanel() {
+  const [expanded, setExpanded] = useState(false);
   const {
     sidePanelOpen,
     selectedPsgc,
@@ -67,22 +69,19 @@ export function PublicSidePanel() {
 
   const nearestClinic = clinicsByDistance[0] ?? null;
 
-  const nearestHospitals = targetPoint
-    ? MAPPED_HOSPITALS.filter((h) => h.verified)
-        .map((h) => ({ ...h, distance: distanceKm(targetPoint, h) }))
-        .sort((a, b) => a.distance - b.distance)
-        .slice(0, 3)
-    : [];
-
   return (
     <aside
-      className="workspace-panel intelligence-panel public-care-panel card"
+      className={`workspace-panel intelligence-panel public-care-panel card ${expanded ? "is-expanded" : ""}`}
       aria-label="Community care and schedules"
     >
       <div className="workspace-panel-heading">
         <h2>
           <HeartPulse size={17} aria-hidden="true" /> Community care & schedules
         </h2>
+        <PanelExpandButton
+          expanded={expanded}
+          onToggle={() => setExpanded((value) => !value)}
+        />
         <button
           className="icon-button"
           aria-label="Close intelligence panel"
@@ -95,11 +94,22 @@ export function PublicSidePanel() {
         className="workspace-panel-body"
         key={selectedBarangayPsgc ?? selectedPsgc ?? selectedScheduleDate}
       >
-        <div className="eyebrow">LAGUNA · PUBLIC HEALTHCARE VIEW</div>
-        <h1> Care closer to your community.</h1>
-        <p>
-          Find approved mobile clinic locations, operating hours, offered
-          services, and verified hospitals across Laguna.
+        <PlaceHeader
+          title={
+            selectedBarangay?.name ??
+            selectedMunicipality?.name ??
+            "Care near you"
+          }
+          kind="Public care guide"
+          subtitle={
+            selectedBarangay
+              ? `${selectedBarangay.municipality}, Laguna`
+              : "Approved clinic visits and nearby care across Laguna."
+          }
+        />
+        <p className="place-intro">
+          Choose a date to find published clinic visits, operating hours and
+          services for your community.
         </p>
 
         {schedule?.status === "Emergency Override" &&
@@ -250,24 +260,13 @@ export function PublicSidePanel() {
               </p>
             )}
 
-            <h4>
-              <Hospital size={15} aria-hidden="true" /> Nearest verified
-              hospitals
-            </h4>
-            {nearestHospitals.map((h) => (
-              <div className="barangay-hospital" key={h.id}>
-                <strong>{h.name}</strong>
-                <span>
-                  {h.municipality} · {h.distance.toFixed(1)} km away
-                </span>
-                <small>
-                  {h.capacity === null
-                    ? "Beds unverified"
-                    : `${h.capacity} beds`}{" "}
-                  · {h.verificationStatus}
-                </small>
-              </div>
-            ))}
+            {targetPoint && targetMunicipalityName && (
+              <NearbyCare
+                point={targetPoint}
+                municipality={targetMunicipalityName}
+                origin={selectedBarangay ? "barangay" : "municipality"}
+              />
+            )}
           </section>
         )}
 

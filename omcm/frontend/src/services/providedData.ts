@@ -8,8 +8,11 @@ import type {
 } from "../types/osmClinic";
 import {
   computeBarangayHealthcareNeed,
+  HEALTHCARE_NEED_FACTORS,
+  isEligibleHospital,
   isLocatedClinic,
   type BarangayHealthcareNeed,
+  type NeedFactor,
 } from "./healthcareNeed";
 export { distanceKm } from "./healthcareNeed";
 
@@ -28,21 +31,22 @@ const clinicBundle = dataset as typeof dataset & {
  * clinic bundle. An unusable snapshot excludes both clinic factors; it is never
  * read as verified zero provision.
  */
-export const OSM_CLINIC_SNAPSHOT: ClinicSnapshot = clinicBundle.clinicSnapshot ?? {
-  valid: false,
-  retrievedAt: null,
-  osmBaseTimestamp: null,
-  endpoint: null,
-  query: null,
-  attribution: "© OpenStreetMap contributors",
-  license: "Open Database License (ODbL) 1.0",
-  rawSha256: null,
-  boundarySha256: null,
-  counts: {},
-  warnings: [
-    "No OSM clinic snapshot is bundled with this dataset build, so clinic factors are excluded.",
-  ],
-};
+export const OSM_CLINIC_SNAPSHOT: ClinicSnapshot =
+  clinicBundle.clinicSnapshot ?? {
+    valid: false,
+    retrievedAt: null,
+    osmBaseTimestamp: null,
+    endpoint: null,
+    query: null,
+    attribution: "© OpenStreetMap contributors",
+    license: "Open Database License (ODbL) 1.0",
+    rawSha256: null,
+    boundarySha256: null,
+    counts: {},
+    warnings: [
+      "No OSM clinic snapshot is bundled with this dataset build, so clinic factors are excluded.",
+    ],
+  };
 
 const clinicDataset: ClinicDataset = {
   clinics: clinicBundle.clinics ?? [],
@@ -93,14 +97,57 @@ export const BARANGAYS_BY_PSGC = new Map(
   LAGUNA_BARANGAYS.map((b) => [b.psgc, b]),
 );
 export const PROVIDED_HOSPITALS: HospitalRecord[] = dataset.hospitals;
-// Keep records without a verified location in the register, without inventing map points.
-export const MAPPED_HOSPITALS: HospitalFacility[] = PROVIDED_HOSPITALS.filter(
-  (h): h is HospitalRecord & { lat: number; lng: number } =>
-    h.lat !== null && h.lng !== null,
+// Historical, unverified and unlocated records remain in PROVIDED_HOSPITALS.
+// The map uses exactly the same verified, located evidence as hospital access in HNI.
+export const MAPPED_HOSPITALS: HospitalFacility[] =
+  PROVIDED_HOSPITALS.filter(isEligibleHospital);
+
+/** Display rollups of the same scored barangays used by both map engines. */
+const municipalityNeed = [
+  ...new Set(LAGUNA_BARANGAYS.map((b) => b.municipalityPsgc)),
+]
+  .map((psgc) => {
+    const records = LAGUNA_BARANGAYS.filter((b) => b.municipalityPsgc === psgc);
+    const population = records.reduce((sum, b) => sum + b.population, 0);
+    const mean = (read: (b: BarangayRecord) => number) =>
+      records.reduce((sum, b) => sum + read(b) * b.population, 0) / population;
+    const needContributions = Object.fromEntries(
+      (Object.keys(HEALTHCARE_NEED_FACTORS) as NeedFactor[]).map((factor) => [
+        factor,
+        records.every((b) => b.needContributions[factor] === null)
+          ? null
+          : mean((b) => b.needContributions[factor] ?? 0),
+      ]),
+    ) as Record<NeedFactor, number | null>;
+    return {
+      psgc,
+      density: Math.round(
+        population / records.reduce((sum, b) => sum + b.areaKm2, 0),
+      ),
+      needScore: Math.round(mean((b) => b.needScore) * 10) / 10,
+      needCoverage: Math.round(mean((b) => b.needCoverage) * 10) / 10,
+      provisionalBarangays: records.filter((b) => b.needProvisional).length,
+      barangayCount: records.length,
+      needContributions,
+    };
+  })
+  .sort((a, b) => b.needScore - a.needScore || a.psgc.localeCompare(b.psgc));
+
+export const MUNICIPALITY_HEALTHCARE_NEED = new Map(
+  municipalityNeed.map((summary) => [
+    summary.psgc,
+    {
+      ...summary,
+      needRank:
+        1 +
+        municipalityNeed.filter((m) => m.needScore > summary.needScore).length,
+    },
+  ]),
 );
 // Active, located OSM clinics the importer assigned to each barangay polygon.
 // This is separate evidence; it never enters the municipal hospital register.
-export const OSM_CLINICS_BY_BARANGAY: Map<string, LocatedOsmClinic[]> = new Map();
+export const OSM_CLINICS_BY_BARANGAY: Map<string, LocatedOsmClinic[]> =
+  new Map();
 for (const clinic of MAPPED_OSM_CLINICS) {
   if (
     !clinic.active ||

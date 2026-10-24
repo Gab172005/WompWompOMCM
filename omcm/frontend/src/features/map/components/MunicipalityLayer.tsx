@@ -10,6 +10,12 @@ export function MunicipalityLayer({
   "municipalities" | "activeMetric" | "selectedPsgc" | "onSelectMunicipality"
 >) {
   const byCode = new Map(props.municipalities.map((m) => [m.psgc, m]));
+  const selected = {
+    ...data,
+    features: data.features.filter(
+      (feature) => String(feature.properties?.adm3_psgc) === props.selectedPsgc,
+    ),
+  };
   return (
     <>
       <GeoJSON
@@ -41,17 +47,42 @@ export function MunicipalityLayer({
           key={props.selectedPsgc}
           data={data}
           interactive={false}
-          style={(f) => ({
+          style={() => ({
             fill: false,
             color: "#334155",
             opacity: 0.9,
-            weight:
-              String(f?.properties?.adm3_psgc) === props.selectedPsgc
-                ? 2.8
-                : 1.6,
+            weight: 1.6,
             className: "municipality-boundary",
           })}
         />
+        {selected.features.length > 0 && (
+          <>
+            <GeoJSON
+              key={`halo-${props.selectedPsgc}`}
+              data={selected}
+              interactive={false}
+              style={{
+                fill: false,
+                color: "#fff",
+                opacity: 1,
+                weight: 9,
+                className: "municipality-selection-halo",
+              }}
+            />
+            <GeoJSON
+              key={`selection-${props.selectedPsgc}`}
+              data={selected}
+              interactive={false}
+              style={{
+                fill: false,
+                color: "#1a73e8",
+                opacity: 1,
+                weight: 5,
+                className: "municipality-boundary is-selected",
+              }}
+            />
+          </>
+        )}
       </Pane>
     </>
   );

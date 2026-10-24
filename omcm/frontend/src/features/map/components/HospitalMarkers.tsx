@@ -1,6 +1,7 @@
 import { divIcon } from "leaflet";
 import { Marker, Popup } from "react-leaflet";
 import type { HospitalFacility } from "../../../types/municipality";
+import { isEligibleHospital } from "../../../services/healthcareNeed";
 import { hospitalMarkerSvg } from "./facilityIcons";
 const icon = divIcon({
   className: "hospital-marker-custom",
@@ -15,7 +16,7 @@ export function HospitalMarkers({
 }) {
   return (
     <>
-      {hospitals.map((h) => (
+      {hospitals.filter(isEligibleHospital).map((h) => (
         <Marker
           key={h.id}
           position={[h.lat, h.lng]}

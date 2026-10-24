@@ -16,7 +16,7 @@ export function heatmapStyle(
         disasterRisk: municipality.adjustedDisasterRisk,
         morbidity: municipality.adjustedMorbidity,
       }[metric]
-    : 0;
+    : null;
   return {
     fillColor: getMetricColor(metric, value),
     fillOpacity: selected ? 0.88 : 0.65,

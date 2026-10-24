@@ -1,11 +1,17 @@
+import { Activity, Home, Layers, Users } from "lucide-react";
+import {
+  NearbyCare,
+  NeedDrivers,
+  NeedScoreCard,
+  PlaceHeader,
+  PlaceStats,
+} from "./PlaceDetails";
 import { useAppStore } from "../../store/useAppStore";
 import {
   BARANGAYS_BY_PSGC,
-  MAPPED_HOSPITALS,
   OSM_CLINIC_SNAPSHOT,
   OSM_CLINICS_BY_BARANGAY,
   PROVIDED_HOSPITALS,
-  distanceKm,
   normalizeMunicipality,
   LAGUNA_BARANGAYS,
 } from "../../services/providedData";
@@ -50,200 +56,236 @@ export function BarangayPanel() {
   const hospitals = PROVIDED_HOSPITALS.filter(
     (h) => h.municipalityKey === normalizeMunicipality(b.municipality),
   );
-  const nearest = MAPPED_HOSPITALS.filter((h) => h.verified)
-    .map((h) => ({ ...h, distance: distanceKm(b, h) }))
-    .sort((a, c) => a.distance - c.distance)
-    .slice(0, 3);
   // OSM clinics the importer assigned to this barangay polygon. They stay a
   // separate register from the municipal hospitals above.
   const clinics = OSM_CLINICS_BY_BARANGAY.get(b.psgc) ?? [];
   const counts = OSM_CLINIC_SNAPSHOT.counts;
-  const clinicWarnings = [...new Set([...OSM_CLINIC_SNAPSHOT.warnings, ...b.clinicWarnings])];
+  const clinicWarnings = [
+    ...new Set([...OSM_CLINIC_SNAPSHOT.warnings, ...b.clinicWarnings]),
+  ];
   return (
     <>
-      <div className="eyebrow">BARANGAY · PSGC {b.psgc}</div>
-      <h1>{b.name}</h1>
-      <p>{b.municipality}, Laguna</p>
-      <button
-        className="workspace-text-button"
-        onClick={() => selectMunicipality(b.municipalityPsgc)}
-      >
-        ← Municipality overview
-      </button>
-      <section aria-label="Barangay healthcare need">
-        <div className="workspace-score">
-          <span>Healthcare need · planning estimate</span>
-          <strong>
-            {b.needScore.toFixed(1)}
-            <small> / 100</small>
-          </strong>
-          <span className="barangay-need-rank">
-            Healthcare need rank #{b.needRank} of {LAGUNA_BARANGAYS.length}
-          </span>
-          {b.needProvisional && (
-            <span>
+      <PlaceHeader
+        title={b.name}
+        kind="Barangay"
+        subtitle={`${b.municipality}, Laguna · ${b.urbanRural || "Classification unavailable"}`}
+        onBack={() => selectMunicipality(b.municipalityPsgc)}
+        backLabel="Municipality overview"
+      />
+      <section className="place-overview" aria-label="Barangay healthcare need">
+        <NeedScoreCard
+          score={b.needScore}
+          rankLabel={`Healthcare need rank #${b.needRank} of ${LAGUNA_BARANGAYS.length}`}
+          coverage={b.needCoverage}
+          provisional={b.needProvisional}
+        >
+          {b.needProvisional ? (
+            <p>
               Provisional score and rank · {b.needCoverage}% of input weight
-              available
-            </span>
+              available. Unresolved inputs are excluded and the remaining
+              weights rescaled. Missing factors are not treated as zero.
+            </p>
+          ) : (
+            <p>All seven planning factors are available for this barangay.</p>
           )}
-        </div>
-        {b.needProvisional && (
+        </NeedScoreCard>
+        <PlaceStats
+          items={[
+            {
+              label: "Residents",
+              value: b.population.toLocaleString(),
+              icon: Users,
+            },
+            {
+              label: "Households",
+              value: b.households.toLocaleString(),
+              icon: Home,
+            },
+            {
+              label: "Residents / km²",
+              value: b.density.toLocaleString(),
+              icon: Layers,
+            },
+            {
+              label: "Mock morbidity / 1,000",
+              value: b.morbidity.toFixed(2),
+              icon: Activity,
+            },
+          ]}
+        />
+        <NeedDrivers contributions={b.needContributions} />
+        <NearbyCare point={b} municipality={b.municipality} />
+        <details className="place-disclosure">
+          <summary>
+            All seven factor inputs<span>Weights & evidence</span>
+          </summary>
+          <h3>Healthcare need contributions</h3>
+          {(Object.keys(HEALTHCARE_NEED_FACTORS) as NeedFactor[]).map((key) => {
+            const score = b.needFactors[key];
+            const metric =
+              key === "clinicDistance"
+                ? b.nearestClinic
+                  ? `Nearest active OSM clinic: ${b.nearestClinic.name} · ${b.nearestClinic.distanceKm.toFixed(2)} km straight line · cross-barangay allowed`
+                  : "Nearest clinic unavailable · no in-province OSM clinic with usable coordinates"
+                : key === "clinicProvision"
+                  ? `${b.clinicCount === null ? "Mapped clinic count unavailable" : `Mapped OSM clinics in this barangay: ${b.clinicCount}${b.clinicCount === 0 ? " (no OSM record; not verified absence)" : ""}`} · ${b.clinicsPer10000 === null ? "rate per 10,000 unavailable" : `${b.clinicsPer10000.toFixed(2)} per 10,000 residents`}`
+                  : null;
+            return (
+              <div className="need-factor-row" key={key}>
+                <span>
+                  {HEALTHCARE_NEED_FACTORS[key].label} ·{" "}
+                  {Math.round(HEALTHCARE_NEED_FACTORS[key].weight * 100)}% base
+                  weight
+                  <small>
+                    {score === null
+                      ? "Unavailable · excluded"
+                      : key === "incomeClass"
+                        ? `${b.incomeClass} municipality class · ${score.toFixed(1)} / 100 resource proxy`
+                        : `${score.toFixed(1)} / 100 ${key === "disasterRisk" ? "supplied index" : key === "clinicProvision" ? "deficit (100 − tied percentile of clinics per 10,000)" : key === "clinicDistance" ? "distance percentile (higher = farther)" : "percentile"}`}
+                  </small>
+                  {metric && <small>{metric}</small>}
+                </span>
+                <strong>
+                  {b.needContributions[key] === null
+                    ? "—"
+                    : `${b.needContributions[key]!.toFixed(1)} pts`}
+                </strong>
+              </div>
+            );
+          })}
           <p className="workspace-note">
-            Unresolved inputs are excluded and the remaining weights rescaled.
-            Missing factors are not treated as zero.
+            Urban / rural classification · {b.urbanRural} · demographic context,
+            not scored. It contributes no weight, no proxy value and no rank
+            change.
           </p>
-        )}
-        <h3>Healthcare need contributions</h3>
-        {(Object.keys(HEALTHCARE_NEED_FACTORS) as NeedFactor[]).map((key) => {
-          const score = b.needFactors[key];
-          const metric =
-            key === "clinicDistance"
-              ? b.nearestClinic
-                ? `Nearest active OSM clinic: ${b.nearestClinic.name} · ${b.nearestClinic.distanceKm.toFixed(2)} km straight line · cross-barangay allowed`
-                : "Nearest clinic unavailable · no in-province OSM clinic with usable coordinates"
-              : key === "clinicProvision"
-                ? `${b.clinicCount === null ? "Mapped clinic count unavailable" : `Mapped OSM clinics in this barangay: ${b.clinicCount}${b.clinicCount === 0 ? " (no OSM record; not verified absence)" : ""}`} · ${b.clinicsPer10000 === null ? "rate per 10,000 unavailable" : `${b.clinicsPer10000.toFixed(2)} per 10,000 residents`}`
-                : null;
-          return (
-            <div className="need-factor-row" key={key}>
-              <span>
-                {HEALTHCARE_NEED_FACTORS[key].label} ·{" "}
-                {Math.round(HEALTHCARE_NEED_FACTORS[key].weight * 100)}% base
-                weight
-                <small>
-                  {score === null
-                    ? "Unavailable · excluded"
-                    : key === "incomeClass"
-                      ? `${b.incomeClass} municipality class · ${score.toFixed(1)} / 100 resource proxy`
-                      : `${score.toFixed(1)} / 100 ${key === "disasterRisk" ? "supplied index" : key === "clinicProvision" ? "deficit (100 − tied percentile of clinics per 10,000)" : key === "clinicDistance" ? "distance percentile (higher = farther)" : "percentile"}`}
-                </small>
-                {metric && <small>{metric}</small>}
-              </span>
+          <p className="workspace-note">
+            Nearest verified hospital:{" "}
+            {b.nearestHospital
+              ? `${b.nearestHospital.name}, ${b.nearestHospital.distanceKm.toFixed(2)} km straight-line distance.`
+              : "Unavailable in the supplied register."}
+          </p>
+        </details>
+        <details className="place-disclosure">
+          <summary>
+            OSM clinic records and provenance<span>Fixed facilities</span>
+          </summary>
+          <h3>OSM clinic evidence</h3>
+          <details>
+            <summary>
+              {OSM_CLINIC_SNAPSHOT.valid
+                ? "Snapshot status and provenance"
+                : "Snapshot unavailable"}
+            </summary>
+            <p className="workspace-note">
+              {OSM_CLINIC_SNAPSHOT.valid
+                ? "OpenStreetMap clinic records retrieved once and bundled offline; the browser never queries Overpass."
+                : "No usable OSM clinic snapshot is bundled, so both clinic factors are excluded. Missing records are not evidence of zero provision."}
+            </p>
+            <div className="summary-line">
+              <span>Retrieved</span>
+              <strong>{OSM_CLINIC_SNAPSHOT.retrievedAt ?? "Unrecorded"}</strong>
+            </div>
+            <div className="summary-line">
+              <span>OSM database timestamp</span>
               <strong>
-                {b.needContributions[key] === null
-                  ? "—"
-                  : `${b.needContributions[key]!.toFixed(1)} pts`}
+                {OSM_CLINIC_SNAPSHOT.osmBaseTimestamp ?? "Unrecorded"}
               </strong>
             </div>
-          );
-        })}
-        <p className="workspace-note">
-          Urban / rural classification · {b.urbanRural} · demographic context,
-          not scored. It contributes no weight, no proxy value and no rank
-          change.
-        </p>
-        <p className="workspace-note">
-          Nearest verified hospital:{" "}
-          {b.nearestHospital
-            ? `${b.nearestHospital.name}, ${b.nearestHospital.distanceKm.toFixed(2)} km straight-line distance.`
-            : "Unavailable in the supplied register."}
-        </p>
-        <h3>OSM clinic evidence</h3>
-        <details>
-          <summary>
-            {OSM_CLINIC_SNAPSHOT.valid
-              ? "Snapshot status and provenance"
-              : "Snapshot unavailable"}
-          </summary>
-          <p className="workspace-note">
-            {OSM_CLINIC_SNAPSHOT.valid
-              ? "OpenStreetMap clinic records retrieved once and bundled offline; the browser never queries Overpass."
-              : "No usable OSM clinic snapshot is bundled, so both clinic factors are excluded. Missing records are not evidence of zero provision."}
-          </p>
-          <div className="summary-line">
-            <span>Retrieved</span>
-            <strong>{OSM_CLINIC_SNAPSHOT.retrievedAt ?? "Unrecorded"}</strong>
-          </div>
-          <div className="summary-line">
-            <span>OSM database timestamp</span>
-            <strong>{OSM_CLINIC_SNAPSHOT.osmBaseTimestamp ?? "Unrecorded"}</strong>
-          </div>
-          <div className="summary-line">
-            <span>Endpoint</span>
-            <strong>{OSM_CLINIC_SNAPSHOT.endpoint ?? "Unrecorded"}</strong>
-          </div>
-          <div className="summary-line">
-            <span>Raw response SHA-256</span>
-            <strong>{OSM_CLINIC_SNAPSHOT.rawSha256 ?? "Unrecorded"}</strong>
-          </div>
-          <div className="summary-line">
-            <span>
-              Active records · assigned / ambiguous / outside / unlocated
-            </span>
-            <strong>
-              {formatCount(counts.active)} · {formatCount(counts.activeAssigned)}{" "}
-              / {formatCount(counts.activeAmbiguous)} /{" "}
-              {formatCount(counts.activeOutside)} /{" "}
-              {formatCount(counts.activeUnlocated)}
-            </strong>
-          </div>
-          <div className="summary-line">
-            <span>Inactive lifecycle records retained</span>
-            <strong>{formatCount(counts.inactive)}</strong>
-          </div>
-          <div className="summary-line">
-            <span>Suspected distinct duplicates kept unmerged</span>
-            <strong>{formatCount(counts.suspectedDuplicates)}</strong>
-          </div>
-          <p className="workspace-note">
-            {OSM_CLINIC_SNAPSHOT.attribution} · {OSM_CLINIC_SNAPSHOT.license}.
-            Active records are elements tagged exactly amenity=clinic or
-            healthcare=clinic.
-            {counts.activeRecordTimestamps === 0 &&
-              " The snapshot carries no per-record OSM last-edit dates, so only the snapshot retrieval and database timestamps above date this evidence."}{" "}
-            Absence of a record is an incomplete mapping observation, not
-            verified absence of a clinic.
-          </p>
-          <ul>
-            {clinicWarnings.map((warning) => (
-              <li key={warning}>{warning}</li>
-            ))}
-          </ul>
-        </details>
-        <h3>
-          Assigned active OSM clinic records ({OSM_CLINIC_SNAPSHOT.valid ? clinics.length : "unavailable"})
-        </h3>
-        {!OSM_CLINIC_SNAPSHOT.valid ? (
-          <p className="workspace-note">
-            Assigned clinic records are unavailable because the offline snapshot
-            is missing or invalid. No mapped count or absence is inferred.
-          </p>
-        ) : clinics.length ? (
-          <>
+            <div className="summary-line">
+              <span>Endpoint</span>
+              <strong>{OSM_CLINIC_SNAPSHOT.endpoint ?? "Unrecorded"}</strong>
+            </div>
+            <div className="summary-line">
+              <span>Raw response SHA-256</span>
+              <strong>{OSM_CLINIC_SNAPSHOT.rawSha256 ?? "Unrecorded"}</strong>
+            </div>
+            <div className="summary-line">
+              <span>
+                Active records · assigned / ambiguous / outside / unlocated
+              </span>
+              <strong>
+                {formatCount(counts.active)} ·{" "}
+                {formatCount(counts.activeAssigned)} /{" "}
+                {formatCount(counts.activeAmbiguous)} /{" "}
+                {formatCount(counts.activeOutside)} /{" "}
+                {formatCount(counts.activeUnlocated)}
+              </strong>
+            </div>
+            <div className="summary-line">
+              <span>Inactive lifecycle records retained</span>
+              <strong>{formatCount(counts.inactive)}</strong>
+            </div>
+            <div className="summary-line">
+              <span>Suspected distinct duplicates kept unmerged</span>
+              <strong>{formatCount(counts.suspectedDuplicates)}</strong>
+            </div>
             <p className="workspace-note">
-              Records whose mapped point falls inside this barangay polygon.
-              Names come from OpenStreetMap; matching was never done by name.
-              Capacity, services and current operating status are not verified.
+              {OSM_CLINIC_SNAPSHOT.attribution} · {OSM_CLINIC_SNAPSHOT.license}.
+              Active records are elements tagged exactly amenity=clinic or
+              healthcare=clinic.
+              {counts.activeRecordTimestamps === 0 &&
+                " The snapshot carries no per-record OSM last-edit dates, so only the snapshot retrieval and database timestamps above date this evidence."}{" "}
+              Absence of a record is an incomplete mapping observation, not
+              verified absence of a clinic.
             </p>
-            {clinics.map((clinic) => (
-              <div className="barangay-hospital" key={clinic.id}>
-                <strong>{clinic.name}</strong>
-                <span>
-                  {clinic.osmType} {clinic.osmId} ·{" "}
-                  {locationMethodLabels[clinic.locationMethod]}
-                </span>
-                <small>
-                  OSM last edit: {tagTimestamp(clinic) ?? "unrecorded"} ·{" "}
-                  <a href={osmElementUrl(clinic)} target="_blank" rel="noreferrer">
-                    OpenStreetMap record
-                  </a>
-                </small>
-                {clinic.warnings.map((warning) => (
-                  <small key={warning}>{warning}</small>
-                ))}
-              </div>
-            ))}
-          </>
-        ) : (
-          <p className="workspace-note">
-            0 OSM clinics recorded in this barangay polygon. This is a mapped
-            observation, not verified absence: the record set covers only
-            exactly tagged OpenStreetMap elements in one bounding box, so a
-            clinic may exist without an OSM record.
-          </p>
-        )}
+            <ul>
+              {clinicWarnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          </details>
+          <h3>
+            Assigned active OSM clinic records (
+            {OSM_CLINIC_SNAPSHOT.valid ? clinics.length : "unavailable"})
+          </h3>
+          {!OSM_CLINIC_SNAPSHOT.valid ? (
+            <p className="workspace-note">
+              Assigned clinic records are unavailable because the offline
+              snapshot is missing or invalid. No mapped count or absence is
+              inferred.
+            </p>
+          ) : clinics.length ? (
+            <>
+              <p className="workspace-note">
+                Records whose mapped point falls inside this barangay polygon.
+                Names come from OpenStreetMap; matching was never done by name.
+                Capacity, services and current operating status are not
+                verified.
+              </p>
+              {clinics.map((clinic) => (
+                <div className="barangay-hospital" key={clinic.id}>
+                  <strong>{clinic.name}</strong>
+                  <span>
+                    {clinic.osmType} {clinic.osmId} ·{" "}
+                    {locationMethodLabels[clinic.locationMethod]}
+                  </span>
+                  <small>
+                    OSM last edit: {tagTimestamp(clinic) ?? "unrecorded"} ·{" "}
+                    <a
+                      href={osmElementUrl(clinic)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      OpenStreetMap record
+                    </a>
+                  </small>
+                  {clinic.warnings.map((warning) => (
+                    <small key={warning}>{warning}</small>
+                  ))}
+                </div>
+              ))}
+            </>
+          ) : (
+            <p className="workspace-note">
+              0 OSM clinics recorded in this barangay polygon. This is a mapped
+              observation, not verified absence: the record set covers only
+              exactly tagged OpenStreetMap elements in one bounding box, so a
+              clinic may exist without an OSM record.
+            </p>
+          )}
+        </details>
         <HealthcareNeedMethod />
-        <details>
+        <details className="place-disclosure">
           <summary>Scope, bias and evidence limits</summary>
           <ul>
             <li>
@@ -267,8 +309,9 @@ export function BarangayPanel() {
               seasonality are ignored.
             </li>
             <li>
-              No record carries verified capacity, services or operating status,
-              and hospital and clinic records can describe the same facility.
+              OSM clinic records do not verify capacity, services or operating
+              status, and hospital and clinic records can describe the same
+              facility.
             </li>
             <li>
               Weights, thresholds and the 100 − percentile deficit are stated
@@ -283,74 +326,46 @@ export function BarangayPanel() {
           View all barangay healthcare need rankings
         </button>
       </section>
-      <div className="workspace-score">
-        <span>Disaster risk index</span>
-        <strong>
-          {b.disasterRisk ?? "Needs review"}
-          {b.disasterRisk !== null && <small> / 100</small>}
-        </strong>
-        {b.disasterRisk !== null && (
-          <span>
-            {b.hazardLevel === "no_mapped_hazard"
-              ? "No mapped hazard at query point"
-              : b.hazardLevel.replaceAll("_", " ")}
-          </span>
-        )}
-        {b.riskRank !== null && (
-          <span>Dataset risk rank #{b.riskRank} · ties share ranks</span>
-        )}
-      </div>
-      <div className="workspace-metrics">
-        {[
-          [b.population.toLocaleString(), "Population"],
-          [b.households.toLocaleString(), "Households"],
-          [b.urbanRural, "Urban / rural"],
-          [b.incomeClass, "Municipality income class"],
-          [b.morbidity.toFixed(2) + " / 1k", "Synthetic morbidity rate"],
-          [b.density.toLocaleString(), "Residents / km²"],
-        ].map(([value, label]) => (
-          <div key={label}>
-            <strong>{value}</strong>
-            <span>{label}</span>
+      <details className="place-disclosure">
+        <summary>
+          Hazard screening details<span>Point-based evidence</span>
+        </summary>
+        <div className="workspace-score">
+          <span>Disaster risk index</span>
+          <strong>
+            {b.disasterRisk ?? "Needs review"}
+            {b.disasterRisk !== null && <small> / 100</small>}
+          </strong>
+          {b.disasterRisk !== null && (
+            <span>
+              {b.hazardLevel === "no_mapped_hazard"
+                ? "No mapped hazard at query point"
+                : b.hazardLevel.replaceAll("_", " ")}
+            </span>
+          )}
+          {b.riskRank !== null && (
+            <span>Dataset risk rank #{b.riskRank} · ties share ranks</span>
+          )}
+        </div>
+        <h3>Risk screening details</h3>
+        <p className="workspace-note">
+          Barangay point screening · {b.methodVersion}. Coverage:{" "}
+          {b.coverageStatus.replaceAll("_", " ")}.
+          {b.disasterRisk === 0 &&
+            " A zero means no mapped hazard was returned at this point; it does not establish that the barangay is safe."}
+          {b.disasterRisk === null &&
+            ` Unresolved hazard codes (${b.unclassifiedCodes}); index range ${b.riskLower}–${b.riskUpper}/100. A final index is unavailable.`}{" "}
+          The index describes the supplied query point, rather than the whole
+          barangay polygon.
+        </p>
+        {Object.entries(b.hazards).map(([key, value]) => (
+          <div className="summary-line" key={key}>
+            <span>{hazardLabels[key] ?? key}</span>
+            <strong>{value === null ? "Unavailable" : `${value} / 100`}</strong>
           </div>
         ))}
-      </div>
-      <h3>Risk screening details</h3>
-      <p className="workspace-note">
-        Barangay point screening · {b.methodVersion}. Coverage:{" "}
-        {b.coverageStatus.replaceAll("_", " ")}.
-        {b.disasterRisk === 0 &&
-          " A zero means no mapped hazard was returned at this point; it does not establish that the barangay is safe."}
-        {b.disasterRisk === null &&
-          ` Unresolved hazard codes (${b.unclassifiedCodes}); index range ${b.riskLower}–${b.riskUpper}/100. A final index is unavailable.`}{" "}
-        The index describes the supplied query point, rather than the whole
-        barangay polygon.
-      </p>
-      {Object.entries(b.hazards).map(([key, value]) => (
-        <div className="summary-line" key={key}>
-          <span>{hazardLabels[key] ?? key}</span>
-          <strong>{value === null ? "Unavailable" : `${value} / 100`}</strong>
-        </div>
-      ))}
-      <h3>Nearby verified hospital records</h3>
-      <p className="workspace-note">
-        Straight-line distance from the supplied barangay point. Travel time and
-        service availability are not provided. This list is the municipal
-        hospital register and excludes OSM clinic records above.
-      </p>
-      {nearest.map((h) => (
-        <div className="barangay-hospital" key={h.id}>
-          <strong>{h.name}</strong>
-          <span>
-            {h.municipality} · {h.distance.toFixed(1)} km
-          </span>
-          <small>
-            {h.capacity === null ? "Beds unverified" : `${h.capacity} beds`} ·{" "}
-            {h.verificationStatus}
-          </small>
-        </div>
-      ))}
-      <details>
+      </details>
+      <details className="place-disclosure">
         <summary>
           Hospital register in {b.municipality} ({hospitals.length})
         </summary>
@@ -367,9 +382,14 @@ export function BarangayPanel() {
             </small>
           </div>
         ))}
-        {!hospitals.length && <p>No hospital records in this municipality.</p>}
+        {!hospitals.length && (
+          <p>
+            No hospital records for this municipality in the supplied dataset.
+            Nearby verified hospitals above may be in other municipalities.
+          </p>
+        )}
       </details>
-      <details>
+      <details className="place-disclosure">
         <summary>Adjacent barangays ({b.adjacentBarangays.length})</summary>
         <ul>
           {b.adjacentBarangays.map((name) => (
@@ -377,14 +397,20 @@ export function BarangayPanel() {
           ))}
         </ul>
       </details>
-      <p className="workspace-note">
-        Sources: laguna_barangays.csv, laguna_barangay_risk_index.csv,
-        laguna_hospitals.csv, OpenStreetMap clinic snapshot (
-        {OSM_CLINIC_SNAPSHOT.attribution}, {OSM_CLINIC_SNAPSHOT.license}).
-        Morbidity is synthetic. Boundary: bundled PSGC snapshot
-        {b.name !== b.boundaryName ? ` (boundary name: ${b.boundaryName})` : ""}
-        .
-      </p>
+      <details className="place-disclosure">
+        <summary>Sources and geographic reference</summary>
+        <p className="workspace-note">
+          PSGC {b.psgc}. Sources: laguna_barangays.csv,
+          laguna_barangay_risk_index.csv, laguna_hospitals.csv, OpenStreetMap
+          clinic snapshot ({OSM_CLINIC_SNAPSHOT.attribution},{" "}
+          {OSM_CLINIC_SNAPSHOT.license}). Morbidity is synthetic. Boundary:
+          bundled PSGC snapshot
+          {b.name !== b.boundaryName
+            ? ` (boundary name: ${b.boundaryName})`
+            : ""}
+          .
+        </p>
+      </details>
     </>
   );
 }

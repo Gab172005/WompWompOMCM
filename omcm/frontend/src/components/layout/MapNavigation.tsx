@@ -12,6 +12,7 @@ export function MapNavigation() {
           useAppStore.setState((s) => ({
             recenterTrigger: s.recenterTrigger + 1,
             selectedPsgc: null,
+            selectedBarangayPsgc: null,
           }))
         }
       >
