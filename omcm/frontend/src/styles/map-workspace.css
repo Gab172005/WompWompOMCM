@@ -2753,6 +2753,9 @@
 .optimizer-controls { display: flex; flex-direction: column; gap: 16px; }
 .optimizer-controls > .workspace-note { margin: -6px 0 0; }
 .optimizer-input-grid { align-items: start; }
+.approval-requirements { padding: 12px 14px; margin: 14px 0; border: 1px solid #dce5f3; border-radius: 10px; background: #f5f8fd; color: #3c4043; font-size: 12px; line-height: 1.6; }
+.approval-requirements strong { display: block; margin-bottom: 5px; }
+.approval-requirements ul { margin: 0; padding-left: 18px; }
 .workspace .optimizer-context > summary { color: #1967d2; }
 .workspace .optimizer-result-heading { align-items: center; padding-top: 6px; }
 .workspace .optimizer-result-heading h3 { font-size: 16px; }

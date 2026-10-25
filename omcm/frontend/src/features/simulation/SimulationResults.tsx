@@ -44,7 +44,7 @@ function activityRows(run: RunState, strategy: Strategy) {
         title =
           index === 0
             ? "Baseline recorded"
-            : `Healthcare need ${baselineChange >= 0 ? "increased" : "decreased"} ${Math.abs(baselineChange).toFixed(1)} points`;
+            : `Healthcare need ${baselineChange >= 0 ? "increased" : "decreased"} ${Math.abs(baselineChange).toFixed(2)} points`;
         tone = "baseline";
       } else if (deployments.length > 0) {
         title = `${deployments.length} clinic${deployments.length === 1 ? "" : "s"} placed`;
@@ -128,11 +128,11 @@ function ScenarioActivity({
                 </p>
               )}
               <p>
-                Baseline <strong>{row.baseline.toFixed(1)}</strong>
+                Baseline <strong>{row.baseline.toFixed(2)}</strong>
                 <span aria-hidden="true"> · </span>
-                Scenario HNI <strong>{row.hni.toFixed(1)}</strong>
+                Scenario HNI <strong>{row.hni.toFixed(2)}</strong>
                 {strategy !== "none" && row.impact > 0 && (
-                  <span> · {row.impact.toFixed(1)} below baseline</span>
+                  <span> · {row.impact.toFixed(2)} below baseline</span>
                 )}
                 {strategy === "none" && row.day > 1 && (
                   <span>
@@ -146,14 +146,14 @@ function ScenarioActivity({
                       row.baseline -
                         (run.snapshots[row.day - 2]?.metrics.baselineHni ??
                           row.baseline),
-                    ).toFixed(1)}{" "}
+                    ).toFixed(2)}{" "}
                     vs previous day
                   </span>
                 )}
               </p>
               {row.affected > 0 && strategy !== "none" && (
                 <span className="simulation-affected-count">
-                  {row.affected} barangays in modeled reach
+                  {row.affected} barangays receiving modeled service
                 </span>
               )}
             </div>
@@ -189,14 +189,14 @@ function ScenarioActivity({
                     </p>
                   )}
                   <p>
-                    Baseline <strong>{row.baseline.toFixed(1)}</strong> ·
-                    Scenario HNI <strong>{row.hni.toFixed(1)}</strong>
+                    Baseline <strong>{row.baseline.toFixed(2)}</strong> ·
+                    Scenario HNI <strong>{row.hni.toFixed(2)}</strong>
                     {row.impact > 0 &&
-                      ` · ${row.impact.toFixed(1)} below baseline`}
+                      ` · ${row.impact.toFixed(2)} below baseline`}
                   </p>
                   {row.affected > 0 && strategy !== "none" && (
                     <span className="simulation-affected-count">
-                      {row.affected} barangays in modeled reach
+                      {row.affected} barangays receiving modeled service
                     </span>
                   )}
                 </div>
@@ -249,26 +249,26 @@ export function SimulationResults() {
         <div>
           <span>Baseline HNI</span>
           <strong>
-            {metrics.baselineHni.toFixed(1)}
+            {metrics.baselineHni.toFixed(2)}
             <small>/100</small>
           </strong>
         </div>
         <div>
           <span>Scenario HNI</span>
           <strong>
-            {metrics.hni.toFixed(1)}
+            {metrics.hni.toFixed(2)}
             <small>/100</small>
           </strong>
         </div>
         <div className={improvement > 0 ? "has-improvement" : ""}>
           <span>Below baseline</span>
           <strong>
-            {improvement.toFixed(1)}
+            {improvement.toFixed(2)}
             <small> pts</small>
           </strong>
         </div>
         <div>
-          <span>Barangays in reach</span>
+          <span>Areas receiving service</span>
           <strong>
             {metrics.servedBarangays}
             <small> / {snapshot.records.length}</small>
@@ -276,6 +276,12 @@ export function SimulationResults() {
         </div>
       </div>
 
+      <p className="workspace-note">
+        {metrics.reachedPopulation.toLocaleString()} residents live in the
+        affected areas. {metrics.servedAppointments.toFixed(0)} modeled
+        appointments served; {metrics.capacityUtilization.toFixed(1)}% fleet
+        capacity used. Area counts do not measure the amount of need reduced.
+      </p>
       <div className="simulation-trend-heading">
         <div>
           <h3>HNI over time</h3>
@@ -309,7 +315,7 @@ export function SimulationResults() {
             <Tooltip
               labelFormatter={(day) => `Day ${day}`}
               formatter={(value, name) => [
-                `${Number(value).toFixed(1)}/100`,
+                `${Number(value).toFixed(2)}/100`,
                 STRATEGIES[name as Strategy],
               ]}
             />
@@ -360,7 +366,7 @@ export function SimulationResults() {
                 <th>Baseline HNI</th>
                 <th>Scenario HNI</th>
                 <th>Need not yet covered</th>
-                <th>Barangays in reach</th>
+                <th>Areas receiving service</th>
                 <th>Need covered (%)</th>
                 <th>Clinic moves</th>
               </tr>

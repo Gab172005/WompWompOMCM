@@ -1,6 +1,7 @@
 import { distanceKm } from "../healthcareNeed";
 import { isDeploymentRestricted } from "../mapLandmarks";
 import type { ForecastRecord } from "./forecast";
+import type { BackendDayImpact } from "./optimizer";
 export const COVERAGE_RADIUS_KM = 3;
 export const SERVICE_FRACTION = 0.35;
 export interface Assignment {
@@ -22,6 +23,10 @@ export interface DailyMetrics {
   coveredPercent: number;
   relocations: number;
   cumulativeUnmetPriority: number;
+  servedAppointments: number;
+  totalAppointments: number;
+  capacityUtilization: number;
+  reachedPopulation: number;
 }
 export interface DailySnapshot {
   day: number;
@@ -114,15 +119,27 @@ export function simulateDay(
   previous: DailySnapshot | undefined,
   allocation: Assignment[],
   coverage: CoverageMatrix,
+  authoritative?: BackendDayImpact,
 ): DailySnapshot {
-  const served = serviceFractions(allocation, coverage);
+  // The local formula is retained for the separate ordinary-plan preview.
+  // Connected simulation supplies authoritative per-barangay deductions.
+  const served = authoritative
+    ? new Map(
+        Object.entries(authoritative.impacts).map(([psgc, impact]) => [
+          psgc,
+          impact.serviceFraction,
+        ]),
+      )
+    : serviceFractions(allocation, coverage);
   const prior = new Map(previous?.records.map((b) => [b.psgc, b.uhni]));
   const records = forecast.map((b) => {
     const demand = untreatedDemand(b.hni, prior.get(b.psgc));
     const serviceFraction = served.get(b.psgc) ?? 0;
     return {
       ...b,
-      scenarioHni: serviceAdjustedHni(b.hni, serviceFraction),
+      scenarioHni: authoritative
+        ? (authoritative.impacts[b.psgc]?.scenarioHni ?? b.hni)
+        : serviceAdjustedHni(b.hni, serviceFraction),
       demand,
       uhni: demand * (1 - serviceFraction),
       serviceFraction,
@@ -130,7 +147,10 @@ export function simulateDay(
   });
   const population = records.reduce((s, b) => s + b.population, 0);
   const baselineNeed = records.reduce((s, b) => s + b.hni * b.population, 0);
-  const totalNeed = records.reduce((s, b) => s + b.scenarioHni * b.population, 0);
+  const totalNeed = records.reduce(
+    (s, b) => s + b.scenarioHni * b.population,
+    0,
+  );
   const demand = records.reduce((s, b) => s + b.demand * b.population, 0);
   const unmet = records.reduce((s, b) => s + b.uhni * b.population, 0);
   const moves = allocation.filter((a) => {
@@ -143,15 +163,22 @@ export function simulateDay(
     records,
     allocation: allocation.map((a) => ({ ...a })),
     metrics: {
-      baselineHni: baselineNeed / population,
-      hni: totalNeed / population,
-      uhni: unmet / population,
+      baselineHni: population ? baselineNeed / population : 0,
+      hni: population ? totalNeed / population : 0,
+      uhni: population ? unmet / population : 0,
       totalUnmetPriority: unmet,
       servedBarangays: records.filter((b) => b.serviceFraction > 0).length,
       coveredPercent: demand ? (100 * (demand - unmet)) / demand : 0,
       relocations: (previous?.metrics.relocations ?? 0) + moves,
       cumulativeUnmetPriority:
         (previous?.metrics.cumulativeUnmetPriority ?? 0) + unmet,
+      servedAppointments: 0,
+      totalAppointments: 0,
+      capacityUtilization: 0,
+      reachedPopulation: records
+        .filter((b) => b.serviceFraction > 0)
+        .reduce((s, b) => s + b.population, 0),
+      ...authoritative?.metrics,
     },
   };
 }

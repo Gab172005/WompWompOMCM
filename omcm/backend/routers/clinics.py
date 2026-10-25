@@ -1,4 +1,5 @@
 """Fleet data, schedule publication, authentication status and audit."""
+from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, Response
 from config import today, require_admin, admin_configuration
 from models.clinic import ApproveRequest, EmergencyRequest
@@ -8,6 +9,7 @@ from services import repository as repo
 from services.deployment_rules import deployment_restricted
 from services.demand_model import TARGET_PREFIX
 router = APIRouter()
+SCHEDULE_WINDOW_DAYS = 7
 
 
 @router.get("/api/clinics")
@@ -34,17 +36,20 @@ def schedules(response: Response):
 
 
 def approved_payload(request, emergency=False):
+    current_day = today()
     if emergency:
-        if request.deployment_date < today():
+        if request.deployment_date < current_day:
             raise HTTPException(422, "Past schedules cannot be overridden.")
-    elif request.deployment_date <= today():
+    elif request.deployment_date <= current_day:
         raise HTTPException(422, "Ordinary approval is for tomorrow or later. Today's schedule requires a confirmed emergency override.")
+    if request.deployment_date > current_day + timedelta(days=SCHEDULE_WINDOW_DAYS):
+        raise HTTPException(422, "Choose a schedule date within the next 7 days. Generate and review a fresh plan closer to later dates.")
     plan = repo.get_plan(request.plan_id)
     if plan is None:
         raise HTTPException(404, "Draft plan not found. Generate a placement first.")
     target = next((note[len(TARGET_PREFIX):] for note in plan.get("notes", []) if note.startswith(TARGET_PREFIX)), None)
-    if not emergency and target and request.deployment_date.isoformat() != target:
-        raise HTTPException(422, "This draft forecast is for " + target + ". Generate a fresh next-day plan before approving another schedule date.")
+    if target and target != (current_day + timedelta(days=1)).isoformat():
+        raise HTTPException(422, "This draft forecast is out of date. Generate a fresh plan before publishing a schedule.")
     if not plan["optimized"]["clinics"]:
         raise HTTPException(422, "Cannot publish an empty deployment.")
     return dict(date=request.deployment_date.isoformat(), plan_id=request.plan_id, status="Emergency revised" if emergency else "Approved",
@@ -64,7 +69,10 @@ def approve(request: ApproveRequest, actor=Depends(require_admin)):
 def emergency(request: EmergencyRequest, actor=Depends(require_admin)):
     if not request.confirmed:
         raise HTTPException(422, "Explicit administrator confirmation is required for an emergency override.")
-    return repo.publish(approved_payload(request, emergency=True), actor, request.notice)
+    notice = request.notice.strip()
+    if len(notice) < 10:
+        raise HTTPException(422, "The public emergency notice needs at least 10 characters after trimming spaces.")
+    return repo.publish(approved_payload(request, emergency=True), actor, notice)
 
 
 @router.get("/api/audit")

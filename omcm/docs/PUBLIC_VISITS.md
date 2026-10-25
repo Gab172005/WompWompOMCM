@@ -9,6 +9,15 @@
 
 Branch: `fix/agreed-balanced-hni-weights`. Reviewed 2026-10-24.
 
+## Current scheduling window
+
+Approved visits may now be booked tomorrow through seven days ahead using a
+fresh plan; today's deployments still need a confirmed emergency override.
+Public date selection and the next-published-visit summary already support these
+ISO dates, so no public schema or layout change is needed. Forecast metadata
+stays private; the admin form explains that later bookings reuse the latest
+next-day estimate. See [scheduling rules](SCHEDULING.md).
+
 ## Current view safeguards
 
 Public schedules still refresh and retain the last confirmed snapshot on outage.

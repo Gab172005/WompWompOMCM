@@ -73,11 +73,18 @@ barangay rollups. Rankings use the same one-decimal scores as the baseline map.
 Disaster risk has no HNI weight. Flood exclusions and maximum modeled travel
 minutes are operational planning constraints.
 
-After a plan succeeds, the map previews the simulator's illustrative service
-adjustment around the proposed sites. The baseline factors and percentages stay
-fixed. The score reduction is at most 35% at a host, tapering to 17.5% at 3 km;
-overlapping clinics use the strongest single effect. This visual rehearsal is
-separate from the backend's appointment and modeled-travel results.
+The 30-day simulator evaluates Manual and Optimized placements through the same
+backend HNI deductions, scaled to XGBoost demand and 180 appointments per clinic.
+Service requires a 3 km centroid radius and safe modeled access within 25 minutes.
+The 35% host / 17.5% edge reductions are ceilings; overlaps keep the strongest
+reservation. The simulation optimizer minimizes the population-weighted HNI
+shown on the cards and map, retaining a feasible manual comparison when better.
+The guarantee applies to the selected day; ties are valid and area count alone
+is not the objective. See [simulation formulas and limits](docs/SIMULATION_MODE.md).
+
+The ordinary Plan clinics map preview remains a separately labeled geographic
+illustration. Its saved-draft appointment objective and publication workflow
+are unchanged by the simulation correction.
 
 ## Views, routes and publication
 
@@ -89,8 +96,10 @@ metrics and methodology are inside clinic planning; adjustable legacy weight
 screens are no longer mounted. Their source modules remain for reference.
 
 Only authenticated FastAPI approval publishes a connected schedule. Ordinary
-approval is for the draft's next-day forecast date; revising today's schedule
-requires a confirmed emergency notice. Public sessions refresh confirmed
+approval can book any date from tomorrow through the next seven days using a
+freshly generated plan. Later bookings reuse its next-day estimate; they do not
+claim a forecast for the booked date. Today's changes require a confirmed
+emergency notice. See [scheduling rules](docs/SCHEDULING.md). Public sessions refresh confirmed
 schedules every 30 seconds while visible and on focus/connectivity return.
 During an outage, the last confirmed visits stay visible with stale feedback.
 

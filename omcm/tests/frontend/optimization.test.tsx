@@ -8,8 +8,9 @@ import {
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { OptimizationPanel } from "../../frontend/src/features/optimization/OptimizationPanel";
+import { DeploymentApproval } from "../../frontend/src/features/optimization/DeploymentApproval";
 import { useOptimizationStore } from "../../frontend/src/store/useOptimizationStore";
-import { useAppStore } from "../../frontend/src/store/useAppStore";
+import { addIsoDays, getManilaToday, useAppStore } from "../../frontend/src/store/useAppStore";
 import {
   clearCredentials,
   enableBrowserDemo,
@@ -108,6 +109,42 @@ afterEach(() => {
 });
 
 describe("connected optimization", () => {
+  it("allows a booking seven days ahead while identifying the original next-day estimate", () => {
+    const today = getManilaToday();
+    const tomorrow = addIsoDays(today, 1);
+    render(<MemoryRouter><DeploymentApproval plan={{ ...plan, notes: [`Forecast target date: ${tomorrow}`] }} /></MemoryRouter>);
+    const date = screen.getByLabelText("Deployment date");
+    expect(date).toHaveAttribute("min", tomorrow);
+    expect(date).toHaveAttribute("max", addIsoDays(today, 7));
+    fireEvent.change(date, { target: { value: addIsoDays(today, 7) } });
+    expect(screen.getByRole("button", { name: "Approve & publish schedule" })).toBeEnabled();
+    expect(screen.getByText(/later bookings use this same estimate/)).toBeVisible();
+    fireEvent.change(date, { target: { value: addIsoDays(today, 8) } });
+    expect(screen.getByRole("button", { name: "Approve & publish schedule" })).toBeDisabled();
+  });
+
+  it("explains and clears both emergency publication blockers", () => {
+    render(<MemoryRouter><DeploymentApproval plan={plan} /></MemoryRouter>);
+    fireEvent.click(screen.getByRole("checkbox", { name: /Emergency schedule override/ }));
+    const button = screen.getByRole("button", { name: "Confirm emergency override" });
+    fireEvent.change(screen.getByLabelText("Public emergency notice"), { target: { value: "hello" } });
+    expect(button).toBeDisabled();
+    expect(screen.getByText(/5\/10 characters minimum/)).toBeVisible();
+    expect(screen.getByText("Check the emergency revision confirmation box.")).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Public emergency notice"), { target: { value: "Clinic relocated to the barangay hall." } });
+    expect(button).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox", { name: "I confirm this emergency revision and public notice." }));
+    expect(button).toBeEnabled();
+    expect(screen.queryByText("Before you can publish")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Public emergency notice"), { target: { value: "hello     " } });
+    expect(button).toBeDisabled();
+  });
+
+  it("asks for a fresh plan when a dated forecast has expired", () => {
+    render(<MemoryRouter><DeploymentApproval plan={{ ...plan, notes: [`Forecast target date: ${getManilaToday()}`] }} /></MemoryRouter>);
+    expect(screen.getByRole("button", { name: "Approve & publish schedule" })).toBeDisabled();
+    expect(screen.getByText(/forecast is out of date/)).toBeVisible();
+  });
   it("posts current constraints even in demo mode and renders server metrics", async () => {
     const fetcher = vi.fn(
       async (url: string) =>

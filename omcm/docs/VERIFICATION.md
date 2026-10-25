@@ -1,5 +1,71 @@
 # Verification record
 
+## Backend-owned simulation HNI — 2026-10-25
+
+Branch: `fix/simulation-hni-objective`, including the preceding audit/UI and
+seven-day scheduling work. Exact file/logic inventory and browser steps:
+[SIMULATION_HNI_FIX.md](SIMULATION_HNI_FIX.md). The new simulation API contract
+was explicitly approved; no storage migration, model retraining, source-data,
+HNI-factor or credential change was made.
+
+| Check | Result |
+| --- | --- |
+| Frontend `npm run lint` | Passed |
+| Frontend `npm test` | 148 passed across 16 files |
+| Frontend `npm run build` | Passed; existing bundle-size advisory |
+| Backend `.venv/bin/python -m pytest -q` | 113 passed; existing Starlette/httpx deprecation warning |
+| Connected `npm run test:simulation` | Passed with real FastAPI, existing XGBoost models, CP-SAT, isolated credentials and temporary SQLite |
+| Connected `npm run test:optimization` | Passed; ordinary planning, flood overlay, manual replan, seven-day publication and fresh public session remain functional |
+| `git diff --check` | Passed |
+
+Backend checks cover hand-computed population-weighted deductions, capacity and
+overlap, exhaustive small-instance optima, bounded-solver incumbent retention,
+identical manual/optimized evaluation, dated-history prefix parity, fixed group
+weights, flood restrictions, invalid histories, authentication/model errors,
+and inability to publish a transient simulation proposal. The real API test
+compares five-clinic Manual/Optimized HNI on Day 15.
+
+The browser uses three clinics on Day 1: Manual **43.6706077702**, Optimized
+**43.6032227472**. It verifies the same day/fleet/manual incumbent, returned HNI
+matching the map's population-weighted values, unchanged outside areas, lower
+host/neighbor HNI, explicit Apply, immutable optimized locations, mobile layout,
+markers and shared playback. Screenshots: `/tmp/omcm-simulation-hni-comparison.png`
+and `/tmp/omcm-simulation-mobile.png`.
+
+These are local results, not a production deployment. Leaflet/Chrome was used;
+Google renderer changes retain existing unit coverage but no live-key session.
+The guarantee is no worse than a feasible manual comparison on the requested
+optimization day. Held locations may rank differently on later dates. The
+ordinary Plan clinics geographic preview remains separately labeled; its
+appointment objective and public publication workflow are unchanged.
+
+## Seven-day booking and emergency guidance — 2026-10-24
+
+Branch: `feat/seven-day-clinic-scheduling`, including the preceding audit/UI
+commits. [SCHEDULING.md](SCHEDULING.md) contains the exact changed-file inventory,
+policy reasoning and browser steps. No request/response schema, storage schema,
+trained model, HNI weight or administrator credential changed.
+
+| Check | Result |
+| --- | --- |
+| Frontend lint | Passed |
+| Frontend unit tests | 145 passed across 16 files |
+| Frontend production build | Passed; existing chunk-size advisory |
+| Backend pytest | 100 passed; existing Starlette/httpx deprecation warning |
+| Connected optimization/publication browser suite | Passed against real FastAPI/XGBoost/CP-SAT with isolated temporary storage |
+
+Backend tests approve bookings on Days 1, 2 and 7, reject Day 8, reject expired
+forecasts for both ordinary and emergency publication, and reject padded short
+notices. Frontend tests verify min/max dates, original next-day estimate wording,
+expiry guidance, the character counter and confirmation gate. The browser suite
+fills `hello` and observes the disabled button, then supplies a valid notice and
+confirmation and observes the enabled button. It then performs ordinary Day 7
+publication and verifies the fresh public session shows the approved deployment.
+This is a booking window, not validation of a seven-day disease forecast.
+
+Source data and both existing trained model artifacts were not edited. Tests
+used existing temporary credentials; no hosted schedule was changed or deployed.
+
 ## Global audit, protected views and UI polish — 2026-10-24
 
 Branch: `audit/omcm-features-and-views`, based on fetched main `a7f5b7f`.

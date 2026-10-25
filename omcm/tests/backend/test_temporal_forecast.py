@@ -69,19 +69,49 @@ def test_forecast_uses_issue_date_and_preserves_source_and_policy(monkeypatch):
     assert any(b["disease_per_1000"] != original[b["id"]]["disease_per_1000"] for b in future)
 
 
-def test_forecast_approval_must_match_target_and_drafts_stay_private(client, auth):
+def test_fresh_forecast_supports_seven_day_bookings_and_drafts_stay_private(client, auth):
     plan = client.post("/api/optimize", json={"clinic_count": 2, "capacity": 70}, auth=auth).json()
     assert TARGET_PREFIX + (today() + timedelta(days=1)).isoformat() in plan["notes"]
     assert client.get("/api/schedules").json()["schedules"] == []
-    wrong_day = dict(plan_id=plan["plan_id"], deployment_date=(today() + timedelta(days=2)).isoformat())
-    assert client.post("/api/schedules/approve", json=wrong_day, auth=auth).status_code == 422
+    outside_window = dict(plan_id=plan["plan_id"], deployment_date=(today() + timedelta(days=8)).isoformat())
+    assert client.post("/api/schedules/approve", json=outside_window, auth=auth).status_code == 422
     assert client.get("/api/schedules").json()["schedules"] == []
-    right_day = dict(wrong_day, deployment_date=(today() + timedelta(days=1)).isoformat())
-    assert client.post("/api/schedules/approve", json=right_day, auth=auth).status_code == 200
+    for offset in (1, 2, 7):
+        booking = dict(outside_window, deployment_date=(today() + timedelta(days=offset)).isoformat())
+        assert client.post("/api/schedules/approve", json=booking, auth=auth).status_code == 200
     public = client.get("/api/schedules").json()
-    assert len(public["schedules"]) == 1
+    assert len(public["schedules"]) == 3
+    assert {row["date"] for row in public["schedules"]} == {(today() + timedelta(days=d)).isoformat() for d in (1, 2, 7)}
     assert "case_rate_lag1" not in str(public)
     assert "predictions" not in str(public)
+
+
+def test_stale_forecast_cannot_publish_later_bookings_or_emergency_revisions(client, auth, monkeypatch):
+    import routers.clinics as clinics
+    issue = today()
+    plan = client.post("/api/optimize", json={"clinic_count": 1}, auth=auth).json()
+    monkeypatch.setattr(clinics, "today", lambda: issue + timedelta(days=1))
+    booking = dict(plan_id=plan["plan_id"], deployment_date=(issue + timedelta(days=2)).isoformat())
+    rejected = client.post("/api/schedules/approve", json=booking, auth=auth)
+    assert rejected.status_code == 422
+    assert "out of date" in rejected.json()["detail"]
+    rejected = client.post("/api/schedules/emergency-override", auth=auth,
+                           json=dict(booking, confirmed=True, notice="Updated clinic arrangements for residents."))
+    assert rejected.status_code == 422
+    assert client.get("/api/schedules").json()["schedules"] == []
+
+
+def test_emergency_notice_minimum_ignores_outer_whitespace(client, auth):
+    plan = client.post("/api/optimize", json={"clinic_count": 1}, auth=auth).json()
+    booking = dict(plan_id=plan["plan_id"], deployment_date=today().isoformat(), confirmed=True)
+    rejected = client.post("/api/schedules/emergency-override", auth=auth,
+                           json=dict(booking, notice="hello          "))
+    assert rejected.status_code == 422
+    assert client.get("/api/schedules").json()["schedules"] == []
+    accepted = client.post("/api/schedules/emergency-override", auth=auth,
+                           json=dict(booking, notice="  Clinic relocated to the barangay hall.  "))
+    assert accepted.status_code == 200
+    assert client.get("/api/schedules").json()["notices"][0]["text"] == "Clinic relocated to the barangay hall."
 
 
 @pytest.mark.usefixtures("demo_data")

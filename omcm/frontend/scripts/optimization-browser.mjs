@@ -246,6 +246,16 @@ try {
     path: join(frontend, "test-results/optimization-connected-mobile.png"),
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
+  await panel.getByRole("checkbox", { name: /Emergency schedule override/ }).check();
+  await panel.getByLabel("Public emergency notice").fill("hello");
+  await expect(panel.getByRole("button", { name: "Confirm emergency override", exact: true })).toBeDisabled();
+  await expect(panel.getByText(/5\/10 characters minimum/)).toBeVisible();
+  await panel.getByLabel("Public emergency notice").fill("Clinic relocated to the barangay hall.");
+  await panel.getByRole("checkbox", { name: "I confirm this emergency revision and public notice." }).check();
+  await expect(panel.getByRole("button", { name: "Confirm emergency override", exact: true })).toBeEnabled();
+  await panel.getByRole("checkbox", { name: /Emergency schedule override/ }).uncheck();
+  const latestBooking = await panel.getByLabel("Deployment date").getAttribute("max");
+  await panel.getByLabel("Deployment date").fill(latestBooking);
   const published = page.waitForResponse((next) =>
     next.url().endsWith("/api/schedules/approve"),
   );
@@ -256,6 +266,7 @@ try {
   expect(approved.status()).toBe(200);
   const schedule = await approved.json();
   expect(schedule.plan_id).toBe(plan.plan_id);
+  expect(schedule.date).toBe(latestBooking);
   await expect(
     panel
       .getByRole("status")

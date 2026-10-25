@@ -149,9 +149,15 @@ function simulationResults() {
         place: placeSummary(a.psgc),
       })),
     })),
-    draft: s.proposal,
+    draft: s.proposal ? {
+      day: s.proposal.day,
+      recommendations: s.proposal.recommendations,
+      solverStatus: s.proposal.solverStatus,
+      comparisonHni: s.proposal.comparisonHni,
+      metrics: s.proposal.evaluation.days[s.proposal.day - 1].metrics,
+    } : null,
     units:
-      "Population-weighted baseline HNI, scenario HNI after modeled clinic service, and uncovered-need indices; not patient or appointment counts. Distances are straight-line.",
+      "Population-weighted HNI and uncovered-need indices are not patient counts. Modeled appointments are separate capacity estimates. Service uses a 3 km radius and safe modeled adjacency paths within 25 minutes.",
   };
 }
 export function assistantContext(pathname: string) {
@@ -579,7 +585,8 @@ export function executeAssistantTool(
               throw new Error(
                 "There is no recommendation draft to apply. Request suggestions first.",
               );
-            s.apply();
+            // Optimized Apply consumes the already evaluated server proposal.
+            void s.apply();
             break;
           case "play":
             useForecastStore.setState({ playing: true });

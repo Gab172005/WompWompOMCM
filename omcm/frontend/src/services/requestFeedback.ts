@@ -70,6 +70,8 @@ export function requestFeedback(
       return "Driving directions are unavailable. Ask your system administrator to check the route service, then try again.";
     if (/administrator access is disabled/i.test(detail))
       return "Administrator access is unavailable. Ask your system administrator to enable sign-in.";
+    if (path.startsWith("/planning/simulation/") && /^Simulation /i.test(detail))
+      return detail;
     // Preserve specific schedule safeguards instead of hiding why approval failed.
     if (
       /schedule|approval|publish|draft plan|emergency/i.test(detail) &&
@@ -79,6 +81,10 @@ export function requestFeedback(
   }
   if (status === 422)
     return "We could not use these settings. Check your selections and available locations, then try again.";
+  if (path.startsWith("/planning/simulation/"))
+    return status === 503
+      ? "The required simulation forecast model is unavailable. Ask your administrator to check the planning service, then retry."
+      : "We could not calculate clinic impact. Your existing scenario is unchanged. Please retry.";
   if (path === "/simulate")
     return "We could not calculate this practice scenario. Please try again. If the problem continues, contact your system administrator.";
   if (path === "/optimize" || path === "/planning/optimize")

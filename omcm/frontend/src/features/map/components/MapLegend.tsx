@@ -430,10 +430,10 @@ export function MapLegend({
               !simulation &&
               "Risk applies to one reference point; a low score does not establish safety."}{" "}
             {simulation &&
-              "Lighter red shows lower scenario HNI. A soft coral outline marks barangays receiving modeled service; circles show the 3 km reach."}
+              "Lighter red shows lower scenario HNI. Coral outlines mark modeled service; circles show the 3 km maximum radius. Capacity and safe modeled access limit actual service."}
             {floodOverlay && panel === "optimization" &&
               " Blue outlines mark barangays flagged by the selected return-period screen; they are not measured flood depths."}
-            {planningImpact && metric === "score" && " Lighter areas show the same illustrative clinic impact used by the simulator. Capacity and travel estimates remain in the plan results."}
+            {planningImpact && metric === "score" && " Lighter areas are a geographic preview only. Capacity and travel estimates remain in the plan results; the 30-day simulation evaluates its deductions separately on the backend."}
           </p>
         )}
         {!simulation && (
@@ -534,7 +534,7 @@ export function MapLegend({
                   }
                   description={
                     simulation
-                      ? "Estimated reach within 3 km (straight line)"
+                      ? "3 km maximum radius; capacity and access apply"
                       : isPublic
                         ? "Scheduled community route"
                         : "Suggested clinic location"
