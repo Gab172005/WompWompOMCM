@@ -425,6 +425,66 @@ try {
   await picker.press("Enter");
   await expect(picker).toHaveValue(/Los Baños/);
 
+  const mapLegend = page.getByRole("region", { name: "Map legend" });
+  await mapLegend.getByRole("button", { name: "Show map symbols" }).click();
+  await mapLegend
+    .getByRole("button", { name: "Data & guidance", exact: true })
+    .click();
+  await expect(
+    mapLegend.getByRole("region", { name: "Map data and guidance" }),
+  ).toBeVisible();
+  await expect(mapLegend.locator("time")).toContainText("PH time");
+  await expect(mapLegend.locator("time")).not.toContainText(/T\d{2}:/);
+  await shot("legend-guidance-desktop");
+  await mapLegend
+    .getByRole("group", { name: "Legend details", exact: true })
+    .focus();
+  await page.keyboard.press("End");
+  await expect(
+    mapLegend.getByRole("region", { name: "Clinic data source", exact: true }),
+  ).toBeVisible();
+  await expect
+    .poll(() =>
+      mapLegend
+        .getByRole("group", { name: "Legend details", exact: true })
+        .evaluate(
+          (element) =>
+            element.scrollHeight - element.clientHeight - element.scrollTop,
+        ),
+    )
+    .toBeLessThanOrEqual(1);
+  await shot("legend-source-desktop");
+  const legendHeader = await mapLegend
+    .locator(".workspace-legend-header-main")
+    .boundingBox();
+  await page.mouse.move(legendHeader.x + 12, legendHeader.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(1370, 950, { steps: 8 });
+  await page.mouse.up();
+  await expect(mapLegend).toHaveClass(/is-positioned/);
+  await withinViewport(mapLegend);
+  await mapLegend
+    .getByRole("button", { name: "Map symbols", exact: true })
+    .click();
+  await withinViewport(mapLegend);
+  await shot("legend-symbols-positioned");
+  await mapLegend
+    .getByRole("button", { name: "Reset legend to default position" })
+    .click();
+  await mapLegend.getByRole("button", { name: "Minimize map legend" }).click();
+  await mapLegend.getByRole("button", { name: "Expand map legend" }).click();
+  await mapLegend.getByRole("button", { name: "Hide map symbols" }).click();
+  await panel.locator('summary[aria-label="How to compare"]').click();
+  await expect(
+    panel.getByText("Area count alone does not measure need reduced.", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await panel.locator(".workspace-panel-body").evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  await shot("scenario-picker-desktop");
+
   for (const size of [
     { width: 1024, height: 768 },
     { width: 768, height: 1024 },
@@ -477,6 +537,53 @@ try {
         page.getByRole("region", { name: "Map legend" }),
       );
       expect(legend.y + legend.height).toBeLessThanOrEqual(sheet.y);
+      await mapLegend.getByRole("button", { name: "Show map symbols" }).click();
+      await mapLegend
+        .getByRole("button", { name: "Data & guidance", exact: true })
+        .click();
+      await withinViewport(mapLegend);
+      await expect(
+        mapLegend.getByRole("button", { name: "Hide map symbols" }),
+      ).toBeVisible();
+      expect(
+        await mapLegend.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth + 1,
+        ),
+      ).toBe(true);
+      await shot(`legend-guidance-${size.width}`);
+      await mapLegend
+        .getByRole("group", { name: "Legend details", exact: true })
+        .focus();
+      await page.keyboard.press("End");
+      await expect(mapLegend.locator("time")).toBeVisible();
+      await expect
+        .poll(() =>
+          mapLegend
+            .getByRole("group", { name: "Legend details", exact: true })
+            .evaluate(
+              (element) =>
+                element.scrollHeight - element.clientHeight - element.scrollTop,
+            ),
+        )
+        .toBeLessThanOrEqual(1);
+      await shot(`legend-source-${size.width}`);
+      await mapLegend.getByRole("button", { name: "Hide map symbols" }).click();
+      const firstScenario = panel.getByRole("button", {
+        name: /^No intervention/,
+      });
+      const lastScenario = panel.getByRole("button", {
+        name: /^Optimized clinic allocation/,
+      });
+      await panel.locator(".workspace-panel-body").evaluate((element) => {
+        element.scrollTop = 0;
+      });
+      const firstScenarioBox = await firstScenario.boundingBox();
+      const lastScenarioBox = await lastScenario.boundingBox();
+      expect(lastScenarioBox.y + lastScenarioBox.height).toBeLessThanOrEqual(
+        sheet.y + sheet.height + 1,
+      );
+      expect(firstScenarioBox.y).toBeGreaterThan(sheet.y);
+      await shot(`scenario-choices-${size.width}`);
       if (size.width === 390) {
         const grip = await panel
           .getByRole("button", { name: "Resize map panel" })

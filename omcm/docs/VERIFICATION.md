@@ -1,5 +1,28 @@
 # Verification record
 
+## Legend and simulation interactions — 2026-10-25
+
+- Frontend lint, **161 tests across 20 files**, production build and **113
+  backend tests** pass. Existing bundle-size and Starlette/httpx advisories remain.
+- New restriction tests verify accent-insensitive municipality search, retained
+  selections, excluded-only filtering and clearing the exclusion/filter state.
+- The workspace browser suite checks aligned scenario rows, all three choices
+  visible in the normal 320 px phone sheet, legend symbol/data controls, friendly
+  snapshot dates, source credit, keyboard scrolling, dragged-content clamping,
+  reset/minimize/restore, viewport-safe guidance and timeline content bounds.
+- Captured viewport sizes include 1440 px desktop, tablets, 390/320 px phones and
+  short landscape layouts. Basemap tiles are suppressed for deterministic capture.
+- All five browser suites pass: workspace, hospital/HNI, connected optimization,
+  connected simulation and assistant. The optimizer uses installed Playwright
+  Chromium; the other suites use Chrome. Simulation retains the same real
+  Manual HNI 43.67060777020463 / Optimized HNI 43.60322274720275 comparison.
+- Provincial planning-export and sensitivity consistency checks pass.
+- Calculations, datasets, model artifacts, authentication and publication remain
+  unchanged. Public legend content retains its existing privacy boundary.
+
+See the [file/behavior inventory](UI_REFINEMENT.md#legend-scenario-selection-and-playback).
+
+
 ## Public care and chatbot experience — 2026-10-25
 
 This refinement continues on `feat/omcm-interface-and-repository-guide`. The

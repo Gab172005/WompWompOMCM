@@ -196,3 +196,23 @@ Both READMEs document the hosted demonstration credentials supplied by the
 project owner. This documentation does not change backend credentials or verify
 the current remote deployment. No model, HNI policy, data schema or database
 migration is part of this refinement.
+
+## Legend, scenario selection and playback
+
+This interaction pass keeps the map, calculations and native controls intact
+while making frequently used panels easier to scan.
+
+| File | Refinement |
+| --- | --- |
+| `frontend/src/features/map/components/MapLegend.tsx` | Separate map symbols from data/guidance using two in-place controls. Replace the long explanation with labeled facts; format snapshot dates in Philippine time while retaining machine-readable timestamps, source tags, credit and license. Make the scroll area keyboard-focusable. Observe resized legend content so a dragged legend remains inside the viewport, and handle pointer cancellation. |
+| `frontend/src/features/simulation/SimulationPanel.tsx` | Replace narrow comparison columns with aligned scenario rows, distinct icons, clear selected-map feedback and a shared reading guide. Simplify repeated scenario context. All three choices fit normal phone sheets; detailed numeric impacts remain in results and comparison details. |
+| `frontend/src/features/simulation/SimulationPlayback.tsx` | Align the six controls, add week context and weekly timeline marks, style the filled track and improve range value text. Replace the long native play tooltip with a short label plus an accessible behavior description. Keep seek, playback speed, pause windows and clinic state unchanged. |
+| `frontend/src/features/optimization/RoadExclusions.tsx` | Present endpoint names once with municipality context, simplify exclusion instructions, add accent-insensitive search and an excluded-only filter, and preserve existing connection IDs and exclusion callbacks. Use a set for selection lookups. |
+| `frontend/src/features/optimization/RoadExclusions.test.tsx` | Verify accent-insensitive discovery, selection retention while searching, excluded-only filtering and clearing IDs/filter state. |
+| `frontend/src/styles/map-workspace.css` | Refine borders, hover/focus cues, selected states, disclosure hierarchy, timeline controls, legend scrolling and mobile sizing. Expanded legends stay clear of desktop toolbar controls; phone guidance uses the available sheet width. Motion remains brief and respects reduced-motion preferences. |
+| `frontend/scripts/workspace-ui-browser.mjs` | Exercise legend symbol/guidance views, source timestamp presentation, keyboard scrolling, drag/clamping/reset, minimize/restore and expanded phone layouts. Assert that all three scenario choices fit a 320 px phone sheet and playback contents stay within their own card. |
+
+No source data, HNI percentages, clinic deductions, XGBoost artifacts, placement
+objectives, backend endpoints, authentication or publication permissions change.
+The public legend still omits private planning scores. All tool changes retain
+the same map screen and DOM map instance.
