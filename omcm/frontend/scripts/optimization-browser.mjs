@@ -76,7 +76,7 @@ try {
       "--host",
       "127.0.0.1",
       "--port",
-      "5178",
+      "5179",
       "--strictPort",
     ],
     frontend,
@@ -87,7 +87,7 @@ try {
       OMCM_PROXY_TARGET: "http://127.0.0.1:8007",
     },
   );
-  await ready("http://127.0.0.1:5178", vite);
+  await ready("http://127.0.0.1:5179", vite);
   browser = await chromium.launch({
     headless: true,
     channel: process.env.OMCM_BROWSER_CHANNEL || "chrome",
@@ -100,7 +100,7 @@ try {
   await page.route("https://tile.openstreetmap.org/**", (route) =>
     route.abort(),
   );
-  await page.goto("http://127.0.0.1:5178", { waitUntil: "domcontentloaded" });
+  await page.goto("http://127.0.0.1:5179", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".barangay-boundary")).toHaveCount(681);
   await expect(page.locator(".clinic-staging-marker")).toHaveCount(0);
   await page
@@ -128,8 +128,12 @@ try {
   await page.getByRole("button", { name: "Sign in to Admin View" }).click();
   await expect(page.locator(".workspace")).toHaveClass(/is-admin-view/);
   await expect(page).toHaveURL(/\/admin$/);
-  await page.getByRole("button", { name: "30-day simulation", exact: true }).click();
-  await expect(page.getByRole("complementary", { name: "Try a 30-day clinic plan" })).toBeVisible();
+  await page
+    .getByRole("button", { name: "30-day simulation", exact: true })
+    .click();
+  await expect(
+    page.getByRole("complementary", { name: "Try a 30-day clinic plan" }),
+  ).toBeVisible();
   await expect(page).toHaveURL(/\/admin$/);
   await page.getByRole("button", { name: "Plan clinics", exact: true }).click();
   await expect(page).toHaveURL(/\/admin$/);
@@ -148,8 +152,8 @@ try {
   await expect(page.getByLabel("Available mobile clinics")).toHaveValue("2");
   await page.getByLabel("Daily capacity per clinic").fill("70");
   await page.getByLabel("Maximum modeled travel minutes").fill("20");
-  const generated = page.waitForResponse((response) =>
-    response.url().endsWith("/api/planning/optimize"),
+  const generated = page.waitForResponse(
+    (response) => response.url().endsWith("/api/planning/optimize"),
     { timeout: 90000 },
   );
   await panel.getByRole("button", { name: "Generate recommendations" }).click();
@@ -172,8 +176,12 @@ try {
   expect(new Set(plan.barangays.map((b) => b.municipality)).size).toBe(30);
   expect(plan.notes.join(" ")).toContain("Agreed Balanced HNI");
   expect(plan.optimized.clinics).toHaveLength(2);
-  await expect(page.locator(".barangay-boundary.has-clinic-impact").first()).toBeVisible();
-  await expect(page.getByText("Planned clinic impact", { exact: true })).toBeVisible();
+  await expect(
+    page.locator(".barangay-boundary.has-clinic-impact").first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Planned clinic impact", { exact: true }),
+  ).toBeVisible();
   expect(plan.flood_affected_barangays).toEqual([]);
   await expect(
     panel.getByRole("region", { name: "Backend allocation results" }),
@@ -200,23 +208,38 @@ try {
   expect(draftSchedules.schedules).toEqual([]);
   const catalog = await (
     await fetch("http://127.0.0.1:8007/api/planning/clinics", {
-      headers: { Authorization: "Basic " + Buffer.from(username + ":" + password).toString("base64") },
+      headers: {
+        Authorization:
+          "Basic " + Buffer.from(username + ":" + password).toString("base64"),
+      },
     })
   ).json();
   expect(catalog.sites).toHaveLength(681);
   const unused = catalog.sites.find(
     (site) =>
-      site.eligible && site.name.includes("Calamba") &&
+      site.eligible &&
+      site.name.includes("Calamba") &&
       !plan.optimized.clinics.some((clinic) => clinic.id === site.id),
   );
-  expect(unused, "A Calamba planning point must be available beyond the old pilot").toBeTruthy();
+  expect(
+    unused,
+    "A Calamba planning point must be available beyond the old pilot",
+  ).toBeTruthy();
   const previousSites = plan.optimized.clinics.map((clinic) => clinic.id);
-  const replan = page.waitForResponse((next) =>
-    next.url().endsWith("/api/planning/optimize"),
+  const replan = page.waitForResponse(
+    (next) => next.url().endsWith("/api/planning/optimize"),
+    { timeout: 90000 },
   );
+  // Preserve the original UI failure if an assertion closes the browser before
+  // the pending network observer settles.
+  void replan.catch(() => {});
   await page
-    .getByLabel("Replan site " + previousSites[0])
-    .selectOption(unused.id);
+    .getByLabel("Replan site " + previousSites[0], { exact: true })
+    .fill(unused.id);
+  const choice = page.locator(".workspace-picker").getByRole("option");
+  await expect(choice).toHaveCount(1);
+  await expect(choice).not.toHaveAttribute("aria-disabled", "true");
+  await choice.click();
   const manualResponse = await replan;
   expect(manualResponse.status()).toBe(200);
   plan = await manualResponse.json();
@@ -246,15 +269,37 @@ try {
     path: join(frontend, "test-results/optimization-connected-mobile.png"),
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await panel.getByRole("checkbox", { name: /Emergency schedule override/ }).check();
+  await panel
+    .getByRole("checkbox", { name: /Emergency schedule override/ })
+    .check();
   await panel.getByLabel("Public emergency notice").fill("hello");
-  await expect(panel.getByRole("button", { name: "Confirm emergency override", exact: true })).toBeDisabled();
+  await expect(
+    panel.getByRole("button", {
+      name: "Confirm emergency override",
+      exact: true,
+    }),
+  ).toBeDisabled();
   await expect(panel.getByText(/5\/10 characters minimum/)).toBeVisible();
-  await panel.getByLabel("Public emergency notice").fill("Clinic relocated to the barangay hall.");
-  await panel.getByRole("checkbox", { name: "I confirm this emergency revision and public notice." }).check();
-  await expect(panel.getByRole("button", { name: "Confirm emergency override", exact: true })).toBeEnabled();
-  await panel.getByRole("checkbox", { name: /Emergency schedule override/ }).uncheck();
-  const latestBooking = await panel.getByLabel("Deployment date").getAttribute("max");
+  await panel
+    .getByLabel("Public emergency notice")
+    .fill("Clinic relocated to the barangay hall.");
+  await panel
+    .getByRole("checkbox", {
+      name: "I confirm this emergency revision and public notice.",
+    })
+    .check();
+  await expect(
+    panel.getByRole("button", {
+      name: "Confirm emergency override",
+      exact: true,
+    }),
+  ).toBeEnabled();
+  await panel
+    .getByRole("checkbox", { name: /Emergency schedule override/ })
+    .uncheck();
+  const latestBooking = await panel
+    .getByLabel("Deployment date")
+    .getAttribute("max");
   await panel.getByLabel("Deployment date").fill(latestBooking);
   const published = page.waitForResponse((next) =>
     next.url().endsWith("/api/schedules/approve"),
@@ -284,7 +329,7 @@ try {
   await fresh.route("https://tile.openstreetmap.org/**", (route) =>
     route.abort(),
   );
-  await fresh.goto("http://127.0.0.1:5178");
+  await fresh.goto("http://127.0.0.1:5179");
   await fresh
     .getByRole("button", { name: /Schedules & Advisories|Approved Schedule/ })
     .click();
@@ -294,6 +339,7 @@ try {
   await expect(
     fresh.getByRole("meter", { name: "Healthcare need out of 100" }),
   ).toHaveCount(0);
+  await fresh.locator(".care-visit-information summary").first().click();
   await expect(fresh.getByText(/Planned service area:/).first()).toBeVisible();
   await expect(fresh.locator("body")).not.toContainText(
     "Forecast target date:",
@@ -319,11 +365,14 @@ try {
     Authorization:
       "Basic " + Buffer.from(username + ":" + password).toString("base64"),
   };
-  const revisedResponse = await fetch("http://127.0.0.1:8007/api/planning/optimize", {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ clinic_count: 1, capacity: 70 }),
-  });
+  const revisedResponse = await fetch(
+    "http://127.0.0.1:8007/api/planning/optimize",
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ clinic_count: 1, capacity: 70 }),
+    },
+  );
   expect(revisedResponse.status).toBe(200);
   const revised = await revisedResponse.json();
   const publicRefresh = fresh.waitForResponse((response) =>
@@ -368,9 +417,8 @@ try {
   const floodGenerated = page.waitForResponse((response) =>
     response.url().endsWith("/api/planning/optimize"),
   );
-  await panel
-    .getByRole("button", { name: "Generate recommendations" })
-    .click();
+  void floodGenerated.catch(() => {});
+  await panel.getByRole("button", { name: "Generate recommendations" }).click();
   const floodResponse = await floodGenerated;
   expect(floodResponse.status()).toBe(200);
   plan = await floodResponse.json();
@@ -415,6 +463,12 @@ try {
     "Connected optimizer browser checks passed: real FastAPI/XGBoost/CP-SAT requests, flood-affected barangay map overlay, manual replan, saved draft approval, fresh public schedule, mobile layout, no hardcoded fallback when backend stops.",
   );
 } catch (error) {
+  const failedPage = browser?.contexts()[0]?.pages()[0];
+  if (failedPage)
+    await failedPage.screenshot({
+      path: "/tmp/omcm-optimizer-ui-failure.png",
+      animations: "disabled",
+    });
   console.error(logs);
   throw error;
 } finally {

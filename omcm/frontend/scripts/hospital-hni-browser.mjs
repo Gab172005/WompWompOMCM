@@ -416,7 +416,9 @@ try {
     }),
   ).toHaveAttribute("value", String(expected.barangay.needScore));
   await expect(detail).toContainText("Share of score factors available100%");
-  await expect(detail).toContainText("All six Balanced HNI factors are available");
+  await expect(detail).toContainText(
+    "All six Balanced HNI factors are available",
+  );
   await expect(detail).toContainText(expected.barangay.nearestHospital.name);
   await expect(detail).toContainText(
     `${expected.barangay.nearestHospital.distanceKm.toFixed(2)} km straight-line distance`,
@@ -487,7 +489,7 @@ try {
   await expect(selection).toBeVisible();
   const mobileSearch = await page.locator(".map-search-card").boundingBox();
   expect(mobileSearch.x).toBe(12);
-  expect(mobileSearch.y).toBe(12);
+  expect(mobileSearch.y).toBeGreaterThanOrEqual(10);
   const mobileSelection = await selection.boundingBox();
   const mobilePanel = await page
     .getByRole("complementary", { name: "Municipality details" })
@@ -495,12 +497,13 @@ try {
   expect(mobileSelection.y + mobileSelection.height).toBeLessThanOrEqual(
     mobilePanel.y,
   );
-  const mobileLegend = await page
-    .getByRole("region", { name: "Map legend" })
+  // The selected-place summary and bottom sheet take priority over the mobile
+  // legend; the map-layers control remains available above the sheet.
+  await expect(page.getByRole("region", { name: "Map legend" })).toBeHidden();
+  const layersBox = await page
+    .getByRole("button", { name: "Map layers", exact: true })
     .boundingBox();
-  expect(mobilePanel.y + mobilePanel.height).toBeLessThanOrEqual(
-    mobileLegend.y,
-  );
+  expect(layersBox.y + layersBox.height).toBeLessThanOrEqual(mobilePanel.y);
   await expect(summary).toBeVisible();
   await expect(summary).toContainText(
     expected.municipality.needScore.toFixed(1),

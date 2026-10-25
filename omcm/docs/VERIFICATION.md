@@ -1,5 +1,111 @@
 # Verification record
 
+## Public care and chatbot experience — 2026-10-25
+
+This refinement continues on `feat/omcm-interface-and-repository-guide`. The
+public experience uses actual published schedules and the existing clinic visit
+dialog. Private scoring, optimization explanations and approval controls remain
+outside Public View. Existing authentication and model settings are unchanged.
+
+- Frontend lint, **159 tests across 19 files**, production build and **113 backend
+  tests** pass. Existing bundle-size and Starlette/httpx advisories remain.
+- Public visit tests cover all published dates, selection of an approved clinic,
+  omission of private planner explanations and retention of confirmed schedules
+  during outages. Dates use Philippine time independently of the viewer’s zone.
+- Chat tests cover selected-community hospital shortcuts through actual local
+  tools, absence of public need-score leakage, retry restrictions and clipboard
+  success/failure feedback. Clipboard APIs are stubbed for deterministic checks.
+- The connected workspace browser suite exercises real publication, the public
+  clinic card and visit dialog, source disclosures and 390/320 px/landscape
+  layouts. No production database or configured user credentials are changed.
+- The assistant browser suite holds a provider response while the reader scrolls
+  through a long earlier answer, verifies that position is retained and the
+  latest-message button works, and retries a failed request successfully. These
+  provider responses are fixtures; live external inference is not claimed.
+- Hospital/HNI browser checks pass for all 681 polygons, 56 located hospitals,
+  scoped counts, search/refocus, selection and phone layout.
+- The connected simulation suite passes host/neighbor map deductions and the
+  real manual/optimized population-weighted comparison. No HNI or model change
+  was needed for the interface revision.
+- The project owner’s Vercel demo credentials are documented in both READMEs.
+  This does not modify the backend environment or verify the remote sign-in.
+
+The connected optimizer suite passes with installed Playwright Chromium,
+including real XGBoost/CP-SAT allocation, flood overlays, replanning, public
+approval/emergency refresh and service-outage handling. Two Chrome runs lost
+browser pages late in the suite; the browser fallback completes the same checks.
+Public layout and assistant browser checks use Chrome.
+
+See [file and behavior inventory](UI_REFINEMENT.md#public-care-and-conversation-experience).
+
+## Planning panels, assistant and repository guides — 2026-10-25
+
+**Story:** Public and administrator users open contextual map panels, understand
+planning choices, inspect backend results and use the assistant without leaving
+the map. New repository readers can find the purpose, setup and methodology
+without knowing the development conversation.
+
+| Boundary | Result and evidence |
+| --- | --- |
+| Interface | Expanded explanations, access search/reset and three scenario comparison cards fit 390/320 px. Native disclosures respond to Enter. |
+| Client → API | Connected optimization suite passes actual FastAPI/XGBoost/CP-SAT generation, replanning and flood constraints. Failed service requests create no fallback placements. |
+| API → data → map | Simulation suite reports Manual HNI 43.67060777020463 and Optimized HNI 43.60322274720275 on its fixed comparison. Host/neighbor deductions, markers and map averages pass. |
+| Publication → public | Connected optimizer approval and a fresh public session pass. UI suite also checks real published visits using isolated credentials and storage. |
+| Assistant | Common commands use zero external model requests; provider-selected action/failure tests use stubbed responses. Public welcome shortcuts omit private planning tasks. |
+| Responsive behavior | Workspace suite covers desktop, tablet, phone and landscape, composer growth and simulated visual-viewport keyboard geometry. |
+| Documentation and icon | Local links in both READMEs and the UI guide resolve. SVG, 32 px PNG and 180 px touch icon return successfully. |
+
+Required checks: frontend lint, 153 tests across 17 files, production build and
+113 backend tests pass. Planning-export and sensitivity checks pass. Existing
+bundle-size and Starlette/httpx advisories remain. No weights, model artifacts,
+source datasets, administrator credentials or backend behavior change in this
+interface revision. See [exact UI changes](UI_REFINEMENT.md#planning-explanations-and-assistant-redesign).
+
+Screenshots are ignored local artifacts under `frontend/test-results/`. Basemap
+tiles are suppressed for deterministic capture. No physical phone keyboard,
+live Google key, production deployment or live external chat provider is claimed.
+
+## Map workspace UI refinement — 2026-10-25
+
+Branch: `layout/maps-workspace-refinement`, based on the completed HNI fix.
+[UI_REFINEMENT.md](UI_REFINEMENT.md) documents the exact files, design references,
+presentation behavior and review steps. This pass does not change backend code,
+HNI calculations, trained artifacts, datasets or administrator credentials.
+
+| Check | Result |
+| --- | --- |
+| Frontend `npm run lint` | Passed |
+| Frontend `npm test` | 153 passed across 17 files |
+| Frontend `npm run build` | Passed; existing bundle-size advisory |
+| Backend `.venv/bin/python -m pytest -q` | 113 passed; existing Starlette/httpx deprecation warning |
+| `npm run test:ui` | Passed; real connected public visits/auth, search, hospital source details, barangay view, aligned planner fields, preselected and empty pickers, keyboard/pointer selection, tap/swipe resize, modal/settings/layers, assistant focus, reduced motion and one retained map |
+| `npm run test:hni` | Passed; retained source counts/HNI/search and selected-place mobile sheet geometry |
+| `npm run test:simulation` | Passed; real shared-backend manual/optimized comparison, markers and revised responsive controls |
+| `npm run test:optimization` | Passed; real allocation, picker replanning, approval/public refresh, flood outlines and unavailable-service handling |
+| `npm run test:assistant` | Passed; local commands, provider-stubbed actions/failure, retained conversation and visible mobile reopen control |
+| `git diff --check` | Passed |
+
+The new UI suite inspects 1440×1000, 1024×768, 768×1024, 760×1024, 390×844,
+320×740 and 844×390 viewports. It checks that dropdowns and sheets settle inside
+the viewport, paired controls align, playback contents fit their own card,
+the launcher does not cover playback, and mobile legend/sheet/playback bands do
+not overlap. Short landscape tool sheets have a reading expansion. The original
+Leaflet map DOM node remains mounted across administrator tool changes.
+
+Screenshots were inspected, including tablet playback, small-screen picker,
+public care/visits/source records, barangay details, sign-in, assistant and map
+settings. Ignored artifacts are `frontend/test-results/ui-*.png`, plus the
+existing connected-suite images. The tablet review caught a compact-card content
+overflow/launcher collision; the responsive timeline now covers tablet widths,
+not just phones. The focus ring remains opaque blue for visibility.
+
+Browser verification uses Chrome/Leaflet. Google live-key rendering, physical
+mobile keyboards and live provider responses were not newly verified. Basemap
+tiles are suppressed for deterministic capture. Demo suites can log expected
+catalog connection errors without a backend; connected UI/optimizer/simulation
+suites use isolated real FastAPI processes and temporary credentials/databases.
+No production data, hosted schedules or deployment was changed.
+
 ## Backend-owned simulation HNI — 2026-10-25
 
 Branch: `fix/simulation-hni-objective`, including the preceding audit/UI and

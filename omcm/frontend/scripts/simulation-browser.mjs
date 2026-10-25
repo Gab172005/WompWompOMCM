@@ -223,7 +223,9 @@ try {
   });
   await panel
     .getByLabel("MC-1 barangay", { exact: true })
-    .selectOption(manualSites.host);
+    .fill(manualSites.host);
+  await panel.getByLabel("MC-1 barangay", { exact: true }).press("ArrowDown");
+  await panel.getByLabel("MC-1 barangay", { exact: true }).press("Enter");
   await expect(page.locator(".clinic-staging-marker")).toHaveCount(1);
   const manualResponse = page.waitForResponse(
     (response) => response.url().includes("/api/planning/simulation/evaluate"),
@@ -301,10 +303,17 @@ try {
     const { useForecastStore } = await import("/src/store/useForecastStore.ts");
     return [...useForecastStore.getState().coverage.keys()].slice(0, 3);
   });
-  for (let index = 0; index < 3; index++)
+  for (let index = 0; index < 3; index++) {
     await panel
       .getByLabel(`MC-${index + 1} barangay`, { exact: true })
-      .selectOption(comparisonSites[index]);
+      .fill(comparisonSites[index]);
+    await panel
+      .getByLabel(`MC-${index + 1} barangay`, { exact: true })
+      .press("ArrowDown");
+    await panel
+      .getByLabel(`MC-${index + 1} barangay`, { exact: true })
+      .press("Enter");
+  }
   const comparisonEvaluation = page.waitForResponse(
     (response) => response.url().includes("/api/planning/simulation/evaluate"),
     { timeout: 90000 },
@@ -387,8 +396,8 @@ try {
   );
   expect(optimizedImpact.mapHni).toBeCloseTo(optimizedImpact.hni, 9);
   await expect(
-    panel.getByLabel("MC-1 barangay", { exact: true }),
-  ).toBeDisabled();
+    panel.getByRole("combobox", { name: "MC-1 barangay", exact: true }),
+  ).toHaveCount(0);
   console.log(
     "Connected comparison:",
     JSON.stringify({
@@ -417,6 +426,7 @@ try {
   expect(synchronizedDay).toEqual([2, 2, 2]);
 
   await page.setViewportSize({ width: 390, height: 844 });
+  await panel.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished.catch(() => {}))));
   await expect(panel).toBeVisible();
   expect(
     await page.evaluate(
@@ -431,7 +441,7 @@ try {
     .getByRole("region", { name: "Map legend" })
     .boundingBox();
   expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(playbackBox.y);
-  expect(playbackBox.y + playbackBox.height).toBeLessThanOrEqual(legendBox.y);
+  expect(legendBox.y + legendBox.height).toBeLessThanOrEqual(panelBox.y);
   await page.screenshot({
     path: "/tmp/omcm-simulation-mobile.png",
     animations: "disabled",

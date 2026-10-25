@@ -4,6 +4,7 @@ import { useAppStore } from "../../store/useAppStore";
 import { MunicipalityPanel } from "../../features/municipalities/MunicipalityPanel";
 import { BarangayPanel } from "../../features/municipalities/BarangayPanel";
 import { PanelExpandButton } from "../../features/municipalities/PlaceDetails";
+import { SheetHandle } from "../ui/SheetHandle";
 export function SidePanel() {
   const [expanded, setExpanded] = useState(false);
   const { sidePanelOpen, selectedBarangayPsgc, selectedPsgc } = useAppStore();
@@ -15,6 +16,11 @@ export function SidePanel() {
         selectedBarangayPsgc ? "Barangay details" : "Municipality details"
       }
     >
+      <SheetHandle
+        expanded={expanded}
+        onExpand={() => setExpanded(true)}
+        onReduce={() => setExpanded(false)}
+      />
       <div className="workspace-panel-heading">
         <h2>
           <MapPin size={17} aria-hidden="true" />{" "}

@@ -1,7 +1,17 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Activity, ChevronDown, ChevronUp, Crosshair, MessageCircle, X } from "lucide-react";
+import {
+  Activity,
+  ChevronDown,
+  ChevronUp,
+  Crosshair,
+  Maximize2,
+  MessageCircle,
+  Minimize2,
+  X,
+} from "lucide-react";
 import { MapControls } from "./MapControls";
+import { SheetHandle } from "../ui/SheetHandle";
 import { MapNavigation } from "./MapNavigation";
 import { SidePanel } from "./SidePanel";
 import { FloatingControls } from "./FloatingControls";
@@ -40,8 +50,10 @@ const ADMIN_ROUTES = new Set([
 
 export function AppLayout() {
   const [collapsedTool, setCollapsedTool] = useState<string | null>(null);
+  const [expandedTool, setExpandedTool] = useState<string | null>(null);
   const state = useAppStore(),
-    { municipalities, plan, disruptions, floodOverlay, planningImpact } = usePlanningResults();
+    { municipalities, plan, disruptions, floodOverlay, planningImpact } =
+      usePlanningResults();
   const { pathname, state: navigationState } = useLocation();
   useClinicAnimation();
   const forecastOverlay = useSimulationMap();
@@ -58,10 +70,12 @@ export function AppLayout() {
   useEffect(() => {
     const store = useAppStore.getState();
     if (ADMIN_ROUTES.has(pathname)) {
-      const initialPanel = (navigationState as { panel?: string } | null)?.panel;
-      const targetPanel = initialPanel === "optimization" || initialPanel === "simulation"
-        ? initialPanel
-        : undefined;
+      const initialPanel = (navigationState as { panel?: string } | null)
+        ?.panel;
+      const targetPanel =
+        initialPanel === "optimization" || initialPanel === "simulation"
+          ? initialPanel
+          : undefined;
       if (store.adminUser) {
         useAppStore.setState({ viewMode: "admin", loginModalOpen: false });
         if (targetPanel) store.openPanel(targetPanel);
@@ -87,7 +101,12 @@ export function AppLayout() {
     simulation: "Try a 30-day clinic plan",
     chatbot: "Planning help",
   };
-  const PanelIcon = state.panel === "optimization" ? Crosshair : state.panel === "simulation" ? Activity : MessageCircle;
+  const PanelIcon =
+    state.panel === "optimization"
+      ? Crosshair
+      : state.panel === "simulation"
+        ? Activity
+        : MessageCircle;
   const toolCollapsed = Boolean(state.panel && collapsedTool === state.panel);
 
   return (
@@ -144,20 +163,67 @@ export function AppLayout() {
         <MapNavigation />
         {!isPublic && state.panel && (
           <aside
-            className={`workspace-panel tool-panel card${toolCollapsed ? " is-collapsed" : ""}`}
+            className={`workspace-panel tool-panel card${toolCollapsed ? " is-collapsed" : ""}${expandedTool === state.panel ? " is-expanded" : ""}`}
             aria-label={titles[state.panel]}
           >
+            <SheetHandle
+              expanded={expandedTool === state.panel && !toolCollapsed}
+              onExpand={() => {
+                setExpandedTool(state.panel);
+                setCollapsedTool(null);
+              }}
+              onReduce={() => {
+                if (expandedTool === state.panel) setExpandedTool(null);
+                else setCollapsedTool(state.panel);
+              }}
+            />
             <div className="workspace-panel-heading">
-              <h2><PanelIcon size={18} aria-hidden="true" />{titles[state.panel]}</h2>
+              <h2>
+                <PanelIcon size={18} aria-hidden="true" />
+                {titles[state.panel]}
+              </h2>
+              <button
+                type="button"
+                className="icon-button panel-height-toggle"
+                aria-label={
+                  expandedTool === state.panel
+                    ? "Reduce panel height"
+                    : "Expand panel height"
+                }
+                aria-expanded={expandedTool === state.panel}
+                onClick={() => {
+                  setExpandedTool(
+                    expandedTool === state.panel ? null : state.panel,
+                  );
+                  setCollapsedTool(null);
+                }}
+              >
+                {expandedTool === state.panel ? (
+                  <Minimize2 size={17} aria-hidden="true" />
+                ) : (
+                  <Maximize2 size={17} aria-hidden="true" />
+                )}
+              </button>
               <button
                 type="button"
                 className="icon-button"
-                aria-label={toolCollapsed ? "Expand tool panel" : "Collapse tool panel"}
+                aria-label={
+                  toolCollapsed ? "Expand tool panel" : "Collapse tool panel"
+                }
                 aria-expanded={!toolCollapsed}
-                onClick={() => setCollapsedTool(toolCollapsed ? null : state.panel)}
-                title={toolCollapsed ? "Show tool details" : "See more of the map"}
+                onClick={() => {
+                  setExpandedTool(null);
+                  setCollapsedTool(toolCollapsed ? null : state.panel);
+                }}
+                title={
+                  toolCollapsed ? "Show tool details" : "See more of the map"
+                }
               >
-                {toolCollapsed ? <ChevronDown size={18} aria-hidden="true" /> : <ChevronUp size={18} aria-hidden="true" />}
+                {toolCollapsed ? (
+                  <ChevronDown size={18} aria-hidden="true" />
+                ) : (
+                  <ChevronUp size={18} aria-hidden="true" />
+                )}
               </button>
               <button
                 className="icon-button"
@@ -167,7 +233,11 @@ export function AppLayout() {
                 <X size={17} />
               </button>
             </div>
-            <div className="workspace-panel-body" hidden={toolCollapsed}>
+            <div
+              className="workspace-panel-body"
+              key={state.panel}
+              hidden={toolCollapsed}
+            >
               {state.panel === "optimization" ? (
                 <OptimizationPanel />
               ) : state.panel === "simulation" ? (

@@ -25,6 +25,7 @@ const server = spawn(
   },
 );
 let browser;
+let releaseHeldReply;
 try {
   let ready = false;
   for (let i = 0; i < 120; i++) {
@@ -64,6 +65,11 @@ try {
           ? c.parts.filter((p) => p.text).map((p) => p.text)
           : [],
       )[0];
+    if (question === "Explain the plan while I read earlier replies") {
+      await new Promise((resolve) => {
+        releaseHeldReply = resolve;
+      });
+    }
     const parts =
       question === "Bring up the simulator screen"
         ? [
@@ -74,7 +80,15 @@ try {
           ]
         : [
             {
-              text: "These tools help compare clinic plans and explain the tradeoffs.",
+              text:
+                question === "Why are these planning tools useful?"
+                  ? "These tools help compare clinic plans and explain the tradeoffs.\n\n" +
+                    Array.from(
+                      { length: 12 },
+                      (_, index) =>
+                        `${index + 1}. Review community need, daily capacity and access together. The map shows sample planning evidence, while published visits remain separate from draft plans.`,
+                    ).join("\n\n")
+                  : "These tools help compare clinic plans and explain the tradeoffs.",
             },
           ];
     await route.fulfill({
@@ -166,7 +180,10 @@ try {
   await ask("Get optimizer suggestions for three clinics");
   await expect(log).toContainText("Generate optimized locations");
   await expect(
-    page.getByRole("button", { name: "Generate optimized locations", exact: true }),
+    page.getByRole("button", {
+      name: "Generate optimized locations",
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(page.getByText(/3 optimized locations/)).toHaveCount(0);
   await ask("Show public schedules for tomorrow");
@@ -187,6 +204,39 @@ try {
   await ask("Why are these planning tools useful?");
   expect(providerRequests).toBe(2);
   await expect(log).toContainText("explain the tradeoffs");
+  await widget
+    .getByRole("textbox", { name: "Assistant message" })
+    .fill("Explain the plan while I read earlier replies");
+  await widget
+    .getByRole("button", { name: "Send message", exact: true })
+    .click();
+  await expect.poll(() => Boolean(releaseHeldReply)).toBe(true);
+  await log.evaluate((element) => {
+    element.scrollTop = 0;
+    element.dispatchEvent(new Event("scroll"));
+  });
+  expect(
+    await log.evaluate(
+      (element) => element.scrollHeight - element.clientHeight,
+    ),
+  ).toBeGreaterThan(64);
+  releaseHeldReply();
+  await expect(log).toHaveAttribute("aria-busy", "false");
+  await expect(
+    widget.getByRole("button", { name: "Jump to latest message" }),
+  ).toBeVisible();
+  expect(
+    await log.evaluate((element) => element.scrollTop),
+  ).toBeLessThanOrEqual(1);
+  await widget.getByRole("button", { name: "Jump to latest message" }).click();
+  await expect
+    .poll(() =>
+      log.evaluate(
+        (element) =>
+          element.scrollHeight - element.scrollTop - element.clientHeight,
+      ),
+    )
+    .toBeLessThanOrEqual(1);
   const messageCount = await log.locator(".workspace-chat-message").count();
   await page.setViewportSize({ width: 390, height: 844 });
   const box = await widget.boundingBox();
@@ -200,17 +250,26 @@ try {
     ),
   ).toBe(true);
   await widget.getByRole("button", { name: "Close assistant" }).click();
-  await page.getByRole("button", { name: "Open OMCM assistant" }).click();
+  // Simulation keeps the mobile launcher off the timeline; its toolbar is
+  // the visible way to reopen the assistant while keeping the conversation.
+  const launcher = page.getByRole("button", { name: "Open OMCM assistant" });
+  if (await launcher.isVisible()) await launcher.click();
+  else
+    await page
+      .getByRole("button", { name: "Planning help", exact: true })
+      .click();
   await expect(log.locator(".workspace-chat-message")).toHaveCount(
     messageCount,
   );
   await mkdir(`${frontend}/test-results`, { recursive: true });
   await page.screenshot({
     path: `${frontend}/test-results/assistant-mobile.png`,
+    animations: "disabled",
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({
     path: `${frontend}/test-results/assistant-desktop.png`,
+    animations: "disabled",
   });
   await page.unroute("**/api/assistant");
   await page.route("**/api/assistant", (route) =>
@@ -228,11 +287,36 @@ try {
   await expect(widget.locator(".assistant-message-error")).toContainText(
     "Gemini quota exceeded",
   );
+  await page.unroute("**/api/assistant");
+  await page.route("**/api/assistant", (route) =>
+    route.fulfill({
+      json: {
+        content: {
+          role: "model",
+          parts: [{ text: "The planning explanation is available again." }],
+        },
+        provider: "gemini",
+        model: "gemini-3.8-flash",
+      },
+    }),
+  );
+  await widget.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(log).toHaveAttribute("aria-busy", "false");
+  await expect(
+    log.locator(".workspace-chat-message.assistant").last(),
+  ).toContainText("The planning explanation is available again.");
+  await expect(
+    log
+      .locator(".workspace-chat-message.assistant")
+      .last()
+      .locator(".assistant-message-error"),
+  ).toHaveCount(0);
   expect(errors).toEqual([]);
   console.log(
-    "Assistant browser checks passed: common commands use zero Gemini requests, model-selected actions use one request, real data lookup, selection/refocus, follow-up, planning/simulation/public navigation, editable drafts, persistent conversation, mobile layout, provider failure, no page errors. Remaining provider responses are stubbed.",
+    "Assistant browser checks passed: common commands use zero Gemini requests, model-selected actions use one request, real data lookup, selection/refocus, follow-up, planning/simulation/public navigation, editable drafts, persistent conversation, reading-position preservation, jump-to-latest, mobile layout, provider failure and retry, no page errors. Remaining provider responses are stubbed.",
   );
 } finally {
+  releaseHeldReply?.();
   await browser?.close();
   server.kill("SIGTERM");
 }

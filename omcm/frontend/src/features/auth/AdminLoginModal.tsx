@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle, ShieldCheck } from "lucide-react";
 import { Modal } from "../../components/ui/Modal";
 import { Button } from "../../components/ui/Button";
 import { useAppStore } from "../../store/useAppStore";
@@ -29,6 +29,7 @@ export function AdminLoginModal() {
   const { loginModalOpen, closeLoginModal, signInAdmin } = useAppStore();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -40,6 +41,7 @@ export function AdminLoginModal() {
   function handleCancel() {
     if (busy) return;
     setError("");
+    setShowPassword(false);
     closeLoginModal();
     if (ADMIN_PATHS.has(pathname)) {
       navigate("/");
@@ -64,6 +66,7 @@ export function AdminLoginModal() {
         setCredentials(trimmedUser, password);
         signInAdmin(trimmedUser);
         setPassword("");
+        setShowPassword(false);
         if (!ADMIN_PATHS.has(pathname)) {
           navigate("/admin");
         }
@@ -79,6 +82,7 @@ export function AdminLoginModal() {
         );
         signInAdmin(me.username);
         setPassword("");
+        setShowPassword(false);
         if (!ADMIN_PATHS.has(pathname)) {
           navigate("/admin");
         }
@@ -170,14 +174,29 @@ export function AdminLoginModal() {
           </label>
           <label className="workspace-field">
             Password
-            <input
-              type="password"
-              required
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
-            />
+            <div className="field-input-affix">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password"
+              />
+              <button
+                type="button"
+                className="icon-button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword((value) => !value)}
+              >
+                {showPassword ? (
+                  <EyeOff size={18} aria-hidden="true" />
+                ) : (
+                  <Eye size={18} aria-hidden="true" />
+                )}
+              </button>
+            </div>
           </label>
           {error && (
             <div className="workspace-alert error" role="alert">
@@ -185,7 +204,8 @@ export function AdminLoginModal() {
             </div>
           )}
           <div className="workspace-button-row">
-            <Button type="submit" disabled={busy}>
+            <Button type="submit" disabled={busy} aria-busy={busy}>
+              {busy && <LoaderCircle size={16} aria-hidden="true" />}
               {busy ? "Verifying…" : "Sign in to Admin View"}
             </Button>
             <Button

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Play, Pause, RotateCcw } from "lucide-react";
+import { ChevronRight, Play, Pause, RotateCcw } from "lucide-react";
 import { useForecastStore } from "../../store/useForecastStore";
 export function SimulationPlayback() {
   const s = useForecastStore(),
@@ -52,10 +52,13 @@ export function SimulationPlayback() {
       </label>
       <output>Day {run.day}/30</output>
       <button
+        aria-label="Next day"
+        className="playback-next"
         disabled={run.day === 30 || s.applyBusy || s.recommendBusy}
         onClick={s.advance}
       >
-        Next day
+        <span>Next day</span>
+        <ChevronRight size={17} aria-hidden="true" />
       </button>
       <label>
         <span className="sr-only">Playback speed</span>
