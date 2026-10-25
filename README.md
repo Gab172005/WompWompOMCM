@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="omcm/frontend/public/omcm-icon.svg" width="76" height="76" alt="OMCM map and care icon" />
+  <img src="omcm/frontend/public/omcm-icon.svg" width="76" height="76" alt="OMCM mobile clinic and community route icon" />
 </p>
 
 # OMCM · Optimized Mobile Clinic Mapper
@@ -31,6 +31,16 @@ no real patient records and is not a clinical diagnosis or live emergency system
 
 Administrator tools open inside a single map workspace. Public View separates
 published care information from private planning scores and drafts.
+
+## Hosted demo sign-in
+
+For the Vercel demonstration, choose **Admin View** and enter:
+
+- **Username:** `admin`
+- **Password:** `laguna-admin-2026`
+
+These credentials are for the hosted demo. Local sign-in uses the credentials
+configured in `backend/.env`.
 
 ## How it works
 

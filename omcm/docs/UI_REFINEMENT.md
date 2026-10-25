@@ -140,7 +140,7 @@ blue actions. HNI, flood and clinic map colors keep their original meanings.
   global styles from squeezing comparison labels or overlapping search icons.
   `assistant.css` consolidates the assistant skin rather than stacking another
   set of conflicting overrides. Existing reduced-motion preferences apply.
-- **Identity:** `frontend/public/omcm-icon.svg` is an original map pin and care
+- **Identity:** `frontend/public/omcm-icon.svg` is an original mobile clinic and connecting route
   mark. `favicon-32.png` and `apple-touch-icon.png` provide raster variants;
   `frontend/index.html` links them and uses a descriptive application title.
 
@@ -158,3 +158,41 @@ Reviewed sizes include desktop 1440 px, tablets 1024/768 px, phones 390/320 px a
 844 × 390 landscape. Keyboard geometry is simulated through the browser’s visual
 viewport; no physical iOS/Android keyboard session is claimed. Optional live
 Google Maps rendering still requires a configured key.
+
+## Public care and conversation experience
+
+Public View follows the same restrained slate/teal surfaces and trailing-chevron
+patterns as the administrator panels. Its information order is published visits,
+selected-community context, clinic locations, nearby hospital evidence and visit
+guidance. Source evidence stays available without wrapping every paragraph in
+another heavy card. Blue remains an action/focus color rather than the default
+color for explanatory text.
+
+| Files | Behavior changed |
+| --- | --- |
+| `frontend/src/features/public/PublicVisitSummary.tsx` | Replace the extra-date dropdown with a scrollable date rail covering today and every actual published future date. Hide the date selector when there is no choice. Format dates in Philippine time, retain outage/stale feedback and preserve the approved-schedule store. |
+| `frontend/src/features/public/PublicSidePanel.tsx` | Flatten community/hospital nesting, prioritize clinic locations, simplify empty states, add a contextual nearest-visit action and move visit guidance into a shared disclosure. |
+| `frontend/src/features/public/PublicClinicCard.tsx` | Show visit location, hours and services before expandable capacity/service-area information. Label the existing dialog trigger accurately. |
+| `frontend/src/features/tracking/ClinicDetails.tsx` | Refine the public visit dialog, including emergency notices, readable services and planned capacity; leave the administrator detail branch intact. |
+| `frontend/src/features/chatbot/ChatbotPanel.tsx` | Ground public shortcuts in the selected community using the existing validated local tools. Preserve reading position when responses arrive, offer a latest-message action, hide empty response bubbles and allow safe user-initiated retries. Avoid automatically opening the mobile keyboard. |
+| `frontend/src/features/chatbot/ChatMessage.tsx` | Separate response text from expandable map-action receipts. Add copy confirmation/failure feedback and a retry control supplied only for the latest failed turn without completed actions. |
+| `frontend/src/features/chatbot/AssistantWidget.tsx` | Use the new project mark and allow the mobile sheet to receive focus without focusing its text field. Preserve close/Escape, drag and viewport behavior. |
+| `frontend/src/styles/map-workspace.css` | Add the public reading hierarchy, date rail, visit dialog, clinic/service rows, responsive evidence layout and neutral supporting text. |
+| `frontend/src/styles/assistant.css` | Style response tools, action receipts, error feedback, progress and latest-message controls, with mobile touch targets and reduced motion. |
+| `frontend/public/omcm-icon.svg`, `favicon-32.png`, `apple-touch-icon.png`; `frontend/index.html` | Replace the generic pin mark with an original mobile-care vehicle following a connecting route. Refresh raster variants and version icon URLs. |
+| `tests/frontend/publicVisits.test.tsx` | Verify selection of every published date, clinic selection and absence of planner explanations in the public card. |
+| `frontend/src/features/chatbot/ChatbotPanel.test.tsx`, `ChatMessage.test.tsx` | Verify grounded public shortcuts, privacy, retry restrictions and truthful clipboard feedback. |
+| `frontend/scripts/workspace-ui-browser.mjs` | Exercise public clinic cards/dialogs at desktop, phone and landscape sizes using real published test visits. |
+| `frontend/scripts/assistant-browser.mjs` | Exercise delayed replies while reading older messages, jump-to-latest and recovery from a provider error. |
+| `frontend/scripts/optimization-browser.mjs` | Expand the new visit-information disclosure before checking assigned service communities. |
+
+The public action still selects the approved clinic marker and opens the existing
+native visit dialog. It does not publish, route to an administrator page or show
+private optimization scores. Planned appointment capacity is never described as
+a live count of available slots. All schedule data and publication permissions
+retain their existing backend source.
+
+Both READMEs document the hosted demonstration credentials supplied by the
+project owner. This documentation does not change backend credentials or verify
+the current remote deployment. No model, HNI policy, data schema or database
+migration is part of this refinement.

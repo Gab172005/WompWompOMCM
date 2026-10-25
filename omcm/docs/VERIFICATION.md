@@ -1,5 +1,43 @@
 # Verification record
 
+## Public care and chatbot experience — 2026-10-25
+
+This refinement continues on `feat/omcm-interface-and-repository-guide`. The
+public experience uses actual published schedules and the existing clinic visit
+dialog. Private scoring, optimization explanations and approval controls remain
+outside Public View. Existing authentication and model settings are unchanged.
+
+- Frontend lint, **159 tests across 19 files**, production build and **113 backend
+  tests** pass. Existing bundle-size and Starlette/httpx advisories remain.
+- Public visit tests cover all published dates, selection of an approved clinic,
+  omission of private planner explanations and retention of confirmed schedules
+  during outages. Dates use Philippine time independently of the viewer’s zone.
+- Chat tests cover selected-community hospital shortcuts through actual local
+  tools, absence of public need-score leakage, retry restrictions and clipboard
+  success/failure feedback. Clipboard APIs are stubbed for deterministic checks.
+- The connected workspace browser suite exercises real publication, the public
+  clinic card and visit dialog, source disclosures and 390/320 px/landscape
+  layouts. No production database or configured user credentials are changed.
+- The assistant browser suite holds a provider response while the reader scrolls
+  through a long earlier answer, verifies that position is retained and the
+  latest-message button works, and retries a failed request successfully. These
+  provider responses are fixtures; live external inference is not claimed.
+- Hospital/HNI browser checks pass for all 681 polygons, 56 located hospitals,
+  scoped counts, search/refocus, selection and phone layout.
+- The connected simulation suite passes host/neighbor map deductions and the
+  real manual/optimized population-weighted comparison. No HNI or model change
+  was needed for the interface revision.
+- The project owner’s Vercel demo credentials are documented in both READMEs.
+  This does not modify the backend environment or verify the remote sign-in.
+
+The connected optimizer suite passes with installed Playwright Chromium,
+including real XGBoost/CP-SAT allocation, flood overlays, replanning, public
+approval/emergency refresh and service-outage handling. Two Chrome runs lost
+browser pages late in the suite; the browser fallback completes the same checks.
+Public layout and assistant browser checks use Chrome.
+
+See [file and behavior inventory](UI_REFINEMENT.md#public-care-and-conversation-experience).
+
 ## Planning panels, assistant and repository guides — 2026-10-25
 
 **Story:** Public and administrator users open contextual map panels, understand

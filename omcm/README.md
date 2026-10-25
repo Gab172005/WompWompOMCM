@@ -20,7 +20,8 @@ details open in a bottom sheet that can be expanded or reduced.
 
 Administrators use **Plan clinics**, **30-day simulation** and **Planning help**
 without leaving the map. Selecting a tool changes the panel, not the page. The
-assistant also offers shortcuts appropriate to the current view.
+assistant offers shortcuts for the current view and selected community, with
+copyable replies, failure recovery and a control to return to the latest message.
 
 ### Planning and publishing visits
 
@@ -57,6 +58,16 @@ More areas reached does not necessarily mean a larger reduction in need.
 Population, existing need, reach and capacity all matter. The simulation solver
 retains a feasible manual comparison if it performs better on the selected day.
 Ties are possible; held locations can perform differently on later days.
+
+## Hosted demo sign-in
+
+For the Vercel demonstration, choose **Admin View** and enter:
+
+- **Username:** `admin`
+- **Password:** `laguna-admin-2026`
+
+These credentials are for the hosted demo. Local sign-in uses the credentials
+configured in `backend/.env`.
 
 ## What the models mean
 
