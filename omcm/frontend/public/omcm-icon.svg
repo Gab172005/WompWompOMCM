@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <title>OMCM — care on the map</title>
+  <rect width="64" height="64" rx="16" fill="#163f46"/>
+  <path d="m7 40 15-6 20 7 15-7v18l-15 6-20-7-15 6V40Z" fill="#5cb6a5" opacity=".45"/>
+  <path d="M48 24c0 12-16 26-16 26S16 36 16 24a16 16 0 1 1 32 0Z" fill="#fff"/>
+  <path d="M29 15h6v6h6v6h-6v6h-6v-6h-6v-6h6v-6Z" fill="#11766f"/>
+</svg>

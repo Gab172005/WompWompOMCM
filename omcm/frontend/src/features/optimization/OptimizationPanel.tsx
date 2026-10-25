@@ -4,12 +4,15 @@ import {
   Crosshair,
   LoaderCircle,
   ShieldCheck,
+  Layers,
+  Waves,
 } from "lucide-react";
 import { useOptimizationStore } from "../../store/useOptimizationStore";
 import { ClinicCountInput } from "./ClinicCountInput";
 import { PlacementRecommendations } from "./PlacementRecommendations";
 import { DeploymentApproval } from "./DeploymentApproval";
 import { RoadExclusions } from "./RoadExclusions";
+import { DisclosureCard } from "../../components/ui/DisclosureCard";
 import { Button } from "../../components/ui/Button";
 
 export function OptimizationPanel() {
@@ -44,16 +47,49 @@ export function OptimizationPanel() {
           <ShieldCheck size={15} aria-hidden="true" />
           All Laguna · 681 barangays · 30 LGUs
         </span>
-        <details className="optimizer-context">
-          <summary>How these recommendations work</summary>
-          <p className="workspace-note">
-            Every barangay is considered. Recommendations use the agreed
-            Balanced HNI with next-day XGBoost illness forecasts and appointment
-            demand. Planning points and capacities need LGU verification. Travel
-            uses estimated adjacency links; a complete provincial road matrix is
-            not available. The map retains baseline illness inputs.
+        <DisclosureCard
+          title="Behind your recommendations"
+          description="Need, demand and access — in three steps"
+          icon={<Layers size={18} />}
+        >
+          <ol className="planning-process">
+            <li>
+              <span>1</span>
+              <div>
+                <strong>Understand community need</strong>
+                <p>
+                  The Balanced Healthcare Need Index compares illness, access
+                  and community conditions across Laguna.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span>2</span>
+              <div>
+                <strong>Estimate tomorrow’s demand</strong>
+                <p>
+                  XGBoost uses sample history and weather to forecast illness
+                  and appointment demand.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span>3</span>
+              <div>
+                <strong>Fit a plan to your fleet</strong>
+                <p>
+                  The solver selects sites within your capacity, travel and
+                  access constraints.
+                </p>
+              </div>
+            </li>
+          </ol>
+          <p className="map-evidence-note">
+            Planning points and capacities need LGU verification. Travel follows
+            estimated barangay links, not a verified road network. The baseline
+            map keeps its original illness inputs.
           </p>
-        </details>
+        </DisclosureCard>
       </div>
       <form
         onSubmit={(event) => {
@@ -80,7 +116,7 @@ export function OptimizationPanel() {
               />
             </label>
             <label className="workspace-field">
-              Maximum modeled travel minutes
+              Travel limit (minutes)
               <input
                 aria-label="Maximum modeled travel minutes"
                 type="number"
@@ -116,14 +152,39 @@ export function OptimizationPanel() {
             Generate a plan to outline flagged barangays in blue. These are
             mapped flood scenarios; water depth is unavailable.
           </p>
-          <details className="optimizer-context">
-            <summary>What do 25-year and 100-year mean?</summary>
+          <DisclosureCard
+            title="Understand flood layers"
+            description="Annual likelihood, not a water-depth forecast"
+            icon={<Waves size={18} />}
+          >
+            <div className="flood-likelihoods">
+              <div>
+                <span>25-year layer</span>
+                <strong>
+                  4%<small> annual chance</small>
+                </strong>
+              </div>
+              <div>
+                <span>100-year layer</span>
+                <strong>
+                  1%<small> annual chance</small>
+                </strong>
+              </div>
+            </div>
             <p>
-              A 25-year event has about a 4% annual chance; a 100-year event has
-              about a 1% annual chance. Selecting a layer excludes its flagged
-              planning points and connected model links.
+              These are chances in any given year, not a countdown. A rare event
+              can happen more than once in a short period.
             </p>
-          </details>
+            <div className="map-context-callout">
+              <strong>What changes in your plan?</strong>
+              <p>
+                The selected layer excludes flagged planning points and
+                connected model links. Generate a plan to see flagged barangays
+                outlined in blue; the outline does not show exact flood
+                boundaries.
+              </p>
+            </div>
+          </DisclosureCard>
           <RoadExclusions
             roads={roads}
             selected={config.closed_roads}

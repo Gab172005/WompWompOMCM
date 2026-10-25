@@ -34,6 +34,30 @@ export function AssistantWidget() {
     },
   );
   const [isDragging, setIsDragging] = useState(false);
+  const [visibleViewport, setVisibleViewport] = useState<{
+    height: number;
+    bottomInset: number;
+  } | null>(null);
+
+  useLayoutEffect(() => {
+    const viewport = window.visualViewport;
+    if (!open || !viewport) return;
+    const resize = () =>
+      setVisibleViewport({
+        height: viewport.height,
+        bottomInset: Math.max(
+          0,
+          window.innerHeight - viewport.height - viewport.offsetTop,
+        ),
+      });
+    resize();
+    viewport.addEventListener("resize", resize);
+    viewport.addEventListener("scroll", resize);
+    return () => {
+      viewport.removeEventListener("resize", resize);
+      viewport.removeEventListener("scroll", resize);
+    };
+  }, [open]);
 
   const launcherRef = useRef<HTMLButtonElement>(null);
   const dragStartRef = useRef<{
@@ -194,7 +218,21 @@ export function AssistantWidget() {
   };
 
   return open ? (
-    <section className="assistant-widget" aria-label="OMCM assistant">
+    <section
+      className="assistant-widget"
+      aria-label="OMCM assistant"
+      style={
+        visibleViewport
+          ? {
+              maxHeight: Math.max(0, visibleViewport.height - 24),
+              bottom:
+                visibleViewport.bottomInset > 0
+                  ? visibleViewport.bottomInset + 12
+                  : undefined,
+            }
+          : undefined
+      }
+    >
       <header className="assistant-widget-heading">
         <div>
           <Bot size={22} aria-hidden="true" />

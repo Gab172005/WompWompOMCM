@@ -9,13 +9,20 @@ import {
   CartesianGrid,
   ReferenceLine,
 } from "recharts";
-import { ArrowDownRight, ArrowUpRight, MapPin } from "lucide-react";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  MapPin,
+  ChartNoAxesCombined,
+  History,
+} from "lucide-react";
 import {
   STRATEGIES,
   useForecastStore,
   type RunState,
   type Strategy,
 } from "../../store/useForecastStore";
+import { DisclosureCard } from "../../components/ui/DisclosureCard";
 import { BARANGAYS_BY_PSGC } from "../../services/providedData";
 
 const strategies = Object.keys(STRATEGIES) as Strategy[];
@@ -353,77 +360,119 @@ export function SimulationResults() {
 
       <ScenarioActivity run={run} strategy={s.strategy} />
 
-      <details className="simulation-full-results">
-        <summary>Full scenario comparison and deployment history</summary>
-        <div className="simulation-table-scroll">
-          <table>
-            <caption>
-              Estimated results on Day {run.day} · scores out of 100
-            </caption>
-            <thead>
-              <tr>
-                <th>Scenario</th>
-                <th>Baseline HNI</th>
-                <th>Scenario HNI</th>
-                <th>Need not yet covered</th>
-                <th>Areas receiving service</th>
-                <th>Need covered (%)</th>
-                <th>Clinic moves</th>
-              </tr>
-            </thead>
-            <tbody>
-              {strategies.map((strategy) => {
-                const scenarioMetrics =
-                  s.runs[strategy].reached >= run.day
-                    ? s.runs[strategy].snapshots[run.day - 1].metrics
-                    : null;
-                return (
-                  <tr key={strategy}>
-                    <th>{STRATEGIES[strategy]}</th>
-                    {scenarioMetrics ? (
-                      <>
-                        <td>{scenarioMetrics.baselineHni.toFixed(2)}</td>
-                        <td>{scenarioMetrics.hni.toFixed(2)}</td>
-                        <td>{scenarioMetrics.uhni.toFixed(2)}</td>
-                        <td>{scenarioMetrics.servedBarangays}</td>
-                        <td>{scenarioMetrics.coveredPercent.toFixed(2)}</td>
-                        <td>{scenarioMetrics.relocations}</td>
-                      </>
-                    ) : (
-                      <td colSpan={6}>
-                        Run this scenario through Day {run.day} to compare
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <p className="workspace-note">
-          Need covered is the estimated share of planning need met, not the
-          share of residents treated. Uncovered need includes carryover from
-          prior days and is not a patient count.
+      <DisclosureCard
+        title="Compare the three scenarios"
+        description={`Day ${run.day} · scores, coverage and clinic moves`}
+        icon={<ChartNoAxesCombined size={18} />}
+      >
+        <p className="comparison-guide">
+          Same day. Same starting need. Lower HNI means less remaining need.
         </p>
-        <details>
-          <summary>Weekly deployment history</summary>
-          {Object.entries(run.history).length ? (
-            Object.entries(run.history).map(([day, allocation]) => (
-              <p key={day}>
-                Day {day}:{" "}
-                {allocation
-                  .map((assignment) => {
+        <div className="scenario-comparison-list">
+          {strategies.map((strategy) => {
+            const scenarioMetrics =
+              s.runs[strategy].reached >= run.day
+                ? s.runs[strategy].snapshots[run.day - 1].metrics
+                : null;
+            return (
+              <section
+                className={`scenario-comparison-card is-${strategy}`}
+                key={strategy}
+                aria-label={`${STRATEGIES[strategy]} comparison`}
+              >
+                <div className="scenario-comparison-heading">
+                  <h4>{STRATEGIES[strategy]}</h4>
+                  {strategy === s.strategy && <span>On map</span>}
+                </div>
+                {scenarioMetrics ? (
+                  <>
+                    <div className="comparison-score">
+                      <strong>
+                        {scenarioMetrics.hni.toFixed(2)}
+                        <small>/100</small>
+                      </strong>
+                      <span>
+                        {Math.max(
+                          0,
+                          scenarioMetrics.baselineHni - scenarioMetrics.hni,
+                        ).toFixed(2)}{" "}
+                        pts below baseline
+                      </span>
+                    </div>
+                    <dl className="comparison-facts">
+                      <div>
+                        <dt>Without clinics</dt>
+                        <dd>{scenarioMetrics.baselineHni.toFixed(2)}</dd>
+                      </div>
+                      <div>
+                        <dt>Areas receiving service</dt>
+                        <dd>{scenarioMetrics.servedBarangays}</dd>
+                      </div>
+                      <div>
+                        <dt>Need covered</dt>
+                        <dd>{scenarioMetrics.coveredPercent.toFixed(2)}%</dd>
+                      </div>
+                      <div>
+                        <dt>Clinic moves</dt>
+                        <dd>{scenarioMetrics.relocations}</dd>
+                      </div>
+                      <div>
+                        <dt>Uncovered need index</dt>
+                        <dd>{scenarioMetrics.uhni.toFixed(2)}</dd>
+                      </div>
+                    </dl>
+                  </>
+                ) : (
+                  <p>Run this scenario through Day {run.day} to compare.</p>
+                )}
+              </section>
+            );
+          })}
+        </div>
+        <p className="map-evidence-note">
+          Coverage estimates planning need met, not residents treated. The
+          uncovered need index includes previous days’ carryover; it is not a
+          patient count.
+        </p>
+      </DisclosureCard>
+      <DisclosureCard
+        title="Clinic deployment history"
+        description={`${STRATEGIES[s.strategy]} · confirmed simulation placements`}
+        icon={<History size={18} />}
+      >
+        {Object.entries(run.history).length ? (
+          <ol className="deployment-timeline">
+            {Object.entries(run.history).map(([day, allocation]) => (
+              <li key={day}>
+                <span className="deployment-day">Day {day}</span>
+                <ul>
+                  {allocation.map((assignment) => {
                     const barangay = BARANGAYS_BY_PSGC.get(assignment.psgc);
-                    return `${assignment.clinicId} → ${barangay ? `${barangay.name}, ${barangay.municipality}` : "Location unavailable"}`;
-                  })
-                  .join("; ")}
-              </p>
-            ))
-          ) : (
-            <p>No confirmed deployments.</p>
-          )}
-        </details>
-      </details>
+                    return (
+                      <li key={assignment.clinicId}>
+                        <MapPin size={14} aria-hidden="true" />
+                        <div>
+                          <strong>{assignment.clinicId}</strong>
+                          <span>
+                            {barangay
+                              ? `${barangay.name}, ${barangay.municipality}`
+                              : "Location unavailable"}
+                          </span>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="map-empty-state">
+            No clinics deployed in this scenario yet. Apply a manual or
+            optimized plan to start its history.
+          </p>
+        )}
+      </DisclosureCard>
     </section>
   );
 }

@@ -119,7 +119,13 @@ try {
     ).toBe(true);
   }
   async function withinViewport(locator) {
-    await locator.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished.catch(() => {}))));
+    await locator.evaluate((element) =>
+      Promise.all(
+        element
+          .getAnimations()
+          .map((animation) => animation.finished.catch(() => {})),
+      ),
+    );
     const size = page.viewportSize();
     await expect
       .poll(
@@ -269,7 +275,69 @@ try {
     .getByLabel("Maximum modeled travel minutes")
     .boundingBox();
   expect(Math.abs(capacityBox.y - travelBox.y)).toBeLessThanOrEqual(1);
+  await planner
+    .locator('summary[aria-label="Behind your recommendations"]')
+    .click();
+  await expect(
+    planner.getByText("Estimate tomorrow’s demand", { exact: true }),
+  ).toBeVisible();
+  await planner
+    .locator('summary[aria-label="Understand flood layers"]')
+    .focus();
+  await page.keyboard.press("Enter");
+  await expect(planner.locator(".flood-likelihoods")).toBeVisible();
+  const restrictions = planner
+    .locator(".map-disclosure")
+    .filter({ has: page.locator('summary[aria-label="Access restrictions"]') });
+  await restrictions.locator("summary").click();
+  await restrictions.getByRole("checkbox").first().check();
+  await expect(
+    restrictions.getByText("1 excluded", { exact: true }),
+  ).toBeVisible();
+  await restrictions.getByRole("searchbox").fill("no-place-matches-this");
+  await expect(
+    restrictions.getByText("No connections found. Try another place name."),
+  ).toBeVisible();
+  await restrictions.getByRole("button", { name: "Clear exclusions" }).click();
+  await expect(
+    restrictions.getByText("Optional", { exact: true }),
+  ).toBeVisible();
+  await restrictions.getByRole("searchbox").fill("Los Baños");
+  await expect(restrictions.getByRole("checkbox").first()).toBeVisible();
+  // Focusing deep content must scroll the body without moving its heading.
+  const plannerBox = await planner.boundingBox();
+  const headingBox = await planner
+    .locator(".workspace-panel-heading")
+    .boundingBox();
+  expect(headingBox.y).toBeGreaterThanOrEqual(plannerBox.y);
+  expect(headingBox.y).toBeLessThan(plannerBox.y + 24);
+  await planner.locator(".workspace-panel-body").evaluate((element) => {
+    element.scrollTop = 0;
+  });
   await shot("planner-desktop");
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    await planner.getByRole("button", { name: "Expand panel height" }).click();
+    for (const title of [
+      "Behind your recommendations",
+      "Understand flood layers",
+      "Access restrictions",
+    ]) {
+      const card = planner
+        .locator(".map-disclosure")
+        .filter({ has: page.locator(`summary[aria-label="${title}"]`) });
+      await card.scrollIntoViewIfNeeded();
+      expect(
+        await card.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth + 1,
+        ),
+      ).toBe(true);
+      await shot(`planner-${title.split(" ")[0].toLowerCase()}-${width}`);
+    }
+    await noOverflow();
+    await planner.getByRole("button", { name: "Reduce panel height" }).click();
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
 
   await page
     .getByRole("button", { name: "30-day simulation", exact: true })
@@ -391,6 +459,26 @@ try {
     await panel.getByRole("button", { name: "Expand tool panel" }).click();
   }
   await page.setViewportSize({ width: 390, height: 844 });
+  await panel.getByRole("button", { name: "Expand panel height" }).click();
+  await panel
+    .locator('summary[aria-label="Compare the three scenarios"]')
+    .click();
+  await expect(panel.locator(".scenario-comparison-card")).toHaveCount(3);
+  await panel.locator(".scenario-comparison-list").scrollIntoViewIfNeeded();
+  expect(
+    await panel
+      .locator(".scenario-comparison-list")
+      .evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
+  ).toBe(true);
+  await shot("comparison-mobile");
+  await panel
+    .locator('summary[aria-label="Clinic deployment history"]')
+    .click();
+  await panel
+    .getByText("No clinics deployed in this scenario yet.", { exact: false })
+    .scrollIntoViewIfNeeded();
+  await shot("deployment-history-mobile");
+  await panel.getByRole("button", { name: "Reduce panel height" }).click();
   await page
     .getByRole("button", { name: "Planning help", exact: true })
     .click();
@@ -400,7 +488,57 @@ try {
   });
   await expect(assistant).toBeVisible();
   await withinViewport(assistant);
+  await expect(
+    assistant.getByRole("button", { name: /Find priority communities/ }),
+  ).toBeVisible();
   await shot("assistant-mobile");
+  for (const size of [
+    { width: 320, height: 740 },
+    { width: 844, height: 390 },
+    { width: 1440, height: 1000 },
+  ]) {
+    await page.setViewportSize(size);
+    await withinViewport(assistant);
+    const composer = assistant.locator(".assistant-composer");
+    await withinViewport(composer);
+    const message = assistant.getByLabel("Assistant message");
+    await message.fill(
+      "A long question about finding community healthcare and mobile clinic visits. ".repeat(
+        10,
+      ),
+    );
+    expect(
+      await message.evaluate((element) => element.offsetHeight),
+    ).toBeLessThanOrEqual(144);
+    await noOverflow();
+    await shot(`assistant-${size.width}x${size.height}`);
+    await message.fill("");
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  // Emulate the visual viewport shrinking above an onscreen keyboard.
+  await page.evaluate(() => {
+    Object.defineProperty(visualViewport, "height", {
+      configurable: true,
+      value: 430,
+    });
+    Object.defineProperty(visualViewport, "offsetTop", {
+      configurable: true,
+      value: 0,
+    });
+    visualViewport.dispatchEvent(new Event("resize"));
+  });
+  await expect
+    .poll(async () => {
+      const box = await assistant.locator(".assistant-composer").boundingBox();
+      return box ? box.y + box.height : Infinity;
+    })
+    .toBeLessThanOrEqual(430);
+  await shot("assistant-keyboard-viewport");
+  await page.evaluate(() => {
+    delete visualViewport.height;
+    delete visualViewport.offsetTop;
+    visualViewport.dispatchEvent(new Event("resize"));
+  });
   await assistant.getByLabel("Assistant message").press("Escape");
   await expect(assistant).toBeHidden();
   await expect(
@@ -453,9 +591,25 @@ try {
       .locator(".workspace-panel")
       .evaluate((element) => getComputedStyle(element).animationName),
   ).toBe("none");
+  await page.getByRole("button", { name: /Open OMCM assistant/ }).click();
+  await expect(
+    assistant.getByRole("button", { name: /Find nearby hospitals/ }),
+  ).toBeVisible();
+  await expect(
+    assistant.getByRole("button", {
+      name: /Find priority communities|Plan clinic locations|Understand the need score/,
+    }),
+  ).toHaveCount(0);
+  await expect(search).toHaveValue("Dambo, Pangil");
+  expect(
+    await search.evaluate((element) => element.clientWidth),
+  ).toBeGreaterThan(100);
+  expect(await search.evaluate((element) => element.scrollLeft)).toBe(0);
+  await shot("assistant-public-desktop");
+  await assistant.getByRole("button", { name: "Close assistant" }).click();
   expect(errors, logs).toEqual([]);
   console.log(
-    "Workspace UI browser checks passed: public empty/published care, search, sign-in/password visibility, aligned planner fields, keyboard/viewport-safe pickers, desktop/tablet/mobile/landscape sheets with tap/swipe resizing, playback, assistant focus, filters, settings, reduced motion and one persistent map. Screenshots:",
+    "Workspace UI browser checks passed: public empty/published care, search, sign-in/password visibility, aligned planner fields, keyboard disclosures, access filtering/reset, responsive scenario comparisons, view-aware assistant tasks/composer, favicons, keyboard/viewport-safe pickers, desktop/tablet/mobile/landscape sheets with tap/swipe resizing, playback, assistant focus, filters, settings, reduced motion and one persistent map. Screenshots:",
     artifacts,
   );
 } catch (error) {

@@ -1,5 +1,13 @@
 import { useEffect } from "react";
-import { Activity, MapPin, Play, Sparkles } from "lucide-react";
+import {
+  Activity,
+  MapPin,
+  Play,
+  Sparkles,
+  SlidersHorizontal,
+  CircleHelp,
+} from "lucide-react";
+import { DisclosureCard } from "../../components/ui/DisclosureCard";
 import { ScenarioBuilder } from "./ScenarioBuilder";
 import { SimulationResults } from "./SimulationResults";
 import { useAppStore } from "../../store/useAppStore";
@@ -454,16 +462,22 @@ export function SimulationPanel() {
 
       <SimulationResults />
 
-      <details className="simulation-secondary-details">
-        <summary>Change planning conditions</summary>
+      <DisclosureCard
+        title="Planning conditions"
+        description="Fleet size and shared scenario settings"
+        icon={<SlidersHorizontal size={18} />}
+      >
         <p>
           Changing conditions restarts all three scenarios. Default: 3 clinics.
           Reset keeps these settings.
         </p>
         <ScenarioBuilder />
-      </details>
-      <details className="simulation-secondary-details">
-        <summary>How the estimates work</summary>
+      </DisclosureCard>
+      <DisclosureCard
+        title="How the estimates work"
+        description="Service reach, capacity and score reductions"
+        icon={<CircleHelp size={18} />}
+      >
         <p>
           The same six-factor Balanced HNI weights used by the main map apply
           here. Disaster risk does not contribute to HNI. Daily morbidity
@@ -485,7 +499,7 @@ export function SimulationPanel() {
           as daily demand changes; generate a new plan in the next placement
           window. These are planning estimates, not patient counts.
         </p>
-      </details>
+      </DisclosureCard>
       <button
         className="simulation-reset-button"
         onClick={() => {
