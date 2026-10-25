@@ -1,62 +1,68 @@
-# OMCM — Optimized Mobile Clinic Mapper
+# OMCM · Optimized Mobile Clinic Mapper
 
-OMCM is a React/TypeScript and FastAPI decision-support prototype for Laguna.
-One full-screen map supports community search, healthcare need assessment,
-mobile clinic placement, scenario comparison and approved public visits.
+OMCM is a decision-support prototype for mobile healthcare planning in Laguna,
+Philippines. It brings community search, healthcare need, clinic planning and
+published visits together on one map.
 
-## Current workflows
+A **barangay** is a local community within a city or municipality. An **LGU** is a
+local government unit. These are the geographic units used throughout the app.
 
-- **Public View:** search communities, find mapped facilities, and inspect approved
-  clinic visits, operating hours, services and emergency advisories.
-- **Admin View:** inspect HNI and rankings, generate a real backend allocation,
-  review or replan sites, and explicitly publish a stored draft.
-- **30-day simulation:** compare No intervention, Manual and Optimized on one
-  clock. Clinic markers and lighter red areas show illustrative host/neighbor
-  service impacts. Rehearsals do not publish schedules.
-- **Map controls:** floating search and filter chips, in-place sliding panels,
-  compact expandable legend, map settings, keyboard focus and reduced motion.
+## Using the map
 
-The connected planner considers **681 barangays across 30 Laguna LGUs**. XGBoost
-predicts synthetic next-day illness and appointment demand; capacity-aware
-CP-SAT selects sites and assignments. Browser-generated allocations never replace
-failed connected requests. The older Los Baños–Bay road pilot is a separate API.
+| View | What it is for |
+| --- | --- |
+| Public View | Find communities and nearby facilities; see approved clinic dates, hours, services and emergency notices. |
+| Admin View | Inspect healthcare need, generate and review clinic plans, publish visits and rehearse alternative allocations. |
 
-## Run locally
+Search for a place in the floating search bar. Open a result to see its details.
+Map layers and the legend explain the information shown. On smaller screens,
+details open in a bottom sheet that can be expanded or reduced.
 
-Use Node.js 22+ and the existing Python backend environment. From `omcm/`:
+Administrators use **Plan clinics**, **30-day simulation** and **Planning help**
+without leaving the map. Selecting a tool changes the panel, not the page. The
+assistant also offers shortcuts appropriate to the current view.
 
-```sh
-cd backend
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-cp ../.env.example .env
-# Configure OMCM_DEMO_AUTH=true, OMCM_ADMIN_USERNAME and
-# OMCM_ADMIN_PASSWORD (12+ characters) in the backend .env.
-# Keep OMCM_DATASET=pilot.
-.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8000
-```
+### Planning and publishing visits
 
-In a second terminal:
+1. Sign in with the administrator credentials configured on the backend.
+2. Open **Plan clinics** and set the fleet, capacity and access constraints.
+3. Generate recommendations, inspect suggested sites and adjust the draft if needed.
+4. Approve the visit with its date, hours and services. Only approval publishes it.
 
-```sh
-cd frontend
-npm ci
-npm run dev
-```
+The planner considers **681 barangays across 30 Laguna LGUs**. It requests actual
+backend allocations and displays a failure if the service cannot complete the
+request. A failed request never creates substitute browser allocations.
 
-Open **http://127.0.0.1:5173/**. The local Vite proxy targets port 8000 when
-`VITE_API_URL` is empty. OpenStreetMap requires internet but no API key. Google
-Maps is an optional renderer configured in Map settings. On Windows use
-`.venv/Scripts/python.exe`; `setup.ps1` and `start.ps1` are also available.
-FastAPI schemas are at **http://127.0.0.1:8000/docs**.
+A freshly generated plan can be booked from tomorrow through seven days from
+today. Later bookings reuse the next-day estimate, rather than claiming a
+forecast for the booked date. Same-day publication requires an emergency notice
+of at least 10 characters and explicit confirmation. See [scheduling](docs/SCHEDULING.md).
+Public schedules refresh while the page is visible and when connectivity returns;
+the last confirmed visits remain visible with stale feedback during an outage.
 
-Use the administrator credentials already configured on the backend. Example
-credentials and the fill shortcut belong only to explicit `VITE_DEMO_MODE=true`
-browser demonstrations. Demo mode does not enable connected server access.
+### Comparing clinic scenarios
 
-## Healthcare Need Index
+**30-day simulation** is a rehearsal with one shared clock:
 
-The agreed Balanced policy is fixed:
+- **No intervention:** sample illness pressure increases over time without clinic service.
+- **Manual:** choose clinic sites and see the effect on their host barangays and reachable neighbors.
+- **Optimized:** ask the backend to choose locations that minimize population-weighted remaining healthcare need for the selected day.
+
+Clinic markers show placements. Lighter red indicates lower estimated need in
+served areas; areas outside their reach retain the shared baseline. Scenario
+cards, a trend chart, comparisons and deployment history explain the changes.
+Simulation placements do not publish community schedules.
+
+More areas reached does not necessarily mean a larger reduction in need.
+Population, existing need, reach and capacity all matter. The simulation solver
+retains a feasible manual comparison if it performs better on the selected day.
+Ties are possible; held locations can perform differently on later days.
+
+## What the models mean
+
+The **Healthcare Need Index (HNI)** is a relative planning score out of 100.
+Higher values mean greater estimated need. It is not a count of patients or
+confirmed illness. The fixed Balanced policy uses:
 
 | Factor | Weight |
 | --- | ---: |
@@ -67,101 +73,147 @@ The agreed Balanced policy is fixed:
 | Distance to a mapped clinic | 5% |
 | Mapped clinic provision deficit | 5% |
 
-Missing factors are excluded and available weights are rescaled; incomplete
-scores are marked provisional. Municipality scores use population-weighted
-barangay rollups. Rankings use the same one-decimal scores as the baseline map.
-Disaster risk has no HNI weight. Flood exclusions and maximum modeled travel
-minutes are operational planning constraints.
+Missing factors are excluded and the remaining weights are rescaled. Incomplete
+scores are marked provisional; municipal summaries weight barangays by population.
+Flood scenarios and travel limits constrain allocation; they do not add HNI weights.
 
-The 30-day simulator evaluates Manual and Optimized placements through the same
-backend HNI deductions, scaled to XGBoost demand and 180 appointments per clinic.
-Service requires a 3 km centroid radius and safe modeled access within 25 minutes.
-The 35% host / 17.5% edge reductions are ceilings; overlaps keep the strongest
-reservation. The simulation optimizer minimizes the population-weighted HNI
-shown on the cards and map, retaining a feasible manual comparison when better.
-The guarantee applies to the selected day; ties are valid and area count alone
-is not the objective. See [simulation formulas and limits](docs/SIMULATION_MODE.md).
+**XGBoost predicts; the solver allocates.** The connected planner uses next-day
+illness and appointment predictions from dated synthetic history and weather.
+Its CP-SAT solver chooses sites and assignments to maximize priority-weighted
+appointments within capacity and access limits.
 
-The ordinary Plan clinics map preview remains a separately labeled geographic
-illustration. Its saved-draft appointment objective and publication workflow
-are unchanged by the simulation correction.
+The simulator uses the same fixed HNI policy with illustrative daily illness
+growth. Dated XGBoost demand limits the service a clinic can provide each day.
+A clinic can reduce need within 3 km where a safe modeled path takes at most
+25 minutes. The maximum reduction is 35% at the host, tapering to 17.5% at the
+edge; demand above capacity scales it down. Overlapping clinics retain the
+strongest reservation rather than deducting twice. The simulator optimizes the
+population-weighted HNI displayed on the map, separately from the ordinary
+planner's appointment objective. See [simulation formulas](docs/SIMULATION_MODE.md).
 
-## Views, routes and publication
+## Run locally
 
-`/` and `/public` show Public View. `/admin` hosts all administrator tools.
-Selecting planning, simulation, details or the assistant changes panel state in
-place. Older `/optimization`, `/simulator`, `/driver`, `/analytics`, `/settings`,
-`/admin/legacy` and `/workspace` links redirect into the same map. Comparison
-metrics and methodology are inside clinic planning; adjustable legacy weight
-screens are no longer mounted. Their source modules remain for reference.
+Use **Node.js 22+** and **Python 3.12 or 3.14**. Local tests use Python 3.14;
+the deployment packaging was also checked on Python 3.12. Run the
+frontend and backend in separate terminals. From this `omcm/` directory:
 
-Only authenticated FastAPI approval publishes a connected schedule. Ordinary
-approval can book any date from tomorrow through the next seven days using a
-freshly generated plan. Later bookings reuse its next-day estimate; they do not
-claim a forecast for the booked date. Today's changes require a confirmed
-emergency notice. See [scheduling rules](docs/SCHEDULING.md). Public sessions refresh confirmed
-schedules every 30 seconds while visible and on focus/connectivity return.
-During an outage, the last confirmed visits stay visible with stale feedback.
+```sh
+cd backend
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+cp -n ../.env.example .env
+```
 
-Detailed scoring, analytics, candidate catalogs, optimization and audit endpoints
-require backend authentication. Public tools omit planning scores and drafts;
-changing views clears the assistant conversation. Bundled synthetic datasets
-are still inspectable in the JavaScript application: they are demo data, not a
-confidential record system. No real patient records are used.
+Edit `backend/.env` for your local environment. Keep `OMCM_DATASET=pilot`, enable
+`OMCM_DEMO_AUTH=true` for the existing prototype sign-in, and set
+`OMCM_ADMIN_USERNAME` and `OMCM_ADMIN_PASSWORD` (at least 12 characters). Keep an
+existing `.env` and credentials if they are already configured. Do not commit secrets.
+Then start the API:
 
-## Verification
+```sh
+.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8000
+```
+
+In a second terminal, from `omcm/`:
+
+```sh
+cd frontend
+npm ci
+npm run dev
+```
+
+Open **http://127.0.0.1:5173/**. API documentation is at
+**http://127.0.0.1:8000/docs**. The frontend development proxy uses port 8000 when
+`VITE_API_URL` is empty. The separate historical Los Baños–Bay road fixture stays
+under `OMCM_DATASET=pilot`; it does not limit the province-wide planning API.
+
+On Windows, use `.venv/Scripts/python.exe` in place of `.venv/bin/python`.
+`setup.ps1` and `start.ps1` are also available. OpenStreetMap requires internet
+but no API key. Google Maps is an optional renderer in Map settings.
+
+### Configuration and common issues
+
+| Setting or symptom | What to check |
+| --- | --- |
+| Cannot connect to the planning service | Start FastAPI as well as Vite. For separate hosting, set `VITE_API_URL` to the backend HTTPS base and allow the frontend origin in backend CORS. |
+| Administrator sign-in fails | Use the backend's configured username/password. A browser demo fill button does not configure server credentials. |
+| `VITE_DEMO_MODE` | Leave false/unset for connected use. Explicit browser demonstrations have sample credentials, but clinic optimization always requires FastAPI. |
+| Assistant without an external model | Grounded local/template commands remain available. Optional chat keys belong only on the server. |
+| Gray map area | A displayed value is unavailable; gray does not mean zero need. Restricted forest land cannot host a clinic. |
+| Zero hospitals in a place | Local hospital counts differ from nearby hospital access. Inspect the facility list and source evidence. |
+
+## Development and checks
+
+The frontend uses React, TypeScript, Vite, Zustand, Leaflet, Recharts, Lucide and
+plain CSS. FastAPI, XGBoost and OR-Tools power the backend. No new UI library is
+required. Existing modules are extended rather than rebuilt.
 
 ```sh
 cd frontend
 npm run lint
 npm test
 npm run build
+cd ../backend
+.venv/bin/python -m pytest -q
+```
+
+Browser checks use isolated servers, temporary test storage and installed Chrome:
+
+```sh
+cd frontend
+npm run test:ui
 npm run test:hni
 npm run test:optimization
 npm run test:simulation
 npm run test:assistant
 node scripts/prepare-laguna-planning.mjs --check
 node scripts/clinic-sensitivity.mjs --check
-cd ../backend
-.venv/bin/python -m pytest -q
 ```
 
-Browser suites use isolated servers and installed Chrome. On Windows use
-`OMCM_BROWSER_CHANNEL=msedge`. Run browser suites sequentially because some share
-port 5178. Screenshots are written to ignored `frontend/test-results/` or `/tmp`.
-Historical `test:e2e*`/`test:barangays` scripts refer to absent or superseded suites;
-use the commands above for the active map. See [verification](docs/VERIFICATION.md).
+Run browser suites sequentially to limit resource contention. On Windows, set
+`OMCM_BROWSER_CHANNEL=msedge` if using Edge. Screenshots go to ignored
+`frontend/test-results/` or `/tmp`. Historical `test:e2e*` and `test:barangays`
+commands target absent or superseded suites; use the active checks above.
 
-## Scope and deployment limits
+## Data, access and limitations
 
-Clinical/weather histories, demand and service effects are synthetic. Province
-travel uses barangay adjacency at 20 km/h, at least 3 minutes per link; these are
-not verified roads or live traffic. Planning points need LGU verification. Flood
-options select 25-year/100-year point layers, not water depths; outlines identify
-flagged barangays rather than exact inundation boundaries. The 30-day rehearsal
-uses deterministic morbidity growth, not thirty XGBoost forecasts. Nightly
-unattended optimization, disease-specific validated predictions and live GPS
-are not implemented.
+Geography and facility evidence come from the documented public sources;
+clinical/weather histories, demand and service effects are synthetic. No real
+patient records are used. Hospital source bed counts do not indicate current
+availability. OpenStreetMap clinic records are fixed facilities, not mobile clinics.
 
-Vercel frontend root is `omcm/frontend`; backend root is `omcm/backend`.
-Set frontend `VITE_API_URL` to the stable backend HTTPS base, configure backend
-CORS and administrator variables, and redeploy each project. The backend includes
-its own restriction geometry and uses CPU XGBoost on Linux. Vercel `/tmp` SQLite
-is temporary and unshared: durable publication needs persistent hosting/storage.
-See [deployment instructions](docs/VERCEL_DEPLOYMENT.md).
+Travel uses estimated barangay adjacency at 20 km/h with a minimum of three
+minutes per link, not live routing or a verified provincial road matrix. Flood
+options select 25-year/100-year mapped point layers, not water depths. Flagged
+barangay outlines are not exact inundation boundaries. Planning points and
+capacities need LGU verification. Disease-specific validated forecasts, live GPS
+and unattended nightly optimization are outside the implemented scope.
 
-## Documentation and source layout
+Backend authentication protects detailed scores, analytics, candidate catalogs,
+optimization and approval. Public tools omit private planning fields and drafts;
+assistant history clears when identity or view changes. Bundled synthetic data
+can still be inspected in browser assets: this prototype is not a confidential
+record system.
 
-- [Current audit and exact file changes](docs/GLOBAL_AUDIT.md)
-- [Map UI refinement and mobile review](docs/UI_REFINEMENT.md)
-- [Balanced HNI policy](docs/BALANCED_HNI.md) and [hospital audit](docs/HOSPITAL_HNI_AUDIT.md)
-- [XGBoost and allocation](docs/OPTIMIZATION_ALLOCATION.md), [forecast evidence](docs/TEMPORAL_FORECAST.md)
-- [Three simulation scenarios and formulas](docs/SIMULATION_MODE.md)
-- [Public visits](docs/PUBLIC_VISITS.md), [view acceptance](docs/INTERFACE-SCOPE.md)
-- [Architecture](docs/ARCHITECTURE.md), [API](docs/API.md), [data sources](datasets/SOURCES.md)
+## Deployment and project guide
 
-The frontend lives in `frontend/src/` (`app`, `components`, `features`, `services`,
-`store`, `styles`). FastAPI entrypoint is `backend/main.py`; domain code lives in
-`backend/routers`, `backend/services` and `backend/models`. Fixtures and native
-models are in `backend/data`; source inputs are in `datasets/`. Tests live in
-`tests/` and beside the relevant frontend services.
+Deploy the frontend from `omcm/frontend` and backend from `omcm/backend`. Set the
+frontend API base and backend CORS/authentication settings, then rebuild each
+project. Vercel `/tmp` SQLite is temporary and unshared; durable publication
+requires persistent hosting/storage. See [deployment](docs/VERCEL_DEPLOYMENT.md).
+
+| Directory | Contents |
+| --- | --- |
+| `frontend/src/` | Map components, feature panels, services, state and styles |
+| `backend/` | FastAPI entrypoint, routers, domain models and services |
+| `backend/data/` | Planning fixtures and native model artifacts |
+| `datasets/` | Source inputs and provenance |
+| `docs/` | Methodology, API, deployment and verification |
+| `tests/` | Additional project test suites |
+
+Further reading: [architecture](docs/ARCHITECTURE.md), [API](docs/API.md),
+[HNI policy](docs/BALANCED_HNI.md), [hospital evidence](docs/HOSPITAL_HNI_AUDIT.md),
+[allocation](docs/OPTIMIZATION_ALLOCATION.md), [forecast evidence](docs/TEMPORAL_FORECAST.md),
+[simulation](docs/SIMULATION_MODE.md), [public visits](docs/PUBLIC_VISITS.md),
+[UI design and checks](docs/UI_REFINEMENT.md), [verification](docs/VERIFICATION.md)
+and [data sources](datasets/SOURCES.md).

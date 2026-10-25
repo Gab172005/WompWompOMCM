@@ -1,5 +1,32 @@
 # Verification record
 
+## Planning panels, assistant and repository guides — 2026-10-25
+
+**Story:** Public and administrator users open contextual map panels, understand
+planning choices, inspect backend results and use the assistant without leaving
+the map. New repository readers can find the purpose, setup and methodology
+without knowing the development conversation.
+
+| Boundary | Result and evidence |
+| --- | --- |
+| Interface | Expanded explanations, access search/reset and three scenario comparison cards fit 390/320 px. Native disclosures respond to Enter. |
+| Client → API | Connected optimization suite passes actual FastAPI/XGBoost/CP-SAT generation, replanning and flood constraints. Failed service requests create no fallback placements. |
+| API → data → map | Simulation suite reports Manual HNI 43.67060777020463 and Optimized HNI 43.60322274720275 on its fixed comparison. Host/neighbor deductions, markers and map averages pass. |
+| Publication → public | Connected optimizer approval and a fresh public session pass. UI suite also checks real published visits using isolated credentials and storage. |
+| Assistant | Common commands use zero external model requests; provider-selected action/failure tests use stubbed responses. Public welcome shortcuts omit private planning tasks. |
+| Responsive behavior | Workspace suite covers desktop, tablet, phone and landscape, composer growth and simulated visual-viewport keyboard geometry. |
+| Documentation and icon | Local links in both READMEs and the UI guide resolve. SVG, 32 px PNG and 180 px touch icon return successfully. |
+
+Required checks: frontend lint, 153 tests across 17 files, production build and
+113 backend tests pass. Planning-export and sensitivity checks pass. Existing
+bundle-size and Starlette/httpx advisories remain. No weights, model artifacts,
+source datasets, administrator credentials or backend behavior change in this
+interface revision. See [exact UI changes](UI_REFINEMENT.md#planning-explanations-and-assistant-redesign).
+
+Screenshots are ignored local artifacts under `frontend/test-results/`. Basemap
+tiles are suppressed for deterministic capture. No physical phone keyboard,
+live Google key, production deployment or live external chat provider is claimed.
+
 ## Map workspace UI refinement — 2026-10-25
 
 Branch: `layout/maps-workspace-refinement`, based on the completed HNI fix.

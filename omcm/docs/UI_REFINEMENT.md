@@ -1,7 +1,7 @@
 # Map workspace UI refinement
 
-Branch: `layout/maps-workspace-refinement`, based on the completed simulation
-HNI correction. This pass refines the active map workspace; it does not change
+The interface retains the completed simulation HNI correction and refines the
+active map workspace; it does not change
 scoring, deduction formulas, model artifacts, source data, authentication,
 publication policy, or backend contracts. Existing unmounted legacy pages were
 left alone. All administrator tools stay on the same map.
@@ -100,3 +100,61 @@ Live visual review uses Chrome/Leaflet. The optional Google renderer retains its
 existing unit coverage, but no live Google key or physical mobile keyboard/device
 session was used. Basemap tiles are suppressed in screenshots for deterministic
 checks. This pass is local and has not been deployed or pushed.
+
+## Planning explanations and assistant redesign
+
+The information hierarchy follows the persistent map and contextual sheets of
+Google Maps. The disclosure treatment also draws on [Carbon’s accordion guidance](https://v10.carbondesignsystem.com/components/accordion/usage/):
+short summaries, aligned reading edges and trailing expansion indicators. This
+is implemented with native HTML and existing CSS/Lucide, without importing a UI
+library. The palette uses slate text, cool white surfaces, teal care accents and
+blue actions. HNI, flood and clinic map colors keep their original meanings.
+
+- **Explanations:** `DisclosureCard.tsx` supplies a keyboard-operable native
+  disclosure with an icon, concise title, descriptive caption, optional count
+  and trailing chevron. Descriptions are linked for assistive technology; focus
+  stays visible inside the card boundary.
+- **Clinic planning:** `OptimizationPanel.tsx` replaces one dense paragraph with
+  a three-step explanation of need, prediction and allocation. Flood likelihood
+  cards distinguish 4%/1% annual chances from the exclusions made by the selected
+  layer. API values, form validation and constraints are unchanged.
+- **Access restrictions:** `RoadExclusions.tsx` adds searchable, selected-first
+  rows, explicit inclusion/exclusion feedback, empty results, a clear action and
+  pagination in groups of 20. Searching never clears exclusions. The existing
+  `closed_roads` IDs still reach the same backend configuration.
+- **Simulation:** `SimulationResults.tsx` presents each scenario’s same-day
+  metrics as a readable card instead of a wide table, and separates clinic
+  history into a deployment timeline. `SimulationPanel.tsx` uses the shared
+  disclosure for conditions and methodology. No metrics or deductions change.
+- **Assistant:** `ChatbotPanel.tsx` puts actionable shortcuts in the scrollable
+  welcome area, with different public/admin tasks. It removes repeated welcome
+  text and oversized prompt buttons. The compact composer grows to 144 px,
+  preserves Enter/Shift+Enter and IME handling, exposes Send/Stop labels and
+  retains the existing conversation/provider pipeline. `AssistantWidget.tsx`
+  sizes the sheet to the visual viewport so a mobile keyboard does not cover
+  the composer; Escape and close still restore focus.
+- **Shared styling:** `map-workspace.css` owns disclosure, comparison, timeline,
+  search and responsive layouts. Sheet shells clip overflow without becoming
+  extra scroll containers, so focusing a deep field keeps the header in place.
+  Explicit grid/padding rules prevent older
+  global styles from squeezing comparison labels or overlapping search icons.
+  `assistant.css` consolidates the assistant skin rather than stacking another
+  set of conflicting overrides. Existing reduced-motion preferences apply.
+- **Identity:** `frontend/public/omcm-icon.svg` is an original map pin and care
+  mark. `favicon-32.png` and `apple-touch-icon.png` provide raster variants;
+  `frontend/index.html` links them and uses a descriptive application title.
+
+### Additional verification
+
+`frontend/scripts/workspace-ui-browser.mjs` checks native disclosure keyboard
+activation, access search/no-match/reset behavior, expanded planning sections at
+390/320 px, same-day comparison cards, public/admin assistant shortcuts, bounded
+composer growth, visual-viewport keyboard geometry and icon responses. It also
+retains the earlier checks for one persistent map, approval/public care,
+responsive sheets, real catalog loading, playback, focus restoration and reduced
+motion. Screenshots are saved in the ignored `frontend/test-results/` directory.
+
+Reviewed sizes include desktop 1440 px, tablets 1024/768 px, phones 390/320 px and
+844 × 390 landscape. Keyboard geometry is simulated through the browser’s visual
+viewport; no physical iOS/Android keyboard session is claimed. Optional live
+Google Maps rendering still requires a configured key.
