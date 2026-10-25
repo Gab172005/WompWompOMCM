@@ -1,4 +1,11 @@
-import { CalendarDays, Check, Clock, RefreshCw, WifiOff } from "lucide-react";
+import {
+  CalendarDays,
+  CalendarClock,
+  Check,
+  Clock,
+  RefreshCw,
+  WifiOff,
+} from "lucide-react";
 import { isBrowserDemo } from "../../services/api";
 import { getManilaToday, useAppStore } from "../../store/useAppStore";
 import { usePublicScheduleStore } from "../../store/usePublicScheduleStore";
@@ -144,19 +151,24 @@ export function PublicVisitSummary() {
             <p>Choose a location below to see it on the map.</p>
           </>
         ) : (
-          <>
-            <strong>
-              No clinic visits announced for{" "}
-              {selectedScheduleDate === today
-                ? "today"
-                : visitDate(selectedScheduleDate)}
-            </strong>
-            <p>
-              {futureDays.length
-                ? "Choose an announced date above, or explore nearby hospitals below."
-                : "An approved visit will appear here when published. Nearby hospitals are still listed on the map."}
-            </p>
-          </>
+          <div className="care-empty-visit">
+            <span className="care-empty-icon">
+              <CalendarClock size={20} aria-hidden="true" />
+            </span>
+            <div>
+              <strong>
+                No clinic visits announced for{" "}
+                {selectedScheduleDate === today
+                  ? "today"
+                  : visitDate(selectedScheduleDate)}
+              </strong>
+              <p>
+                {futureDays.length
+                  ? "Choose an announced date above, or explore nearby hospitals below."
+                  : "An approved visit will appear here when published. Nearby hospitals are still listed on the map."}
+              </p>
+            </div>
+          </div>
         )}
       </div>
       {error && (

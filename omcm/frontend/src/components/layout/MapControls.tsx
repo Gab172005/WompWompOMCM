@@ -31,6 +31,7 @@ export function MapControls() {
     signOutAdmin,
   } = useAppStore();
   const navigate = useNavigate();
+  const assistantOpen = useAssistantStore((state) => state.open);
   const isPublic = viewMode === "public";
   const schedule = publishedSchedules[selectedScheduleDate];
   const clinicCount = schedule?.plan.clinics.length ?? 0;
@@ -113,6 +114,11 @@ export function MapControls() {
           <button
             type="button"
             aria-pressed={sidePanelOpen}
+            aria-label={
+              schedule
+                ? `${schedule.status === "Emergency Override" ? "Emergency Notice" : "Approved Schedule"} · ${clinicCount} ${clinicCount === 1 ? "Clinic" : "Clinics"}`
+                : "Schedules & Advisories"
+            }
             onClick={() =>
               useAppStore.setState({ sidePanelOpen: !sidePanelOpen })
             }
@@ -122,25 +128,28 @@ export function MapControls() {
             ) : (
               <CalendarDays size={17} aria-hidden="true" />
             )}
-            <span>
+            <span className="tool-label-full">
               {schedule
                 ? `${schedule.status === "Emergency Override" ? "Emergency Notice" : "Approved Schedule"} · ${clinicCount} ${clinicCount === 1 ? "Clinic" : "Clinics"}`
                 : "Schedules & Advisories"}
             </span>
+            <span className="tool-label-compact" aria-hidden="true">
+              {schedule?.status === "Emergency Override"
+                ? "Visit alert"
+                : "Clinic visits"}
+              {clinicCount > 0 && (
+                <span className="tool-count">{clinicCount}</span>
+              )}
+            </span>
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (adminUser) {
-                setViewMode("admin");
-                navigate("/admin");
-              } else {
-                requestAdminView();
-              }
-            }}
+            aria-label="Ask OMCM"
+            aria-pressed={assistantOpen}
+            onClick={() => useAssistantStore.getState().setOpen(!assistantOpen)}
           >
-            <ShieldCheck size={17} aria-hidden="true" />
-            <span>Admin View</span>
+            <Bot size={17} aria-hidden="true" />
+            <span>Ask OMCM</span>
           </button>
         </nav>
       ) : (
@@ -155,7 +164,8 @@ export function MapControls() {
             <button
               key={id}
               type="button"
-              aria-pressed={panel === id}
+              aria-label={label}
+              aria-pressed={id === "chatbot" ? assistantOpen : panel === id}
               title={
                 id === "optimization"
                   ? "Choose and review mobile clinic locations"
@@ -165,12 +175,19 @@ export function MapControls() {
               }
               onClick={() =>
                 id === "chatbot"
-                  ? useAssistantStore.getState().setOpen(true)
+                  ? useAssistantStore.getState().setOpen(!assistantOpen)
                   : openPanel(panel === id ? null : id)
               }
             >
               <Icon size={18} aria-hidden="true" />
-              {label}
+              <span className="tool-label-full">{label}</span>
+              <span className="tool-label-compact" aria-hidden="true">
+                {id === "optimization"
+                  ? "Plan clinics"
+                  : id === "simulation"
+                    ? "Simulate"
+                    : "Ask OMCM"}
+              </span>
             </button>
           ))}
           <span

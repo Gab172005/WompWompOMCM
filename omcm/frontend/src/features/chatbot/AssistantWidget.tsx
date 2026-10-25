@@ -7,6 +7,7 @@ import {
 } from "react";
 import { GripVertical, MessageCircle, RotateCcw, X } from "lucide-react";
 import { useAssistantStore } from "../../store/useAssistantStore";
+import { useAppStore } from "../../store/useAppStore";
 import { ChatbotPanel } from "./ChatbotPanel";
 import "../../styles/assistant.css";
 
@@ -14,6 +15,13 @@ const STORAGE_KEY = "omcm_assistant_launcher_pos";
 
 export function AssistantWidget() {
   const { open, busy, setOpen, clear } = useAssistantStore();
+  const identity = useAppStore(
+    (state) => `${state.viewMode}:${state.adminUser ?? "public"}`,
+  );
+  const [draft, setDraft] = useState({ identity, text: "" });
+  useLayoutEffect(() => {
+    setDraft({ identity, text: "" });
+  }, [identity]);
   const [position, setPosition] = useState<{ x: number; y: number } | null>(
     () => {
       if (typeof window === "undefined") return null;
@@ -237,7 +245,7 @@ export function AssistantWidget() {
       <header className="assistant-widget-heading">
         <div>
           <img
-            src="/omcm-icon.svg?v=2"
+            src="/omcm-icon.svg?v=3"
             className="assistant-brand-mark"
             width="38"
             height="38"
@@ -255,7 +263,10 @@ export function AssistantWidget() {
             aria-label="New assistant conversation"
             title="New conversation"
             disabled={busy}
-            onClick={clear}
+            onClick={() => {
+              clear();
+              setDraft({ identity, text: "" });
+            }}
           >
             <RotateCcw size={17} />
           </button>
@@ -269,7 +280,10 @@ export function AssistantWidget() {
           </button>
         </div>
       </header>
-      <ChatbotPanel />
+      <ChatbotPanel
+        draft={draft.identity === identity ? draft.text : ""}
+        onDraftChange={(text) => setDraft({ identity, text })}
+      />
     </section>
   ) : (
     <button

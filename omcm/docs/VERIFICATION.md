@@ -1,5 +1,36 @@
 # Verification record
 
+## Transparent icons and map discovery — 2026-10-26
+
+- Frontend lint, **171 tests across 22 files**, production build and **113
+  backend tests** pass. Existing build/deprecation advisories remain.
+- New tests cover actual assistant-button state, metric/visibility changes,
+  Public View restrictions, simulation-aware controls, retained/cleared drafts
+  and the search shortcut’s editor guard.
+- Website icons use transparent PNG/SVG canvases with visible artwork. The ICO
+  contains four valid PNG frames at 16/32/48/96 px. Browser checks inspect alpha
+  values as well as successful decoding, so an empty image cannot pass.
+- Layout verification checks every mobile planning tool and layer chip against
+  the viewport, native radio selection and keyboard changes, local Escape/focus
+  behavior, and omission of private radio choices in the public layer picker.
+- Public community checks cover the reported Casile layout at 1440/390/320/844
+  px, readable facts (4,661 residents / 2,229 households), one empty-state message,
+  truthful checking status, selection reset and continued hospital access.
+- All five browser suites pass: workspace UI, hospital/HNI, connected
+  optimization, connected simulation and assistant. Optimization uses Playwright
+  Chromium; the others use Chrome. The connected simulation retains Manual HNI
+  43.67060777020463 and Optimized HNI 43.60322274720275. Assistant provider
+  replies use fixtures; live external inference is not claimed.
+- The final screenshot review removes duplicate public section dividers and
+  restores regular-weight map-layer descriptions. Source data, scoring weights,
+  model artifacts and backend behavior are unchanged.
+- Hosted Google Search appearance is not claimed: the deployed icon must be
+  recrawled/processed by Google. No deployment, indexing request or credential
+  change is performed by this refinement.
+
+See [file/behavior inventory](UI_REFINEMENT.md#transparent-identity-and-map-discovery).
+
+
 ## Legend and simulation interactions — 2026-10-25
 
 - Frontend lint, **161 tests across 20 files**, production build and **113

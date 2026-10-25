@@ -53,6 +53,32 @@ export function MunicipalitySearch() {
         ?.scrollIntoView({ block: "nearest" });
   }, [active, open, listId]);
 
+  useEffect(() => {
+    const focusSearch = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (
+        event.key !== "/" ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey ||
+        document.querySelector("dialog[open]")
+      )
+        return;
+      if (
+        target instanceof HTMLElement &&
+        target.closest(
+          "input, textarea, select, [contenteditable='true'], [role='textbox']",
+        )
+      )
+        return;
+      event.preventDefault();
+      input.current?.focus();
+      input.current?.select();
+    };
+    document.addEventListener("keydown", focusSearch);
+    return () => document.removeEventListener("keydown", focusSearch);
+  }, []);
+
   function select(psgc: string) {
     const barangay = communities.find((b) => b.psgc === psgc);
     if (barangay) selectBarangay(psgc, barangay.municipalityPsgc);
@@ -84,6 +110,7 @@ export function MunicipalitySearch() {
         role="combobox"
         aria-label="Find municipality or barangay"
         aria-autocomplete="list"
+        aria-keyshortcuts="/"
         aria-expanded={open}
         aria-controls={listId}
         aria-activedescendant={

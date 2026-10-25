@@ -216,3 +216,59 @@ No source data, HNI percentages, clinic deductions, XGBoost artifacts, placement
 objectives, backend endpoints, authentication or publication permissions change.
 The public legend still omits private planning scores. All tool changes retain
 the same map screen and DOM map instance.
+
+## Transparent identity and map discovery
+
+The original care-waypoint mark combines a medical map pin with branching
+routes to two communities. The medical cross is a transparent cutout, and no
+background rectangle is painted. Browser-ready variants include SVG, 32/96 px PNG, a 180 px touch icon
+and a multi-resolution ICO containing 16/32/48/96 px frames. The 96 px PNG and
+root ICO have stable URLs. Browser SVG/32 px/touch links use the refreshed asset
+version so older icon responses can be replaced.
+
+The site supplies its favicon files; a search engine controls its own result
+presentation and cache. A newly deployed icon may appear in search only after
+recrawling/processing. See [Google’s favicon guidance](https://developers.google.com/search/docs/appearance/favicon-in-search).
+The icon does not require a backend or a map-provider key.
+
+| Files | Behavior changed |
+| --- | --- |
+| `frontend/public/omcm-icon.svg`, `favicon-32.png`, `favicon-96.png`, `apple-touch-icon.png`, `favicon.ico`; `frontend/index.html` | Replace the painted vehicle badge with the original care-waypoint mark and transparent cross, generate raster/ICO variants and declare the browser/search icon resources. |
+| `frontend/src/components/layout/MapControls.tsx` | Give Public View direct assistant access, retain administrator access in the search bar, make help buttons reflect/toggle actual assistant state and provide compact visual labels without changing accessible tool names. |
+| `frontend/src/components/layout/FloatingControls.tsx` | Separate the fixed popover heading from scrollable controls, focus an active input on opening, and handle Escape locally with focus restoration. |
+| `frontend/src/features/filters/HeatmapSelector.tsx` | Present native radio choices with previews generated from the same color function used by the map. Preserve the metric IDs and state contract. |
+| `frontend/src/features/filters/LayerToggles.tsx` | Present independent facility checkboxes as descriptive, color-coded controls, distinguishing published public clinics from administrator drafts. |
+| `frontend/src/features/filters/FilterControls.tsx` | Hide inactive baseline metric choices during simulation and direct users to its actual HNI/uncovered-need control. Keep private metrics out of Public View. |
+| `frontend/src/features/municipalities/MunicipalitySearch.tsx` | Add a slash shortcut that focuses/selects search while respecting editors, modifier keys and open dialogs. |
+| `frontend/src/features/chatbot/AssistantWidget.tsx`, `ChatbotPanel.tsx` | Keep unfinished input in widget memory through close/reopen, clear it on identity/view changes and new conversation, and restore the bounded textarea height. Existing message execution, cancellation and privacy controls remain. |
+| `frontend/src/styles/map-workspace.css` | Fit every tool and layer chip into phone-width navigation, refine the floating layers trigger and build responsive color/facility controls with hover, checked and keyboard-focus feedback. Remove the obsolete community stripe and duplicate separators; align public facts and empty-state content on the same reading edge. Respect reduced motion. |
+| `frontend/src/components/layout/MapControls.test.tsx`, `frontend/src/features/filters/FilterControls.test.tsx` | Verify assistant toggle/state feedback, metric/visibility state changes, public restrictions and simulation-context controls. |
+| `frontend/src/features/chatbot/AssistantWidget.test.tsx`, `tests/frontend/searchSelection.test.tsx` | Verify draft retention/clearing and search-shortcut focus without taking typing keys from an editor. |
+| `frontend/scripts/workspace-ui-browser.mjs` | Decode icon resources and check nonempty artwork with transparent backgrounds, verify tool/chip bounds at 390/320 px, use native radio keyboard changes, check public layer privacy and retain the earlier connected map workflows. |
+
+The mobile tool row no longer hides the assistant beyond a horizontal scroll.
+All five administrator layer chips remain visible. These changes reuse existing
+React, plain CSS, Lucide icons, stores and authentication; they introduce no
+new library, dataset, schema, score weight, model artifact or placement rule.
+
+### Public community details
+
+A selected community now has one place heading, an explicit **All Laguna**
+action and a two-column definition list for residents and households. The
+population values still come from the supplied community dataset. A single
+published-visit section explains an empty date; the panel no longer repeats a
+second “no clinic” message or labels an unavailable nearest clinic. While the
+service is checking, it preserves the checking state instead of claiming that
+no visits exist. When a published location is available, the nearest-visit
+button still opens its existing approved-clinic dialog.
+
+| Files | Behavior changed |
+| --- | --- |
+| `frontend/src/features/public/PublicSidePanel.tsx` | Consolidate duplicated place information, present labeled resident/household facts, clear selection through the existing store action and render nearest-clinic details only for an actual published visit. Preserve public hospital access and approval-only data. |
+| `frontend/src/features/public/PublicVisitSummary.tsx` | Group the empty-date message with a calendar symbol and readable supporting copy. Retain refresh, delayed-update feedback and published-date selection. |
+| `tests/frontend/publicVisits.test.tsx` | Verify Casile’s supplied facts, one truthful empty state, hospitals remaining available, selection reset and no false empty claim while service status is unknown. |
+| `frontend/scripts/workspace-ui-browser.mjs` | Exercise Casile’s empty/public care panel at 1440/390/320/844 px, check heading insets, facts and overflow, and capture hospital reading layouts. |
+| `../README.md` | Update the logo’s alternative text to describe the new care-waypoint identity. |
+
+The public panel continues to use the same map instance. No additional request,
+publication permission, routing, HNI calculation or model input is introduced.

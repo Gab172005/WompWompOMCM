@@ -165,6 +165,54 @@ try {
   await expect(page.locator(".barangay-boundary")).toHaveCount(681, {
     timeout: 90000,
   });
+  const alphaChecks = await page.evaluate(async () => {
+    return Promise.all(
+      [
+        "/omcm-icon.svg",
+        "/favicon-32.png",
+        "/favicon-96.png",
+        "/apple-touch-icon.png",
+        // Separate the inspection request from Chrome's automatic favicon load.
+        "/favicon.ico?alpha-check=1",
+      ].map(async (src) => {
+        const icon = new Image();
+        icon.src = src;
+        try {
+          await icon.decode();
+        } catch (error) {
+          throw new Error(`${src}: ${String(error)}`);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = icon.naturalWidth;
+        canvas.height = icon.naturalHeight;
+        const context = canvas.getContext("2d");
+        context.drawImage(icon, 0, 0);
+        const pixels = context.getImageData(
+          0,
+          0,
+          canvas.width,
+          canvas.height,
+        ).data;
+        const alpha = Array.from(
+          { length: pixels.length / 4 },
+          (_, index) => pixels[index * 4 + 3],
+        );
+        return {
+          src,
+          width: canvas.width,
+          transparent: alpha.filter((value) => value === 0).length,
+          opaque: alpha.filter((value) => value > 0).length,
+          total: alpha.length,
+          corner: pixels[3],
+        };
+      }),
+    );
+  });
+  for (const icon of alphaChecks) {
+    expect(icon.corner, icon.src).toBe(0);
+    expect(icon.transparent, icon.src).toBeGreaterThan(icon.total * 0.5);
+    expect(icon.opaque, icon.src).toBeGreaterThan(icon.total * 0.1);
+  }
   await page.evaluate(() => {
     window.__uiOriginalMap = document.querySelector(".leaflet-container");
   });
@@ -176,6 +224,65 @@ try {
   const search = page.getByRole("combobox", {
     name: "Find municipality or barangay",
   });
+  await search.fill("Casile Cabuyao");
+  await page.getByRole("option", { name: /^Casile, Cabuyao Barangay/ }).click();
+  await expect(publicPanel.getByText(/No clinic visits announced/)).toHaveCount(
+    1,
+  );
+  await expect(
+    publicPanel.getByRole("region", { name: "Nearest published clinic visit" }),
+  ).toHaveCount(0);
+  for (const size of [
+    { width: 1440, height: 1000 },
+    { width: 390, height: 844 },
+    { width: 320, height: 740 },
+    { width: 844, height: 390 },
+  ]) {
+    await page.setViewportSize(size);
+    const expand = publicPanel.getByRole("button", {
+      name: "Expand place details",
+    });
+    if (await expand.isVisible()) await expand.click();
+    await publicPanel.locator(".workspace-panel-body").evaluate((element) => {
+      element.scrollTop = 0;
+    });
+    await withinViewport(publicPanel);
+    expect(
+      await publicPanel.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth + 1,
+      ),
+    ).toBe(true);
+    const inset = await publicPanel
+      .locator(".workspace-panel-heading")
+      .evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const title = element.querySelector("h2").getBoundingClientRect();
+        return title.left - box.left;
+      });
+    expect(inset).toBeGreaterThanOrEqual(12);
+    const facts = publicPanel.getByRole("region", {
+      name: "Selected community care",
+    });
+    await expect(facts.getByText("4,661", { exact: true })).toBeVisible();
+    await expect(facts.getByText("2,229", { exact: true })).toBeVisible();
+    await shot(`public-casile-empty-${size.width}`);
+    await publicPanel
+      .getByRole("region", { name: "Nearby verified hospitals" })
+      .scrollIntoViewIfNeeded();
+    await shot(`public-casile-hospitals-${size.width}`);
+    const reduce = publicPanel.getByRole("button", {
+      name: "Collapse place details",
+    });
+    if (await reduce.isVisible()) await reduce.click();
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await publicPanel.getByRole("button", { name: "All Laguna" }).click();
+  await expect(
+    publicPanel.getByRole("region", { name: "Selected community care" }),
+  ).toHaveCount(0);
+  await page.locator("body").click({ position: { x: 700, y: 100 } });
+  await page.keyboard.press("/");
+  await expect(search).toBeFocused();
   await search.fill("Los Banos");
   await shot("search-desktop");
   await page.getByRole("option", { name: /Los Baños Municipality/ }).click();
@@ -228,6 +335,11 @@ try {
   await publicPanel.getByRole("button", { name: /Next clinic day/ }).click();
   await expect(
     publicPanel.getByText("1 clinic announced", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    publicPanel
+      .getByRole("region", { name: "Nearest published clinic visit" })
+      .getByRole("button"),
   ).toBeVisible();
   const clinicAction = publicPanel
     .getByRole("button", { name: /^View MC-.* visit details$/ })
@@ -372,6 +484,41 @@ try {
   await shot("planner-desktop");
   for (const width of [390, 320]) {
     await page.setViewportSize({ width, height: 844 });
+    for (const button of await page
+      .getByRole("navigation", { name: "Planning tools" })
+      .getByRole("button")
+      .all())
+      await withinViewport(button);
+    for (const button of await page
+      .getByRole("navigation", { name: "Map layers and colors" })
+      .getByRole("button")
+      .all())
+      await withinViewport(button);
+    await page.getByRole("button", { name: "Map layers", exact: true }).click();
+    const layerPicker = page.getByRole("region", { name: "Map filters" });
+    await withinViewport(layerPicker);
+    await layerPicker.getByText("Population", { exact: true }).click();
+    await expect(
+      layerPicker.getByRole("radio", { name: "People per square kilometre" }),
+    ).toBeChecked();
+    await expect(
+      page
+        .getByRole("navigation", { name: "Map layers and colors" })
+        .getByRole("button", { name: "Population", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await shot(`map-details-admin-${width}`);
+    await layerPicker
+      .getByRole("radio", { name: "People per square kilometre" })
+      .focus();
+    await page.keyboard.press("ArrowLeft");
+    await expect(
+      layerPicker.getByRole("radio", { name: "Healthcare Need Score" }),
+    ).toBeChecked();
+    await page.keyboard.press("Escape");
+    await expect(layerPicker).toBeHidden();
+    await expect(
+      page.getByRole("button", { name: "Map layers", exact: true }),
+    ).toBeFocused();
     await planner.getByRole("button", { name: "Expand panel height" }).click();
     for (const title of [
       "Behind your recommendations",
@@ -649,6 +796,9 @@ try {
     exact: true,
   });
   await expect(assistant).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Planning help", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await withinViewport(assistant);
   await expect(
     assistant.getByRole("button", { name: /Find priority communities/ }),
@@ -731,6 +881,9 @@ try {
     .click();
   await page.getByRole("button", { name: "Map layers", exact: true }).click();
   await withinViewport(page.getByRole("region", { name: "Map filters" }));
+  await expect(
+    page.getByRole("region", { name: "Map filters" }).getByRole("radio"),
+  ).toHaveCount(0);
   await shot("layers-mobile");
   await page.getByRole("button", { name: "Close map filters" }).click();
   await page.setViewportSize({ width: 1440, height: 1000 });
