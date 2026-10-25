@@ -6,6 +6,10 @@ import {
   Sparkles,
   SlidersHorizontal,
   CircleHelp,
+  ChartNoAxesCombined,
+  Check,
+  TrendingUp,
+  Crosshair,
 } from "lucide-react";
 import { DisclosureCard } from "../../components/ui/DisclosureCard";
 import { ScenarioBuilder } from "./ScenarioBuilder";
@@ -30,10 +34,10 @@ const options = [...LAGUNA_BARANGAYS].sort(
 );
 
 const scenarioDescriptions: Record<Strategy, string> = {
-  none: "Need follows the shared baseline, with no clinic service.",
+  none: "See how need changes over time without mobile clinic service.",
   manual: "Choose sites and see the local effect around each clinic.",
   optimizer:
-    "Review a province-wide plan from the connected allocation service.",
+    "Find clinic locations across Laguna and review their modeled impact.",
 };
 
 const shortNames: Record<Strategy, string> = {
@@ -88,8 +92,8 @@ export function SimulationPanel() {
           <Activity size={14} aria-hidden="true" /> 30-day planning view
         </span>
         <p>
-          One shared timeline keeps all three HNI scenarios in step. Select a
-          card to show its heatmap on the map.
+          Move through the same 30 days, then choose a scenario to see its
+          clinic coverage and remaining need on the map.
         </p>
       </div>
 
@@ -98,8 +102,8 @@ export function SimulationPanel() {
         aria-label="Simulation scenarios"
       >
         <div className="simulation-section-heading">
-          <h3>Scenarios</h3>
-          <span>Same day · different clinic plans</span>
+          <h3>Choose a scenario</h3>
+          <span>Day {run.day} · select to update the map</span>
         </div>
         <div className="simulation-scenario-grid">
           {(Object.keys(STRATEGIES) as Strategy[]).map((strategy) => {
@@ -113,6 +117,12 @@ export function SimulationPanel() {
               current.metrics.hni,
             );
             const clinicAreas = current.metrics.servedBarangays;
+            const ScenarioIcon =
+              strategy === "none"
+                ? TrendingUp
+                : strategy === "manual"
+                  ? MapPin
+                  : Crosshair;
             return (
               <button
                 className={`simulation-scenario-card simulation-scenario-${strategy}`}
@@ -124,42 +134,75 @@ export function SimulationPanel() {
                   if (s.strategy !== strategy) s.setStrategy(strategy);
                 }}
               >
-                <span className="simulation-scenario-name">
-                  {shortNames[strategy]}
+                <span className="simulation-scenario-symbol" aria-hidden="true">
+                  <ScenarioIcon size={18} />
                 </span>
-                <strong>{current.metrics.hni.toFixed(2)}</strong>
-                <span className="simulation-scenario-score-label">
-                  HNI / 100
+                <span className="simulation-scenario-copy">
+                  <span className="simulation-scenario-name">
+                    {shortNames[strategy]}
+                    {s.strategy === strategy && (
+                      <span className="scenario-map-state">
+                        <Check size={11} aria-hidden="true" />
+                        On map
+                      </span>
+                    )}
+                  </span>
+                  <span className="simulation-scenario-status">
+                    {strategy === "none"
+                      ? "No clinic service"
+                      : clinicAreas > 0
+                        ? `${clinicAreas} areas receiving service`
+                        : "No clinics deployed"}
+                  </span>
+                  {(strategy === "none" || clinicAreas > 0) && (
+                    <span className="simulation-scenario-change">
+                      {difference}
+                    </span>
+                  )}
                 </span>
-                <span className="simulation-scenario-change">{difference}</span>
-                <span className="simulation-scenario-status">
-                  {strategy === "none"
-                    ? "No clinic service"
-                    : clinicAreas > 0
-                      ? `${clinicAreas} areas receiving service`
-                      : "No clinics deployed"}
+                <span className="simulation-scenario-value">
+                  <strong>{current.metrics.hni.toFixed(2)}</strong>
+                  <span className="simulation-scenario-score-label">
+                    HNI / 100
+                  </span>
                 </span>
               </button>
             );
           })}
         </div>
-        <details className="simulation-comparison-context">
-          <summary>
-            {optimizedDay !== undefined
-              ? `Optimized for Day ${optimizedDay} · comparison details`
-              : "How to compare these scores"}
-          </summary>
-          <p className="workspace-note">
-            HNI weights each barangay by population. Area counts describe reach;
-            they do not measure the amount of need reduced.
-          </p>
-          {optimizedDay !== undefined && (
-            <p className="workspace-note">
-              Locations optimized for Day {optimizedDay}. Held locations use
-              each day's updated mock demand.
-            </p>
-          )}
-        </details>
+        <DisclosureCard
+          title="How to compare"
+          description={
+            optimizedDay !== undefined
+              ? `Plan generated for Day ${optimizedDay}`
+              : "What the scores and coverage mean"
+          }
+          icon={<ChartNoAxesCombined size={18} />}
+        >
+          <dl className="simulation-reading-guide">
+            <div>
+              <dt>Lower HNI</dt>
+              <dd>
+                Less remaining need, weighted by each barangay’s population.
+              </dd>
+            </div>
+            <div>
+              <dt>Areas reached</dt>
+              <dd>
+                How widely service extends. Area count alone does not measure
+                need reduced.
+              </dd>
+            </div>
+            <div>
+              <dt>Plan timing</dt>
+              <dd>
+                {optimizedDay !== undefined
+                  ? `Locations were optimized for Day ${optimizedDay}. Held locations use each day’s updated mock demand.`
+                  : "All scenarios share the same day. Compare their scores at the same point on the timeline."}
+              </dd>
+            </div>
+          </dl>
+        </DisclosureCard>
         {optimizedDay !== undefined &&
           manualSites.join() !== comparedSites.join() && (
             <p className="workspace-note" role="status">
@@ -175,7 +218,7 @@ export function SimulationPanel() {
       >
         <div className="simulation-current-heading">
           <div>
-            <span className="simulation-eyebrow">Selected scenario</span>
+            <span className="simulation-eyebrow">On the map</span>
             <h3>{STRATEGIES[s.strategy]}</h3>
           </div>
           <span className="simulation-day-chip">

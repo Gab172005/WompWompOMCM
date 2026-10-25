@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="omcm/frontend/public/omcm-icon.svg" width="76" height="76" alt="OMCM mobile clinic and community route icon" />
+  <img src="omcm/frontend/public/omcm-icon.svg" width="76" height="76" alt="OMCM care waypoint and connected communities icon" />
 </p>
 
 # OMCM · Optimized Mobile Clinic Mapper

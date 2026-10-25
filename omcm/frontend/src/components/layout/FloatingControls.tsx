@@ -12,16 +12,29 @@ export function FloatingControls() {
       if (!container.current?.contains(event.target as Node)) setOpen(false);
     };
     const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (
+        event.key === "Escape" &&
+        !event.defaultPrevented &&
+        container.current?.contains(event.target as Node)
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
         setOpen(false);
         toggle.current?.focus();
       }
     };
+    const focus = requestAnimationFrame(() => {
+      const first =
+        container.current?.querySelector<HTMLInputElement>("input:checked") ??
+        container.current?.querySelector<HTMLInputElement>("input");
+      first?.focus({ preventScroll: true });
+    });
     document.addEventListener("pointerdown", dismiss);
-    document.addEventListener("keydown", escape);
+    document.addEventListener("keydown", escape, true);
     return () => {
+      cancelAnimationFrame(focus);
       document.removeEventListener("pointerdown", dismiss);
-      document.removeEventListener("keydown", escape);
+      document.removeEventListener("keydown", escape, true);
     };
   }, [open]);
   return (
@@ -33,7 +46,10 @@ export function FloatingControls() {
           aria-label="Map filters"
         >
           <div className="map-layers-heading">
-            <strong>Map details</strong>
+            <div>
+              <strong>Map details</strong>
+              <p>Choose what appears on your map</p>
+            </div>
             <button
               className="map-icon-button"
               aria-label="Close map filters"
@@ -45,7 +61,9 @@ export function FloatingControls() {
               <X size={18} aria-hidden="true" />
             </button>
           </div>
-          <FilterControls />
+          <div className="map-layers-content">
+            <FilterControls />
+          </div>
         </section>
       )}
       <button
@@ -55,7 +73,7 @@ export function FloatingControls() {
         title="Choose map colors and show hospitals or clinics"
         aria-expanded={open}
         aria-controls={id}
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen((value) => !value)}
       >
         <Layers size={24} aria-hidden="true" />
         <span>Map details</span>

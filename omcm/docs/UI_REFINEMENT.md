@@ -196,3 +196,144 @@ Both READMEs document the hosted demonstration credentials supplied by the
 project owner. This documentation does not change backend credentials or verify
 the current remote deployment. No model, HNI policy, data schema or database
 migration is part of this refinement.
+
+## Legend, scenario selection and playback
+
+This interaction pass keeps the map, calculations and native controls intact
+while making frequently used panels easier to scan.
+
+| File | Refinement |
+| --- | --- |
+| `frontend/src/features/map/components/MapLegend.tsx` | Separate map symbols from data/guidance using two in-place controls. Replace the long explanation with labeled facts; format snapshot dates in Philippine time while retaining machine-readable timestamps, source tags, credit and license. Make the scroll area keyboard-focusable. Observe resized legend content so a dragged legend remains inside the viewport, and handle pointer cancellation. |
+| `frontend/src/features/simulation/SimulationPanel.tsx` | Replace narrow comparison columns with aligned scenario rows, distinct icons, clear selected-map feedback and a shared reading guide. Simplify repeated scenario context. All three choices fit normal phone sheets; detailed numeric impacts remain in results and comparison details. |
+| `frontend/src/features/simulation/SimulationPlayback.tsx` | Align the six controls, add week context and weekly timeline marks, style the filled track and improve range value text. Replace the long native play tooltip with a short label plus an accessible behavior description. Keep seek, playback speed, pause windows and clinic state unchanged. |
+| `frontend/src/features/optimization/RoadExclusions.tsx` | Present endpoint names once with municipality context, simplify exclusion instructions, add accent-insensitive search and an excluded-only filter, and preserve existing connection IDs and exclusion callbacks. Use a set for selection lookups. |
+| `frontend/src/features/optimization/RoadExclusions.test.tsx` | Verify accent-insensitive discovery, selection retention while searching, excluded-only filtering and clearing IDs/filter state. |
+| `frontend/src/styles/map-workspace.css` | Refine borders, hover/focus cues, selected states, disclosure hierarchy, timeline controls, legend scrolling and mobile sizing. Expanded legends stay clear of desktop toolbar controls; phone guidance uses the available sheet width. Motion remains brief and respects reduced-motion preferences. |
+| `frontend/scripts/workspace-ui-browser.mjs` | Exercise legend symbol/guidance views, source timestamp presentation, keyboard scrolling, drag/clamping/reset, minimize/restore and expanded phone layouts. Assert that all three scenario choices fit a 320 px phone sheet and playback contents stay within their own card. |
+
+No source data, HNI percentages, clinic deductions, XGBoost artifacts, placement
+objectives, backend endpoints, authentication or publication permissions change.
+The public legend still omits private planning scores. All tool changes retain
+the same map screen and DOM map instance.
+
+## Transparent identity and map discovery
+
+The original care-waypoint mark combines a medical map pin with branching
+routes to two communities. The medical cross is a transparent cutout, and no
+background rectangle is painted. Browser-ready variants include SVG, 32/96 px PNG, a 180 px touch icon
+and a multi-resolution ICO containing 16/32/48/96 px frames. The 96 px PNG and
+root ICO have stable URLs. Browser SVG/32 px/touch links use the refreshed asset
+version so older icon responses can be replaced.
+
+The site supplies its favicon files; a search engine controls its own result
+presentation and cache. A newly deployed icon may appear in search only after
+recrawling/processing. See [Google’s favicon guidance](https://developers.google.com/search/docs/appearance/favicon-in-search).
+The icon does not require a backend or a map-provider key.
+
+| Files | Behavior changed |
+| --- | --- |
+| `frontend/public/omcm-icon.svg`, `favicon-32.png`, `favicon-96.png`, `apple-touch-icon.png`, `favicon.ico`; `frontend/index.html` | Replace the painted vehicle badge with the original care-waypoint mark and transparent cross, generate raster/ICO variants and declare the browser/search icon resources. |
+| `frontend/src/components/layout/MapControls.tsx` | Give Public View direct assistant access, retain administrator access in the search bar, make help buttons reflect/toggle actual assistant state and provide compact visual labels without changing accessible tool names. |
+| `frontend/src/components/layout/FloatingControls.tsx` | Separate the fixed popover heading from scrollable controls, focus an active input on opening, and handle Escape locally with focus restoration. |
+| `frontend/src/features/filters/HeatmapSelector.tsx` | Present native radio choices with previews generated from the same color function used by the map. Preserve the metric IDs and state contract. |
+| `frontend/src/features/filters/LayerToggles.tsx` | Present independent facility checkboxes as descriptive, color-coded controls, distinguishing published public clinics from administrator drafts. |
+| `frontend/src/features/filters/FilterControls.tsx` | Hide inactive baseline metric choices during simulation and direct users to its actual HNI/uncovered-need control. Keep private metrics out of Public View. |
+| `frontend/src/features/municipalities/MunicipalitySearch.tsx` | Add a slash shortcut that focuses/selects search while respecting editors, modifier keys and open dialogs. |
+| `frontend/src/features/chatbot/AssistantWidget.tsx`, `ChatbotPanel.tsx` | Keep unfinished input in widget memory through close/reopen, clear it on identity/view changes and new conversation, and restore the bounded textarea height. Existing message execution, cancellation and privacy controls remain. |
+| `frontend/src/styles/map-workspace.css` | Fit every tool and layer chip into phone-width navigation, refine the floating layers trigger and build responsive color/facility controls with hover, checked and keyboard-focus feedback. Remove the obsolete community stripe and duplicate separators; align public facts and empty-state content on the same reading edge. Respect reduced motion. |
+| `frontend/src/components/layout/MapControls.test.tsx`, `frontend/src/features/filters/FilterControls.test.tsx` | Verify assistant toggle/state feedback, metric/visibility state changes, public restrictions and simulation-context controls. |
+| `frontend/src/features/chatbot/AssistantWidget.test.tsx`, `tests/frontend/searchSelection.test.tsx` | Verify draft retention/clearing and search-shortcut focus without taking typing keys from an editor. |
+| `frontend/scripts/workspace-ui-browser.mjs` | Decode icon resources and check nonempty artwork with transparent backgrounds, verify tool/chip bounds at 390/320 px, use native radio keyboard changes, check public layer privacy and retain the earlier connected map workflows. |
+
+The mobile tool row no longer hides the assistant beyond a horizontal scroll.
+All five administrator layer chips remain visible. These changes reuse existing
+React, plain CSS, Lucide icons, stores and authentication; they introduce no
+new library, dataset, schema, score weight, model artifact or placement rule.
+
+### Public community details
+
+A selected community now has one place heading, an explicit **All Laguna**
+action and a two-column definition list for residents and households. The
+population values still come from the supplied community dataset. A single
+published-visit section explains an empty date; the panel no longer repeats a
+second “no clinic” message or labels an unavailable nearest clinic. While the
+service is checking, it preserves the checking state instead of claiming that
+no visits exist. When a published location is available, the nearest-visit
+button still opens its existing approved-clinic dialog.
+
+| Files | Behavior changed |
+| --- | --- |
+| `frontend/src/features/public/PublicSidePanel.tsx` | Consolidate duplicated place information, present labeled resident/household facts, clear selection through the existing store action and render nearest-clinic details only for an actual published visit. Preserve public hospital access and approval-only data. |
+| `frontend/src/features/public/PublicVisitSummary.tsx` | Group the empty-date message with a calendar symbol and readable supporting copy. Retain refresh, delayed-update feedback and published-date selection. |
+| `tests/frontend/publicVisits.test.tsx` | Verify Casile’s supplied facts, one truthful empty state, hospitals remaining available, selection reset and no false empty claim while service status is unknown. |
+| `frontend/scripts/workspace-ui-browser.mjs` | Exercise Casile’s empty/public care panel at 1440/390/320/844 px, check heading insets, facts and overflow, and capture hospital reading layouts. |
+| `../README.md` | Update the logo’s alternative text to describe the new care-waypoint identity. |
+
+The public panel continues to use the same map instance. No additional request,
+publication permission, routing, HNI calculation or model input is introduced.
+
+## Map experience finishing pass
+
+Work continues on `feat/omcm-maps-experience-polish`, created directly from
+`aa800a2`. It includes the two previously unpushed commits (`b416f3d` and
+`aa800a2`); publishing this new branch includes those changes automatically.
+The earlier branch does not need a separate push or pull request.
+
+The design retains [Google Maps’ focus on readable place information](https://blog.google/products-and-platforms/products/maps/google-maps-updates-summer-travel-2024/)
+and uses [Carbon’s slider anatomy](https://www.carbondesignsystem.com/building-blocks/core/components/slider/guidelines)
+as a reference for separating captions, controls and value labels. These are
+custom refinements to the existing CSS and native controls, not imported design
+libraries. Teal signals care and active planning tools; data-layer and selected
+boundary colors keep their original meanings.
+
+### Alignment and interaction decisions
+
+- An inherited 15 px bottom margin on labels was shifting the speed control
+  7.5 px off center. Scoped label-spacing resets remove that mismatch from
+  playback, panels and layer controls without restyling the legacy pages.
+- The playback caption sits above a single control row. Play, reset, slider,
+  day/week output, next-day action and speed all share the same vertical center.
+  Tick labels sit below the rail, and the legend leaves a visible gap above
+  playback. On phones and tablets, the caption/ticks give way to larger usable
+  control targets in the existing compact card.
+- Playback exposes its actual playing, paused, updating or complete state.
+  Seeking still revisits reached days through the existing shared store;
+  advancing still uses Play or Next day and respects weekly placement windows.
+- The minimized legend uses balanced padding, restrained type and an aligned
+  expand action. Position reset, drag, resize clamping and map data are unchanged.
+- Map settings puts the active provider first, with native radio cards for the
+  existing engine choices. Optional browser-key setup moves into a disclosure.
+  Existing key storage, fallback, clear and reload behavior are unchanged.
+- Fleet size has an explicitly associated label/value and visible 1–5 scale, using the original native
+  range and the same draft invalidation callback. Municipality rows align rank,
+  community name and score in fixed columns without changing ranking math.
+- Empty assistant conversations open at the top; starting a new conversation
+  clears stale jump-to-latest feedback. Existing reading-position preservation
+  still applies after messages arrive.
+- Public visit cards, map search, form fields, hospital popups and the assistant
+  share consistent reading edges, surface shapes and feedback. Noninteractive
+  information is not styled as an action. Hover motion is limited to fine
+  pointers; touch and keyboard focus remain usable. Reduced-motion preferences
+  suppress entrance movement and hover/press transforms.
+- Tablet tools show their compact labels together instead of hiding the last
+  action in horizontal overflow. Desktop panel expansion remains limited to
+  its intended viewport rules, preventing a selected-place summary from
+  covering a sheet heading.
+
+| File | Exact change |
+| --- | --- |
+| `frontend/src/features/simulation/SimulationPlayback.tsx` | Separate playback status/caption from the aligned control row; clarify the existing history-seeking behavior for assistive technology. Keep timing, seek, speed and advancement callbacks. |
+| `frontend/src/features/map/components/LagunaMap.tsx` | Group actual map-provider status, replace the engine select with native radio choices and put optional key setup in a shared disclosure. Preserve map rendering and all storage/fallback behavior. |
+| `frontend/src/features/optimization/ClinicCountInput.tsx` | Add a labeled output, correct singular/plural units, progress styling and a 1–5 scale to the existing range. Preserve invalidation and fleet state updates. |
+| `frontend/src/features/municipalities/MunicipalityRanking.tsx` | Add section/column context and stable hooks for aligned place-name rows. Preserve ordering, shared ranks, scores and selection actions. |
+| `frontend/src/styles/map-workspace.css` | Rework the playback geometry; refine minimized legend, tablet tools, map/provider surfaces, controls, rows, popups, hover/press/focus feedback and reduced-motion behavior. |
+| `frontend/src/features/chatbot/ChatbotPanel.tsx` | Start empty/reset conversations at the top and reset latest-reply feedback, while retaining reading position for existing conversations. |
+| `frontend/src/styles/assistant.css` | Match card elevation and header surface; refine task-icon feedback and composer/send interactions, including reduced motion. |
+| `frontend/scripts/workspace-ui-browser.mjs` | Measure all six playback control centers at desktop/tablet/phone/landscape sizes, verify compact-legend alignment/gap, and exercise provider selection and optional-key disclosure across responsive dialogs; use a touch-enabled phone context to verify the public assistant and facility controls. |
+| `docs/UI_REFINEMENT.md`, `docs/VERIFICATION.md` | Document inherited commits, exact file/behavior changes, design references and final checks. |
+
+No score weight, XGBoost artifact, allocation objective, simulation deduction,
+dataset, API contract, authentication setting or publication permission changes.
+The public view still receives only published care information, and administrator
+tools continue to open in place on the same map.

@@ -17,8 +17,13 @@ import {
   LoaderCircle,
 } from "lucide-react";
 
-export function ChatbotPanel() {
-  const [input, setInput] = useState("");
+export function ChatbotPanel({
+  draft,
+  onDraftChange,
+}: { draft?: string; onDraftChange?: (value: string) => void } = {}) {
+  const [localInput, setLocalInput] = useState("");
+  const input = draft ?? localInput;
+  const setInput = onDraftChange ?? setLocalInput;
   const s = useAssistantStore();
   const selectedPsgc = useAppStore((state) => state.selectedPsgc);
   const selectedBarangayPsgc = useAppStore(
@@ -88,6 +93,12 @@ export function ChatbotPanel() {
   locationRef.current = location;
   const history = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const field = inputRef.current;
+    if (!field) return;
+    field.style.height = "auto";
+    field.style.height = `${Math.min(field.scrollHeight, 144)}px`;
+  }, [input]);
   useEffect(() => {
     if (window.matchMedia?.("(max-width: 760px), (pointer: coarse)").matches)
       inputRef.current
@@ -97,6 +108,12 @@ export function ChatbotPanel() {
   }, []);
   useLayoutEffect(() => {
     if (!history.current) return;
+    if (!s.messages.length) {
+      history.current.scrollTop = 0;
+      followLatest.current = true;
+      setHasNewReply(false);
+      return;
+    }
     if (followLatest.current)
       history.current.scrollTop = history.current.scrollHeight;
     else setHasNewReply(true);
@@ -225,8 +242,6 @@ export function ChatbotPanel() {
             maxLength={4000}
             onChange={(e) => {
               setInput(e.target.value);
-              e.target.style.height = "auto";
-              e.target.style.height = `${Math.min(e.target.scrollHeight, 144)}px`;
             }}
             placeholder={
               isAdmin

@@ -18,12 +18,19 @@ export function MunicipalityRanking({
         a.municipality.psgc.localeCompare(b.municipality.psgc),
     );
   return (
-    <section>
+    <section
+      className="municipality-ranking-section"
+      aria-label="Municipality healthcare need ranking"
+    >
       <h3>Municipality healthcare need ranking</h3>
       <p className="workspace-note">
         Average barangay scores based on population. Rank 1 has the highest
         estimated need. Equal scores share a rank. * Some data missing.
       </p>
+      <div className="ranking-column-labels" aria-hidden="true">
+        <span>Rank / Community</span>
+        <span>Need / 100</span>
+      </div>
       <ol className="workspace-ranking">
         {ranked.map(({ municipality: m, summary }) => (
           <li key={m.psgc}>
@@ -32,7 +39,7 @@ export function MunicipalityRanking({
               onClick={() => selectMunicipality(m.psgc)}
             >
               <span className="rank-number">{summary?.needRank ?? "—"}</span>
-              <span>
+              <span className="ranking-place-name">
                 <strong>{m.name}</strong>
                 <small>{m.population.toLocaleString()} residents</small>
               </span>

@@ -1,5 +1,100 @@
 # Verification record
 
+## Map experience finishing pass — 2026-10-26
+
+Branch: `feat/omcm-maps-experience-polish`, based on local `aa800a2`. The
+previous unpushed legend/simulation and public-care/discovery commits remain
+included; no separate push of the earlier branch is necessary.
+
+- Frontend lint, **171 tests across 22 files**, production build and **113 backend
+  tests** pass. The existing large-bundle advisory and Starlette/httpx deprecation
+  warning remain; no dependencies were added.
+- All five browser suites pass: workspace UI, connected optimization, connected
+  simulation, hospital/HNI and assistant. Optimization uses Playwright Chromium;
+  the remaining suites use Chrome.
+- The workspace suite measures play, reset, range, day/week, next-day and speed
+  centers within 1.5 px across desktop, tablet, phone and landscape. A focused
+  inspection measured identical centers at 1440/1024/768/390/320 px. The compact
+  legend’s title/actions align, and its desktop gap above playback is at least
+  8 px. Screenshot: `ui-compact-legend-playback-desktop.png`.
+- Provider selection works by visible label and native radio arrow keys. The
+  optional key disclosure and disabled save guard remain functional. Dialogs
+  fit 1440/390/320/844 px viewports. No live Google Maps key is supplied, and
+  switching actual keyed Google rendering is not claimed.
+- A separate touch-enabled 390 px browser context confirms coarse-pointer
+  behavior, public assistant opening/closing, an unscrolled empty conversation,
+  and facility visibility controls. It is emulation, not a physical-device test.
+  Screenshot: `ui-assistant-touch-phone.png`.
+- Connected optimization verifies the existing keyboard fleet range, real
+  XGBoost/CP-SAT requests, manual replanning, saved draft publication, public
+  refresh and service-outage behavior without fabricated allocations.
+- Connected simulation retains Manual HNI **43.67060777020463** and Optimized HNI
+  **43.60322274720275**, host/neighbor service effects, clinic markers and the
+  shared timeline. Hospital checks retain 681 polygons and 56 mapped hospitals.
+- Assistant checks preserve reading position and jump-to-latest for existing
+  conversations, common local commands, provider-error recovery and responsive
+  behavior. External model responses are fixtures; live inference is not claimed.
+- The same map instance persists through public/admin tools and dialogs. Scoring,
+  model artifacts, data, authentication and publication permissions are unchanged.
+  No push or deployment has been performed.
+
+All screenshot artifacts are ignored under `frontend/test-results/` and can be
+regenerated with `npm run test:ui`. See the [exact file/behavior inventory](UI_REFINEMENT.md#map-experience-finishing-pass).
+
+## Transparent icons and map discovery — 2026-10-26
+
+- Frontend lint, **171 tests across 22 files**, production build and **113
+  backend tests** pass. Existing build/deprecation advisories remain.
+- New tests cover actual assistant-button state, metric/visibility changes,
+  Public View restrictions, simulation-aware controls, retained/cleared drafts
+  and the search shortcut’s editor guard.
+- Website icons use transparent PNG/SVG canvases with visible artwork. The ICO
+  contains four valid PNG frames at 16/32/48/96 px. Browser checks inspect alpha
+  values as well as successful decoding, so an empty image cannot pass.
+- Layout verification checks every mobile planning tool and layer chip against
+  the viewport, native radio selection and keyboard changes, local Escape/focus
+  behavior, and omission of private radio choices in the public layer picker.
+- Public community checks cover the reported Casile layout at 1440/390/320/844
+  px, readable facts (4,661 residents / 2,229 households), one empty-state message,
+  truthful checking status, selection reset and continued hospital access.
+- All five browser suites pass: workspace UI, hospital/HNI, connected
+  optimization, connected simulation and assistant. Optimization uses Playwright
+  Chromium; the others use Chrome. The connected simulation retains Manual HNI
+  43.67060777020463 and Optimized HNI 43.60322274720275. Assistant provider
+  replies use fixtures; live external inference is not claimed.
+- The final screenshot review removes duplicate public section dividers and
+  restores regular-weight map-layer descriptions. Source data, scoring weights,
+  model artifacts and backend behavior are unchanged.
+- Hosted Google Search appearance is not claimed: the deployed icon must be
+  recrawled/processed by Google. No deployment, indexing request or credential
+  change is performed by this refinement.
+
+See [file/behavior inventory](UI_REFINEMENT.md#transparent-identity-and-map-discovery).
+
+
+## Legend and simulation interactions — 2026-10-25
+
+- Frontend lint, **161 tests across 20 files**, production build and **113
+  backend tests** pass. Existing bundle-size and Starlette/httpx advisories remain.
+- New restriction tests verify accent-insensitive municipality search, retained
+  selections, excluded-only filtering and clearing the exclusion/filter state.
+- The workspace browser suite checks aligned scenario rows, all three choices
+  visible in the normal 320 px phone sheet, legend symbol/data controls, friendly
+  snapshot dates, source credit, keyboard scrolling, dragged-content clamping,
+  reset/minimize/restore, viewport-safe guidance and timeline content bounds.
+- Captured viewport sizes include 1440 px desktop, tablets, 390/320 px phones and
+  short landscape layouts. Basemap tiles are suppressed for deterministic capture.
+- All five browser suites pass: workspace, hospital/HNI, connected optimization,
+  connected simulation and assistant. The optimizer uses installed Playwright
+  Chromium; the other suites use Chrome. Simulation retains the same real
+  Manual HNI 43.67060777020463 / Optimized HNI 43.60322274720275 comparison.
+- Provincial planning-export and sensitivity consistency checks pass.
+- Calculations, datasets, model artifacts, authentication and publication remain
+  unchanged. Public legend content retains its existing privacy boundary.
+
+See the [file/behavior inventory](UI_REFINEMENT.md#legend-scenario-selection-and-playback).
+
+
 ## Public care and chatbot experience — 2026-10-25
 
 This refinement continues on `feat/omcm-interface-and-repository-guide`. The

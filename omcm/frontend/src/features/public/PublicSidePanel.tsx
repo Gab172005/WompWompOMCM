@@ -1,9 +1,9 @@
 import {
   AlertTriangle,
-  ArrowLeft,
   Check,
   ChevronRight,
   CloudRain,
+  House,
   Users,
   HeartPulse,
   MapPin,
@@ -11,7 +11,6 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { isBrowserDemo } from "../../services/api";
 import { SheetHandle } from "../../components/ui/SheetHandle";
 import { useAppStore } from "../../store/useAppStore";
 import { BARANGAYS_BY_PSGC, distanceKm } from "../../services/providedData";
@@ -105,19 +104,46 @@ export function PublicSidePanel() {
         key={selectedBarangayPsgc ?? selectedPsgc ?? selectedScheduleDate}
       >
         {(selectedBarangay || selectedMunicipality) && (
-          <PlaceHeader
-            title={
-              selectedBarangay?.name ??
-              selectedMunicipality?.name ??
-              "Care near you"
-            }
-            kind="Public care guide"
-            subtitle={
-              selectedBarangay
-                ? `${selectedBarangay.municipality}, Laguna`
-                : "Approved clinic visits and nearby care across Laguna."
-            }
-          />
+          <section
+            className="public-community-card"
+            aria-label="Selected community care"
+          >
+            <PlaceHeader
+              title={
+                selectedBarangay?.name ??
+                selectedMunicipality?.name ??
+                "Care near you"
+              }
+              kind="Public care guide"
+              onBack={() => selectMunicipality(null)}
+              backLabel="All Laguna"
+              subtitle={
+                selectedBarangay
+                  ? `${selectedBarangay.municipality}, Laguna`
+                  : "Approved clinic visits and nearby care across Laguna."
+              }
+            />
+            <dl className="care-community-facts">
+              <div>
+                <Users size={17} aria-hidden="true" />
+                <dt>Residents</dt>
+                <dd>
+                  {(
+                    selectedBarangay?.population ??
+                    selectedMunicipality?.population ??
+                    0
+                  ).toLocaleString("en-PH")}
+                </dd>
+              </div>
+              {selectedBarangay && (
+                <div>
+                  <House size={17} aria-hidden="true" />
+                  <dt>Households</dt>
+                  <dd>{selectedBarangay.households.toLocaleString("en-PH")}</dd>
+                </div>
+              )}
+            </dl>
+          </section>
         )}
         <PublicVisitSummary />
         {!targetPoint && (
@@ -148,82 +174,39 @@ export function PublicSidePanel() {
             </div>
           )}
 
-        {(selectedBarangay || selectedMunicipality) && (
+        {targetPoint && nearestClinic && schedule && (
           <section
-            className="public-community-card"
-            aria-label="Selected community care"
+            className="care-nearest-visit"
+            aria-label="Nearest published clinic visit"
           >
-            <div className="care-community-heading">
-              <div>
-                <span className="care-kicker">YOUR COMMUNITY</span>
-                <h3>
-                  Care near{" "}
-                  {selectedBarangay?.name ?? selectedMunicipality?.name}
-                </h3>
-              </div>
-              <button
-                type="button"
-                className="icon-button"
-                title="Clear community selection"
-                aria-label="Clear community selection"
-                onClick={() => selectMunicipality(null)}
-              >
-                <ArrowLeft size={17} aria-hidden="true" />
-              </button>
-            </div>
-            <div className="care-community-facts">
-              <span>
-                <Users size={14} aria-hidden="true" />
-                {(
-                  selectedBarangay?.population ??
-                  selectedMunicipality?.population ??
-                  0
-                ).toLocaleString()}{" "}
-                residents
-              </span>
-              {selectedBarangay && (
-                <span>
-                  {selectedBarangay.households.toLocaleString()} households
-                </span>
-              )}
-            </div>
             <h4 className="care-subheading">Nearest scheduled mobile clinic</h4>
-
-            {nearestClinic && schedule ? (
-              <button
-                type="button"
-                className="care-nearest-location"
-                aria-haspopup="dialog"
-                onClick={() =>
-                  useAppStore.setState({
-                    selectedClinicId: nearestClinic.clinicId,
-                  })
-                }
-              >
-                <span className="care-location-icon">
-                  <MapPin size={18} aria-hidden="true" />
-                </span>
-                <span>
-                  <strong>{nearestClinic.siteName}</strong>
-                  <small>
-                    {nearestClinic.municipality} ·{" "}
-                    {nearestClinic.distance.toFixed(1)} km straight line
+            <button
+              type="button"
+              className="care-nearest-location"
+              aria-haspopup="dialog"
+              onClick={() =>
+                useAppStore.setState({
+                  selectedClinicId: nearestClinic.clinicId,
+                })
+              }
+            >
+              <span className="care-location-icon">
+                <MapPin size={18} aria-hidden="true" />
+              </span>
+              <span>
+                <strong>{nearestClinic.siteName}</strong>
+                <small>
+                  {nearestClinic.municipality} ·{" "}
+                  {nearestClinic.distance.toFixed(1)} km straight line
+                </small>
+                {targetMunicipalityName === nearestClinic.municipality && (
+                  <small className="care-local-context">
+                    In your municipality
                   </small>
-                  {targetMunicipalityName === nearestClinic.municipality && (
-                    <small className="care-local-context">
-                      In your municipality
-                    </small>
-                  )}
-                </span>
-                <ChevronRight size={17} aria-hidden="true" />
-              </button>
-            ) : (
-              <p className="workspace-note">
-                {!publicData && !isBrowserDemo()
-                  ? "Published locations have not been confirmed yet. Check the visit updates above."
-                  : `No approved mobile clinic is scheduled for ${selectedScheduleDate}.`}
-              </p>
-            )}
+                )}
+              </span>
+              <ChevronRight size={17} aria-hidden="true" />
+            </button>
           </section>
         )}
 

@@ -9,6 +9,8 @@ import {
 } from "@testing-library/react";
 import { PublicClinicCard } from "../../frontend/src/features/public/PublicClinicCard";
 import { PublicVisitSummary } from "../../frontend/src/features/public/PublicVisitSummary";
+import { PublicSidePanel } from "../../frontend/src/features/public/PublicSidePanel";
+import { LAGUNA_BARANGAYS } from "../../frontend/src/services/providedData";
 import {
   PUBLIC_REFRESH_MS,
   useScheduleSync,
@@ -66,6 +68,7 @@ const data: PublicData = {
   ],
 };
 const original = usePublicScheduleStore.getState();
+const originalApp = useAppStore.getState();
 
 beforeEach(() => {
   usePublicScheduleStore.getState().cancel();
@@ -80,18 +83,66 @@ beforeEach(() => {
     viewMode: "public",
     selectedScheduleDate: today,
     publishedSchedules: {},
+    selectedBarangayPsgc: null,
+    selectedPsgc: null,
+    sidePanelOpen: true,
   });
 });
 afterEach(() => {
   cleanup();
   usePublicScheduleStore.getState().cancel();
   usePublicScheduleStore.setState(original, true);
+  useAppStore.setState(originalApp, true);
   vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
 describe("public approved visits", () => {
+  it("shows one empty-visit message while retaining selected community facts and hospitals", () => {
+    const casile = LAGUNA_BARANGAYS.find(
+      (b) => b.name === "Casile" && b.municipality === "Cabuyao",
+    )!;
+    useAppStore.setState({ selectedBarangayPsgc: casile.psgc });
+    usePublicScheduleStore.setState({
+      data: { ...data, schedules: [] },
+      lastSynced: new Date().toISOString(),
+    });
+    render(<PublicSidePanel />);
+    expect(screen.getAllByText(/No clinic visits announced/)).toHaveLength(1);
+    expect(
+      screen.queryByRole("region", { name: "Nearest published clinic visit" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("heading", { name: "Casile" }),
+    ).toBeVisible();
+    expect(screen.getByText("4,661")).toBeVisible();
+    expect(screen.getByText("2,229")).toBeVisible();
+    expect(
+      screen.getByRole("region", { name: "Nearby verified hospitals" }),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "All Laguna" }));
+    expect(useAppStore.getState().selectedBarangayPsgc).toBeNull();
+    expect(
+      screen.queryByRole("region", { name: "Selected community care" }),
+    ).toBeNull();
+  });
+
+  it("does not claim no visits while the public service is unconfirmed", () => {
+    const casile = LAGUNA_BARANGAYS.find(
+      (b) => b.name === "Casile" && b.municipality === "Cabuyao",
+    )!;
+    useAppStore.setState({ selectedBarangayPsgc: casile.psgc });
+    render(<PublicSidePanel />);
+    expect(screen.getByText("Checking published clinic visits…")).toBeVisible();
+    expect(
+      screen.queryByText(/No clinic visits|No approved mobile clinic/),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("region", { name: "Nearest published clinic visit" }),
+    ).toBeNull();
+  });
+
   it("replaces the calendar with today and the next actual announced day", () => {
     useAppStore.setState({ publishedSchedules: publicSchedules(data) });
     usePublicScheduleStore.setState({

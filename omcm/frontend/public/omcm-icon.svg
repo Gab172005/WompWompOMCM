@@ -1,11 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <title>OMCM — mobile care, connected communities</title>
-  <rect width="64" height="64" rx="17" fill="#163f46"/>
-  <path d="M9 54h29c12 0 18-7 18-17S45 24 45 13" stroke="#57ad99" stroke-width="4" stroke-linecap="round"/>
-  <circle cx="45" cy="11" r="4" fill="#9ed8c6"/>
-  <path d="M11 23a5 5 0 0 1 5-5h24a4 4 0 0 1 4 4v4h5l7 10v9H11V23Z" fill="#fff"/>
-  <path d="M45 29h3l4 7h-7v-7Z" fill="#83c9ba"/>
-  <path d="M25 23h5v6h6v5h-6v6h-5v-6h-6v-5h6v-6Z" fill="#11766f"/>
-  <circle cx="21" cy="45" r="5" fill="#163f46" stroke="#fff" stroke-width="2"/>
-  <circle cx="47" cy="45" r="5" fill="#163f46" stroke="#fff" stroke-width="2"/>
+  <title>OMCM — care that reaches communities</title>
+  <defs>
+    <mask id="care-waypoint">
+      <path d="M32 4C20 4 12 12 12 24c0 13 20 26 20 26s20-13 20-26C52 12 44 4 32 4Z" fill="#fff"/>
+      <path d="M29 13h6v7h7v6h-7v7h-6v-7h-7v-6h7v-7Z" fill="#000"/>
+    </mask>
+  </defs>
+  <path d="M32 45v4c0 6-8 7-18 7m18-7c0 6 8 7 18 7" stroke="#60aa91" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="10" cy="56" r="4" fill="#147c6e"/>
+  <circle cx="54" cy="56" r="4" fill="#147c6e"/>
+  <path d="M32 4C20 4 12 12 12 24c0 13 20 26 20 26s20-13 20-26C52 12 44 4 32 4Z" fill="#147c6e" mask="url(#care-waypoint)"/>
 </svg>

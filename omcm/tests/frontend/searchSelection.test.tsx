@@ -24,6 +24,21 @@ afterAll(() => {
 });
 
 describe("Place search and selected-place feedback", () => {
+  it("focuses search with slash without stealing the key from an editor", () => {
+    render(
+      <>
+        <MunicipalitySearch />
+        <textarea aria-label="Notes" />
+      </>,
+    );
+    fireEvent.keyDown(document.body, { key: "/" });
+    expect(document.activeElement).toBe(screen.getByRole("combobox"));
+    const notes = screen.getByRole("textbox", { name: "Notes" });
+    notes.focus();
+    fireEvent.keyDown(notes, { key: "/" });
+    expect(document.activeElement).toBe(notes);
+  });
+
   it("accepts a barangay and municipality without punctuation using keyboard selection", () => {
     render(<MunicipalitySearch />);
     const input = screen.getByRole("combobox");

@@ -161,10 +161,79 @@ try {
         .click();
     return panel;
   }
+  async function playbackAlignment() {
+    const centers = await page
+      .getByRole("region", { name: "Simulation playback" })
+      .evaluate((element) =>
+        [
+          ".playback-play",
+          ".playback-rewind",
+          ".workspace-timeline input",
+          "output",
+          ".playback-next",
+          ".playback-speed select",
+        ].map((selector) => {
+          const box = element.querySelector(selector).getBoundingClientRect();
+          return box.top + box.height / 2;
+        }),
+      );
+    expect(
+      Math.max(...centers) - Math.min(...centers),
+      "Playback controls must share the slider's center line",
+    ).toBeLessThanOrEqual(1.5);
+  }
   await page.goto("http://127.0.0.1:5186", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".barangay-boundary")).toHaveCount(681, {
     timeout: 90000,
   });
+  const alphaChecks = await page.evaluate(async () => {
+    return Promise.all(
+      [
+        "/omcm-icon.svg",
+        "/favicon-32.png",
+        "/favicon-96.png",
+        "/apple-touch-icon.png",
+        // Separate the inspection request from Chrome's automatic favicon load.
+        "/favicon.ico?alpha-check=1",
+      ].map(async (src) => {
+        const icon = new Image();
+        icon.src = src;
+        try {
+          await icon.decode();
+        } catch (error) {
+          throw new Error(`${src}: ${String(error)}`);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = icon.naturalWidth;
+        canvas.height = icon.naturalHeight;
+        const context = canvas.getContext("2d");
+        context.drawImage(icon, 0, 0);
+        const pixels = context.getImageData(
+          0,
+          0,
+          canvas.width,
+          canvas.height,
+        ).data;
+        const alpha = Array.from(
+          { length: pixels.length / 4 },
+          (_, index) => pixels[index * 4 + 3],
+        );
+        return {
+          src,
+          width: canvas.width,
+          transparent: alpha.filter((value) => value === 0).length,
+          opaque: alpha.filter((value) => value > 0).length,
+          total: alpha.length,
+          corner: pixels[3],
+        };
+      }),
+    );
+  });
+  for (const icon of alphaChecks) {
+    expect(icon.corner, icon.src).toBe(0);
+    expect(icon.transparent, icon.src).toBeGreaterThan(icon.total * 0.5);
+    expect(icon.opaque, icon.src).toBeGreaterThan(icon.total * 0.1);
+  }
   await page.evaluate(() => {
     window.__uiOriginalMap = document.querySelector(".leaflet-container");
   });
@@ -176,6 +245,65 @@ try {
   const search = page.getByRole("combobox", {
     name: "Find municipality or barangay",
   });
+  await search.fill("Casile Cabuyao");
+  await page.getByRole("option", { name: /^Casile, Cabuyao Barangay/ }).click();
+  await expect(publicPanel.getByText(/No clinic visits announced/)).toHaveCount(
+    1,
+  );
+  await expect(
+    publicPanel.getByRole("region", { name: "Nearest published clinic visit" }),
+  ).toHaveCount(0);
+  for (const size of [
+    { width: 1440, height: 1000 },
+    { width: 390, height: 844 },
+    { width: 320, height: 740 },
+    { width: 844, height: 390 },
+  ]) {
+    await page.setViewportSize(size);
+    const expand = publicPanel.getByRole("button", {
+      name: "Expand place details",
+    });
+    if (await expand.isVisible()) await expand.click();
+    await publicPanel.locator(".workspace-panel-body").evaluate((element) => {
+      element.scrollTop = 0;
+    });
+    await withinViewport(publicPanel);
+    expect(
+      await publicPanel.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth + 1,
+      ),
+    ).toBe(true);
+    const inset = await publicPanel
+      .locator(".workspace-panel-heading")
+      .evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const title = element.querySelector("h2").getBoundingClientRect();
+        return title.left - box.left;
+      });
+    expect(inset).toBeGreaterThanOrEqual(12);
+    const facts = publicPanel.getByRole("region", {
+      name: "Selected community care",
+    });
+    await expect(facts.getByText("4,661", { exact: true })).toBeVisible();
+    await expect(facts.getByText("2,229", { exact: true })).toBeVisible();
+    await shot(`public-casile-empty-${size.width}`);
+    await publicPanel
+      .getByRole("region", { name: "Nearby verified hospitals" })
+      .scrollIntoViewIfNeeded();
+    await shot(`public-casile-hospitals-${size.width}`);
+    const reduce = publicPanel.getByRole("button", {
+      name: "Collapse place details",
+    });
+    if (await reduce.isVisible()) await reduce.click();
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await publicPanel.getByRole("button", { name: "All Laguna" }).click();
+  await expect(
+    publicPanel.getByRole("region", { name: "Selected community care" }),
+  ).toHaveCount(0);
+  await page.locator("body").click({ position: { x: 700, y: 100 } });
+  await page.keyboard.press("/");
+  await expect(search).toBeFocused();
   await search.fill("Los Banos");
   await shot("search-desktop");
   await page.getByRole("option", { name: /Los Baños Municipality/ }).click();
@@ -228,6 +356,11 @@ try {
   await publicPanel.getByRole("button", { name: /Next clinic day/ }).click();
   await expect(
     publicPanel.getByText("1 clinic announced", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    publicPanel
+      .getByRole("region", { name: "Nearest published clinic visit" })
+      .getByRole("button"),
   ).toBeVisible();
   const clinicAction = publicPanel
     .getByRole("button", { name: /^View MC-.* visit details$/ })
@@ -372,6 +505,41 @@ try {
   await shot("planner-desktop");
   for (const width of [390, 320]) {
     await page.setViewportSize({ width, height: 844 });
+    for (const button of await page
+      .getByRole("navigation", { name: "Planning tools" })
+      .getByRole("button")
+      .all())
+      await withinViewport(button);
+    for (const button of await page
+      .getByRole("navigation", { name: "Map layers and colors" })
+      .getByRole("button")
+      .all())
+      await withinViewport(button);
+    await page.getByRole("button", { name: "Map layers", exact: true }).click();
+    const layerPicker = page.getByRole("region", { name: "Map filters" });
+    await withinViewport(layerPicker);
+    await layerPicker.getByText("Population", { exact: true }).click();
+    await expect(
+      layerPicker.getByRole("radio", { name: "People per square kilometre" }),
+    ).toBeChecked();
+    await expect(
+      page
+        .getByRole("navigation", { name: "Map layers and colors" })
+        .getByRole("button", { name: "Population", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await shot(`map-details-admin-${width}`);
+    await layerPicker
+      .getByRole("radio", { name: "People per square kilometre" })
+      .focus();
+    await page.keyboard.press("ArrowLeft");
+    await expect(
+      layerPicker.getByRole("radio", { name: "Healthcare Need Score" }),
+    ).toBeChecked();
+    await page.keyboard.press("Escape");
+    await expect(layerPicker).toBeHidden();
+    await expect(
+      page.getByRole("button", { name: "Map layers", exact: true }),
+    ).toBeFocused();
     await planner.getByRole("button", { name: "Expand panel height" }).click();
     for (const title of [
       "Behind your recommendations",
@@ -425,6 +593,86 @@ try {
   await picker.press("Enter");
   await expect(picker).toHaveValue(/Los Baños/);
 
+  const mapLegend = page.getByRole("region", { name: "Map legend" });
+  await mapLegend.getByRole("button", { name: "Show map symbols" }).click();
+  await mapLegend
+    .getByRole("button", { name: "Data & guidance", exact: true })
+    .click();
+  await expect(
+    mapLegend.getByRole("region", { name: "Map data and guidance" }),
+  ).toBeVisible();
+  await expect(mapLegend.locator("time")).toContainText("PH time");
+  await expect(mapLegend.locator("time")).not.toContainText(/T\d{2}:/);
+  await shot("legend-guidance-desktop");
+  await mapLegend
+    .getByRole("group", { name: "Legend details", exact: true })
+    .focus();
+  await page.keyboard.press("End");
+  await expect(
+    mapLegend.getByRole("region", { name: "Clinic data source", exact: true }),
+  ).toBeVisible();
+  await expect
+    .poll(() =>
+      mapLegend
+        .getByRole("group", { name: "Legend details", exact: true })
+        .evaluate(
+          (element) =>
+            element.scrollHeight - element.clientHeight - element.scrollTop,
+        ),
+    )
+    .toBeLessThanOrEqual(1);
+  await shot("legend-source-desktop");
+  const legendHeader = await mapLegend
+    .locator(".workspace-legend-header-main")
+    .boundingBox();
+  await page.mouse.move(legendHeader.x + 12, legendHeader.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(1370, 950, { steps: 8 });
+  await page.mouse.up();
+  await expect(mapLegend).toHaveClass(/is-positioned/);
+  await withinViewport(mapLegend);
+  await mapLegend
+    .getByRole("button", { name: "Map symbols", exact: true })
+    .click();
+  await withinViewport(mapLegend);
+  await shot("legend-symbols-positioned");
+  await mapLegend
+    .getByRole("button", { name: "Reset legend to default position" })
+    .click();
+  await mapLegend.getByRole("button", { name: "Minimize map legend" }).click();
+  const compactCenters = await mapLegend.evaluate((element) =>
+    [".workspace-legend-minimized-info", ".workspace-legend-actions"].map(
+      (selector) => {
+        const box = element.querySelector(selector).getBoundingClientRect();
+        return box.y + box.height / 2;
+      },
+    ),
+  );
+  expect(Math.abs(compactCenters[0] - compactCenters[1])).toBeLessThanOrEqual(
+    1.5,
+  );
+  await playbackAlignment();
+  const compactLegend = await mapLegend.boundingBox();
+  const desktopClock = await page
+    .getByRole("region", { name: "Simulation playback" })
+    .boundingBox();
+  expect(
+    desktopClock.y - compactLegend.y - compactLegend.height,
+  ).toBeGreaterThanOrEqual(8);
+  await shot("compact-legend-playback-desktop");
+  await mapLegend.getByRole("button", { name: "Expand map legend" }).click();
+  await mapLegend.getByRole("button", { name: "Hide map symbols" }).click();
+  await panel.locator('summary[aria-label="How to compare"]').click();
+  await expect(
+    panel.getByText("Area count alone does not measure need reduced.", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await panel.locator(".workspace-panel-body").evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  await shot("scenario-picker-desktop");
+
   for (const size of [
     { width: 1024, height: 768 },
     { width: 768, height: 1024 },
@@ -435,6 +683,7 @@ try {
   ]) {
     await page.setViewportSize(size);
     await noOverflow();
+    await playbackAlignment();
     const sheet = await withinViewport(panel);
     const playback = await withinViewport(
       page.getByRole("region", { name: "Simulation playback" }),
@@ -477,6 +726,53 @@ try {
         page.getByRole("region", { name: "Map legend" }),
       );
       expect(legend.y + legend.height).toBeLessThanOrEqual(sheet.y);
+      await mapLegend.getByRole("button", { name: "Show map symbols" }).click();
+      await mapLegend
+        .getByRole("button", { name: "Data & guidance", exact: true })
+        .click();
+      await withinViewport(mapLegend);
+      await expect(
+        mapLegend.getByRole("button", { name: "Hide map symbols" }),
+      ).toBeVisible();
+      expect(
+        await mapLegend.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth + 1,
+        ),
+      ).toBe(true);
+      await shot(`legend-guidance-${size.width}`);
+      await mapLegend
+        .getByRole("group", { name: "Legend details", exact: true })
+        .focus();
+      await page.keyboard.press("End");
+      await expect(mapLegend.locator("time")).toBeVisible();
+      await expect
+        .poll(() =>
+          mapLegend
+            .getByRole("group", { name: "Legend details", exact: true })
+            .evaluate(
+              (element) =>
+                element.scrollHeight - element.clientHeight - element.scrollTop,
+            ),
+        )
+        .toBeLessThanOrEqual(1);
+      await shot(`legend-source-${size.width}`);
+      await mapLegend.getByRole("button", { name: "Hide map symbols" }).click();
+      const firstScenario = panel.getByRole("button", {
+        name: /^No intervention/,
+      });
+      const lastScenario = panel.getByRole("button", {
+        name: /^Optimized clinic allocation/,
+      });
+      await panel.locator(".workspace-panel-body").evaluate((element) => {
+        element.scrollTop = 0;
+      });
+      const firstScenarioBox = await firstScenario.boundingBox();
+      const lastScenarioBox = await lastScenario.boundingBox();
+      expect(lastScenarioBox.y + lastScenarioBox.height).toBeLessThanOrEqual(
+        sheet.y + sheet.height + 1,
+      );
+      expect(firstScenarioBox.y).toBeGreaterThan(sheet.y);
+      await shot(`scenario-choices-${size.width}`);
       if (size.width === 390) {
         const grip = await panel
           .getByRole("button", { name: "Resize map panel" })
@@ -542,6 +838,9 @@ try {
     exact: true,
   });
   await expect(assistant).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Planning help", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await withinViewport(assistant);
   await expect(
     assistant.getByRole("button", { name: /Find priority communities/ }),
@@ -624,6 +923,9 @@ try {
     .click();
   await page.getByRole("button", { name: "Map layers", exact: true }).click();
   await withinViewport(page.getByRole("region", { name: "Map filters" }));
+  await expect(
+    page.getByRole("region", { name: "Map filters" }).getByRole("radio"),
+  ).toHaveCount(0);
   await shot("layers-mobile");
   await page.getByRole("button", { name: "Close map filters" }).click();
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -635,7 +937,42 @@ try {
     exact: true,
   });
   await withinViewport(settings);
+  await settings.getByText("OpenStreetMap", { exact: true }).click();
+  await expect(
+    settings.getByRole("radio", { name: "OpenStreetMap", exact: true }),
+  ).toBeChecked();
+  await settings
+    .getByRole("radio", { name: "OpenStreetMap", exact: true })
+    .focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(
+    settings.getByRole("radio", { name: "Google Maps", exact: true }),
+  ).toBeChecked();
+  await expect(
+    settings.getByText("OpenStreetMap is active", { exact: true }),
+  ).toBeVisible();
+  await expect(settings.getByLabel("Google Maps API key")).toBeHidden();
+  await settings.locator('summary[aria-label="Google Maps key"]').click();
+  await expect(settings.getByLabel("Google Maps API key")).toBeVisible();
+  await expect(
+    settings.getByRole("button", { name: "Save key and reload map" }),
+  ).toBeDisabled();
   await shot("map-settings-desktop");
+  for (const size of [
+    { width: 390, height: 844 },
+    { width: 320, height: 740 },
+    { width: 844, height: 390 },
+  ]) {
+    await page.setViewportSize(size);
+    await withinViewport(settings);
+    expect(
+      await settings.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth + 1,
+      ),
+    ).toBe(true);
+    await shot(`map-settings-${size.width}`);
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await settings.getByRole("button", { name: "Close dialog" }).click();
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page
@@ -662,6 +999,52 @@ try {
   expect(await search.evaluate((element) => element.scrollLeft)).toBe(0);
   await shot("assistant-public-desktop");
   await assistant.getByRole("button", { name: "Close assistant" }).click();
+  const touchPage = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  touchPage.on("pageerror", (error) => errors.push(error.message));
+  await touchPage.route("https://tile.openstreetmap.org/**", (route) =>
+    route.abort(),
+  );
+  await touchPage.goto("http://127.0.0.1:5186");
+  await expect(touchPage.locator(".barangay-boundary")).toHaveCount(681);
+  expect(
+    await touchPage.evaluate(() => matchMedia("(pointer: coarse)").matches),
+  ).toBe(true);
+  await touchPage.getByRole("button", { name: "Ask OMCM", exact: true }).tap();
+  const touchAssistant = touchPage.getByRole("region", {
+    name: "OMCM assistant",
+    exact: true,
+  });
+  await expect(touchAssistant).toBeVisible();
+  expect(
+    await touchAssistant
+      .locator(".assistant-chat-log")
+      .evaluate((element) => element.scrollTop),
+  ).toBe(0);
+  expect(
+    await touchPage.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await touchPage.screenshot({
+    path: join(artifacts, "ui-assistant-touch-phone.png"),
+    animations: "disabled",
+  });
+  await touchAssistant.getByRole("button", { name: "Close assistant" }).tap();
+  await touchPage
+    .getByRole("button", { name: "Map layers", exact: true })
+    .tap();
+  await expect(
+    touchPage.getByRole("region", { name: "Map filters" }),
+  ).toBeVisible();
+  await touchPage
+    .getByRole("checkbox", { name: "Hospitals", exact: true })
+    .uncheck();
+  await expect(touchPage.locator(".hospital-marker-custom")).toHaveCount(0);
+  await touchPage.close();
   expect(errors, logs).toEqual([]);
   console.log(
     "Workspace UI browser checks passed: public empty/published care, search, sign-in/password visibility, aligned planner fields, keyboard disclosures, access filtering/reset, responsive scenario comparisons, view-aware assistant tasks/composer, favicons, keyboard/viewport-safe pickers, desktop/tablet/mobile/landscape sheets with tap/swipe resizing, playback, assistant focus, filters, settings, reduced motion and one persistent map. Screenshots:",
