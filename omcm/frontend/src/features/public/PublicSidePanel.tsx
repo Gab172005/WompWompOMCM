@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  ArrowLeft,
   Clock,
   HeartPulse,
   MapPin,
@@ -7,6 +8,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { SheetHandle } from "../../components/ui/SheetHandle";
 import { useAppStore } from "../../store/useAppStore";
 import { BARANGAYS_BY_PSGC, distanceKm } from "../../services/providedData";
 import { LAGUNA_BASE_DATA } from "../../services/lagunaData";
@@ -72,6 +74,11 @@ export function PublicSidePanel() {
       className={`workspace-panel intelligence-panel public-care-panel card ${expanded ? "is-expanded" : ""}`}
       aria-label="Community care and schedules"
     >
+      <SheetHandle
+        expanded={expanded}
+        onExpand={() => setExpanded(true)}
+        onReduce={() => setExpanded(false)}
+      />
       <div className="workspace-panel-heading">
         <h2>
           <HeartPulse size={17} aria-hidden="true" /> Community care & schedules
@@ -108,10 +115,12 @@ export function PublicSidePanel() {
           />
         )}
         <PublicVisitSummary />
-        <p className="place-intro">
-          Search for your community to find nearby care. Clinic locations and
-          services are listed below.
-        </p>
+        {!targetPoint && (
+          <p className="place-intro">
+            Search for your community to find nearby care and approved clinic
+            visits.
+          </p>
+        )}
 
         {schedule?.status === "Emergency Override" &&
           schedule.emergencyNotice && (
@@ -141,14 +150,10 @@ export function PublicSidePanel() {
           >
             <div className="eyebrow">
               {selectedBarangay
-                ? `BARANGAY · PSGC ${selectedBarangay.psgc}`
-                : `MUNICIPALITY · PSGC ${selectedMunicipality?.psgc}`}
+                ? "BARANGAY CARE GUIDE"
+                : "MUNICIPALITY CARE GUIDE"}
             </div>
-            <h3>
-              {selectedBarangay
-                ? `${selectedBarangay.name}, ${selectedBarangay.municipality}`
-                : selectedMunicipality?.name}
-            </h3>
+            <h3>Community & nearby care</h3>
             <p className="workspace-note">
               Population:{" "}
               {(
@@ -166,7 +171,8 @@ export function PublicSidePanel() {
               className="workspace-text-button"
               onClick={() => selectMunicipality(null)}
             >
-              ← Clear community selection
+              <ArrowLeft size={14} aria-hidden="true" /> Clear community
+              selection
             </button>
 
             <h4>Nearest approved mobile clinic</h4>
@@ -291,9 +297,9 @@ export function PublicSidePanel() {
                 No mobile clinics announced for {selectedScheduleDate}
               </strong>
               <p className="workspace-note">
-                Only administrator-approved deployments appear here. Unapproved
-                planning drafts and disaster simulations are never shown as
-                public schedules.
+                Visits will appear once the LGU confirms a schedule. Search your
+                community for nearby verified hospitals while waiting for an
+                announcement.
               </p>
             </div>
           )}

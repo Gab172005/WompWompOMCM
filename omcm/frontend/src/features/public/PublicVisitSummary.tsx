@@ -42,6 +42,7 @@ export function PublicVisitSummary() {
             className="map-icon-button"
             aria-label="Refresh published visits"
             disabled={busy}
+            aria-busy={busy}
             onClick={() => void refresh()}
           >
             <RefreshCw size={17} aria-hidden="true" />

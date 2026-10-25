@@ -166,7 +166,10 @@ try {
   await ask("Get optimizer suggestions for three clinics");
   await expect(log).toContainText("Generate optimized locations");
   await expect(
-    page.getByRole("button", { name: "Generate optimized locations", exact: true }),
+    page.getByRole("button", {
+      name: "Generate optimized locations",
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(page.getByText(/3 optimized locations/)).toHaveCount(0);
   await ask("Show public schedules for tomorrow");
@@ -200,7 +203,14 @@ try {
     ),
   ).toBe(true);
   await widget.getByRole("button", { name: "Close assistant" }).click();
-  await page.getByRole("button", { name: "Open OMCM assistant" }).click();
+  // Simulation keeps the mobile launcher off the timeline; its toolbar is
+  // the visible way to reopen the assistant while keeping the conversation.
+  const launcher = page.getByRole("button", { name: "Open OMCM assistant" });
+  if (await launcher.isVisible()) await launcher.click();
+  else
+    await page
+      .getByRole("button", { name: "Planning help", exact: true })
+      .click();
   await expect(log.locator(".workspace-chat-message")).toHaveCount(
     messageCount,
   );

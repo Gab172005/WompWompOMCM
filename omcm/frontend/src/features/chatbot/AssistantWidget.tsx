@@ -1,4 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+} from "react";
 import { Bot, GripVertical, MessageCircle, RotateCcw, X } from "lucide-react";
 import { useAssistantStore } from "../../store/useAssistantStore";
 import { ChatbotPanel } from "./ChatbotPanel";
@@ -38,6 +44,41 @@ export function AssistantWidget() {
     hasMoved: boolean;
   } | null>(null);
   const wasDraggingRef = useRef(false);
+  const returnFocus = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    if (
+      open &&
+      document.activeElement instanceof HTMLElement &&
+      document.activeElement !== document.body
+    )
+      returnFocus.current = document.activeElement;
+  }, [open]);
+  const restoreFocus = useCallback(() => {
+    requestAnimationFrame(() => {
+      if (returnFocus.current?.isConnected && returnFocus.current.offsetWidth)
+        returnFocus.current.focus();
+      else launcherRef.current?.focus();
+    });
+  }, []);
+  const closeAssistant = useCallback(() => {
+    setOpen(false);
+    restoreFocus();
+  }, [setOpen, restoreFocus]);
+
+  useEffect(() => {
+    if (!open) return;
+    const dismiss = (event: KeyboardEvent) => {
+      if (
+        event.key !== "Escape" ||
+        event.defaultPrevented ||
+        document.querySelector("dialog[open]")
+      )
+        return;
+      closeAssistant();
+    };
+    document.addEventListener("keydown", dismiss);
+    return () => document.removeEventListener("keydown", dismiss);
+  }, [open, closeAssistant]);
 
   // Keep launcher within viewport when window is resized
   useEffect(() => {
@@ -57,6 +98,7 @@ export function AssistantWidget() {
         return { x: clampedX, y: clampedY };
       });
     };
+    handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [position]);
@@ -158,7 +200,7 @@ export function AssistantWidget() {
           <Bot size={22} aria-hidden="true" />
           <div>
             <h2>OMCM assistant</h2>
-            <span>Ask, find, and navigate</span>
+            <span>Places, care and planning</span>
           </div>
         </div>
         <div>
@@ -176,7 +218,7 @@ export function AssistantWidget() {
             type="button"
             className="icon-button"
             aria-label="Close assistant"
-            onClick={() => setOpen(false)}
+            onClick={closeAssistant}
           >
             <X size={20} />
           </button>
@@ -219,4 +261,3 @@ export function AssistantWidget() {
     </button>
   );
 }
-

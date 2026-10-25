@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAssistantStore } from "../../store/useAssistantStore";
 import { ChatMessage } from "./ChatMessage";
 import { Button } from "../../components/ui/Button";
+import { MessageCircle, Send, Square } from "lucide-react";
 
 export function ChatbotPanel() {
   const [input, setInput] = useState("");
@@ -43,10 +44,16 @@ export function ChatbotPanel() {
         aria-busy={s.busy}
       >
         {!s.messages.length && (
-          <p className="assistant-empty">
-            Try “Show Los Baños and its nearest hospitals” or “Open the 30-day
-            simulation.”
-          </p>
+          <div className="assistant-empty">
+            <span className="assistant-welcome-icon">
+              <MessageCircle size={24} aria-hidden="true" />
+            </span>
+            <strong>What would you like to find?</strong>
+            <p>
+              Try “Show Los Baños and its nearest hospitals” or “Open the 30-day
+              simulation.”
+            </p>
+          </div>
         )}
         {s.messages.map((m) => (
           <ChatMessage key={m.id} message={m} />
@@ -112,11 +119,11 @@ export function ChatbotPanel() {
           </span>
           {s.busy ? (
             <Button type="button" variant="secondary" onClick={s.stop}>
-              Stop
+              <Square size={14} aria-hidden="true" /> Stop
             </Button>
           ) : (
             <Button type="submit" disabled={!input.trim()}>
-              Send message
+              <Send size={15} aria-hidden="true" /> Send message
             </Button>
           )}
         </div>

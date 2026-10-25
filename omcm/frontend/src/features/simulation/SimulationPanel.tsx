@@ -13,6 +13,7 @@ import {
 import { operationalPeriod } from "../../services/forecasting/forecast";
 import { LAGUNA_BARANGAYS } from "../../services/providedData";
 import { needLevel } from "../../services/planningLanguage";
+import { SearchableSelect } from "../../components/ui/SearchableSelect";
 
 const options = [...LAGUNA_BARANGAYS].sort(
   (a, b) =>
@@ -134,18 +135,30 @@ export function SimulationPanel() {
             );
           })}
         </div>
-        <p className="workspace-note">
-          HNI weights each barangay by population. Area counts describe reach;
-          they do not measure the amount of need reduced.
-        </p>
-        {optimizedDay !== undefined && (
+        <details className="simulation-comparison-context">
+          <summary>
+            {optimizedDay !== undefined
+              ? `Optimized for Day ${optimizedDay} · comparison details`
+              : "How to compare these scores"}
+          </summary>
           <p className="workspace-note">
-            Locations optimized for Day {optimizedDay}. Held locations use each
-            day's updated mock demand.
-            {manualSites.join() !== comparedSites.join() &&
-              " Manual locations have changed since this comparison; generate a fresh comparison in the next placement window."}
+            HNI weights each barangay by population. Area counts describe reach;
+            they do not measure the amount of need reduced.
           </p>
-        )}
+          {optimizedDay !== undefined && (
+            <p className="workspace-note">
+              Locations optimized for Day {optimizedDay}. Held locations use
+              each day's updated mock demand.
+            </p>
+          )}
+        </details>
+        {optimizedDay !== undefined &&
+          manualSites.join() !== comparedSites.join() && (
+            <p className="workspace-note" role="status">
+              Manual locations changed after this optimization. Compare again in
+              the next placement window.
+            </p>
+          )}
       </section>
 
       <section
@@ -349,92 +362,77 @@ export function SimulationPanel() {
             </div>
           )}
 
-          <fieldset
-            className="simulation-allocation"
-            disabled={
-              !canAllocate ||
-              s.recommendBusy ||
-              s.applyBusy ||
-              (s.strategy === "optimizer" && !s.proposal)
-            }
-          >
-            <legend>
-              {s.strategy === "manual"
-                ? "Manual clinic locations"
-                : "Solver-selected locations"}
-            </legend>
-            <p className="simulation-guidance">
-              {s.strategy === "manual"
-                ? "Choose a barangay below or click the map to place the selected clinic."
-                : s.proposal
-                  ? "The map previews these locations. Use Manual to try your own placements."
-                  : "Generate optimized locations first. You can review the proposal before applying it."}
-            </p>
-            <label className="workspace-field">
-              Click the map to place
-              <select
-                disabled={s.strategy === "optimizer"}
-                value={s.editingClinic}
-                onChange={(e) =>
-                  useForecastStore.setState({
-                    editingClinic: Number(e.target.value),
-                  })
-                }
-              >
-                {s.draft.map((_, i) => (
-                  <option key={i} value={i}>
-                    MC-{i + 1}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {s.draft.map((value, i) => (
-              <label className="workspace-field" key={i}>
-                MC-{i + 1}
+          {s.strategy === "manual" ? (
+            <fieldset
+              className="simulation-allocation"
+              disabled={!canAllocate || s.applyBusy || s.recommendBusy}
+            >
+              <legend>Manual clinic locations</legend>
+              <p className="simulation-guidance">
+                Search below, or choose a clinic and tap its location on the
+                map.
+              </p>
+              <label className="workspace-field">
+                Click the map to place
                 <select
-                  aria-label={`MC-${i + 1} barangay`}
-                  disabled={s.strategy === "optimizer"}
-                  value={value}
-                  onChange={(e) => s.setDraft(i, e.target.value)}
+                  value={s.editingClinic}
+                  onChange={(event) =>
+                    useForecastStore.setState({
+                      editingClinic: Number(event.target.value),
+                    })
+                  }
                 >
-                  <option value="">Select a barangay…</option>
-                  {options.map((barangay) => (
-                    <option
-                      key={barangay.psgc}
-                      value={barangay.psgc}
-                      disabled={
-                        !s.coverage.has(barangay.psgc) ||
-                        s.draft.some(
-                          (draftValue, j) =>
-                            j !== i && draftValue === barangay.psgc,
-                        )
-                      }
-                    >
-                      {barangay.municipality} · {barangay.name}
-                      {!s.coverage.has(barangay.psgc) &&
-                        " · Deployment unavailable"}
+                  {s.draft.map((_, i) => (
+                    <option key={i} value={i}>
+                      MC-{i + 1}
                     </option>
                   ))}
                 </select>
               </label>
-            ))}
-            <button
-              className="primary"
-              disabled={
-                !canAllocate ||
-                s.applyBusy ||
-                s.recommendBusy ||
-                s.draft.some((value) => !value)
-              }
-              onClick={() => void s.apply()}
-            >
-              {s.applyBusy
-                ? "Calculating clinic impact…"
-                : s.strategy === "manual"
-                  ? "Apply my clinic locations"
-                  : "Apply these clinic locations"}
-            </button>
-          </fieldset>
+              {s.draft.map((value, i) => (
+                <SearchableSelect
+                  key={i}
+                  label={`MC-${i + 1} barangay`}
+                  value={value}
+                  disabled={!canAllocate || s.applyBusy || s.recommendBusy}
+                  onChange={(psgc) => s.setDraft(i, psgc)}
+                  options={options.map((barangay) => ({
+                    value: barangay.psgc,
+                    label: barangay.name,
+                    description: barangay.municipality,
+                    disabled:
+                      !s.coverage.has(barangay.psgc) ||
+                      s.draft.some(
+                        (other, index) =>
+                          index !== i && other === barangay.psgc,
+                      ),
+                  }))}
+                />
+              ))}
+              <button
+                className="primary"
+                aria-busy={s.applyBusy}
+                disabled={
+                  !canAllocate || s.applyBusy || s.draft.some((value) => !value)
+                }
+                onClick={() => void s.apply()}
+              >
+                {s.applyBusy
+                  ? "Calculating clinic impact…"
+                  : "Apply my clinic locations"}
+              </button>
+            </fieldset>
+          ) : (
+            s.proposal && (
+              <button
+                className="primary simulation-apply-proposal"
+                disabled={!canAllocate || s.recommendBusy || s.applyBusy}
+                onClick={() => void s.apply()}
+              >
+                Apply these clinic locations
+              </button>
+            )
+          )}
 
           {s.strategy === "optimizer" &&
             !s.proposal &&

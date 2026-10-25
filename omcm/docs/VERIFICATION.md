@@ -1,5 +1,46 @@
 # Verification record
 
+## Map workspace UI refinement — 2026-10-25
+
+Branch: `layout/maps-workspace-refinement`, based on the completed HNI fix.
+[UI_REFINEMENT.md](UI_REFINEMENT.md) documents the exact files, design references,
+presentation behavior and review steps. This pass does not change backend code,
+HNI calculations, trained artifacts, datasets or administrator credentials.
+
+| Check | Result |
+| --- | --- |
+| Frontend `npm run lint` | Passed |
+| Frontend `npm test` | 153 passed across 17 files |
+| Frontend `npm run build` | Passed; existing bundle-size advisory |
+| Backend `.venv/bin/python -m pytest -q` | 113 passed; existing Starlette/httpx deprecation warning |
+| `npm run test:ui` | Passed; real connected public visits/auth, search, hospital source details, barangay view, aligned planner fields, preselected and empty pickers, keyboard/pointer selection, tap/swipe resize, modal/settings/layers, assistant focus, reduced motion and one retained map |
+| `npm run test:hni` | Passed; retained source counts/HNI/search and selected-place mobile sheet geometry |
+| `npm run test:simulation` | Passed; real shared-backend manual/optimized comparison, markers and revised responsive controls |
+| `npm run test:optimization` | Passed; real allocation, picker replanning, approval/public refresh, flood outlines and unavailable-service handling |
+| `npm run test:assistant` | Passed; local commands, provider-stubbed actions/failure, retained conversation and visible mobile reopen control |
+| `git diff --check` | Passed |
+
+The new UI suite inspects 1440×1000, 1024×768, 768×1024, 760×1024, 390×844,
+320×740 and 844×390 viewports. It checks that dropdowns and sheets settle inside
+the viewport, paired controls align, playback contents fit their own card,
+the launcher does not cover playback, and mobile legend/sheet/playback bands do
+not overlap. Short landscape tool sheets have a reading expansion. The original
+Leaflet map DOM node remains mounted across administrator tool changes.
+
+Screenshots were inspected, including tablet playback, small-screen picker,
+public care/visits/source records, barangay details, sign-in, assistant and map
+settings. Ignored artifacts are `frontend/test-results/ui-*.png`, plus the
+existing connected-suite images. The tablet review caught a compact-card content
+overflow/launcher collision; the responsive timeline now covers tablet widths,
+not just phones. The focus ring remains opaque blue for visibility.
+
+Browser verification uses Chrome/Leaflet. Google live-key rendering, physical
+mobile keyboards and live provider responses were not newly verified. Basemap
+tiles are suppressed for deterministic capture. Demo suites can log expected
+catalog connection errors without a backend; connected UI/optimizer/simulation
+suites use isolated real FastAPI processes and temporary credentials/databases.
+No production data, hosted schedules or deployment was changed.
+
 ## Backend-owned simulation HNI — 2026-10-25
 
 Branch: `fix/simulation-hni-objective`, including the preceding audit/UI and

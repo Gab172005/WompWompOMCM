@@ -1,5 +1,10 @@
 import { useEffect } from "react";
-import { BrainCircuit, Crosshair, ShieldCheck } from "lucide-react";
+import {
+  BrainCircuit,
+  Crosshair,
+  LoaderCircle,
+  ShieldCheck,
+} from "lucide-react";
 import { useOptimizationStore } from "../../store/useOptimizationStore";
 import { ClinicCountInput } from "./ClinicCountInput";
 import { PlacementRecommendations } from "./PlacementRecommendations";
@@ -32,9 +37,8 @@ export function OptimizationPanel() {
         </span>
         <h3>Put your fleet where it can help</h3>
         <p>
-          Choose your available clinics and daily appointment capacity, then
-          review suggested locations before approving a schedule. Estimates use
-          sample healthcare needs and estimated links between barangays.
+          Set your fleet size and daily capacity, then review suggested sites
+          before approving a visit. Uses sample planning data.
         </p>
         <span className="optimizer-scope">
           <ShieldCheck size={15} aria-hidden="true" />
@@ -42,13 +46,13 @@ export function OptimizationPanel() {
         </span>
         <details className="optimizer-context">
           <summary>How these recommendations work</summary>
-        <p className="workspace-note">
-          Every barangay is considered. Recommendations use the agreed Balanced
-          HNI with next-day XGBoost illness forecasts and appointment demand.
-          Planning points and capacities need LGU verification. Travel uses
-          estimated adjacency links; a complete provincial road matrix is not
-          available. The map retains baseline illness inputs.
-        </p>
+          <p className="workspace-note">
+            Every barangay is considered. Recommendations use the agreed
+            Balanced HNI with next-day XGBoost illness forecasts and appointment
+            demand. Planning points and capacities need LGU verification. Travel
+            uses estimated adjacency links; a complete provincial road matrix is
+            not available. The map retains baseline illness inputs.
+          </p>
         </details>
       </div>
       <form
@@ -114,7 +118,11 @@ export function OptimizationPanel() {
           </p>
           <details className="optimizer-context">
             <summary>What do 25-year and 100-year mean?</summary>
-            <p>A 25-year event has about a 4% annual chance; a 100-year event has about a 1% annual chance. Selecting a layer excludes its flagged planning points and connected model links.</p>
+            <p>
+              A 25-year event has about a 4% annual chance; a 100-year event has
+              about a 1% annual chance. Selecting a layer excludes its flagged
+              planning points and connected model links.
+            </p>
           </details>
           <RoadExclusions
             roads={roads}
@@ -123,8 +131,16 @@ export function OptimizationPanel() {
           />
         </fieldset>
         <div className="workspace-button-row">
-          <Button type="submit" disabled={busy || !sites.length} aria-busy={busy}>
-            <BrainCircuit size={16} aria-hidden="true" />{" "}
+          <Button
+            type="submit"
+            disabled={busy || !sites.length}
+            aria-busy={busy}
+          >
+            {busy ? (
+              <LoaderCircle size={16} aria-hidden="true" />
+            ) : (
+              <BrainCircuit size={16} aria-hidden="true" />
+            )}{" "}
             {busy ? "Finding clinic locations…" : "Generate recommendations"}
           </Button>
           {busy && (

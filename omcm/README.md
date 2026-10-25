@@ -153,6 +153,7 @@ See [deployment instructions](docs/VERCEL_DEPLOYMENT.md).
 ## Documentation and source layout
 
 - [Current audit and exact file changes](docs/GLOBAL_AUDIT.md)
+- [Map UI refinement and mobile review](docs/UI_REFINEMENT.md)
 - [Balanced HNI policy](docs/BALANCED_HNI.md) and [hospital audit](docs/HOSPITAL_HNI_AUDIT.md)
 - [XGBoost and allocation](docs/OPTIMIZATION_ALLOCATION.md), [forecast evidence](docs/TEMPORAL_FORECAST.md)
 - [Three simulation scenarios and formulas](docs/SIMULATION_MODE.md)
