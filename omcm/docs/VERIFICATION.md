@@ -1,5 +1,46 @@
 # Verification record
 
+## Map experience finishing pass — 2026-10-26
+
+Branch: `feat/omcm-maps-experience-polish`, based on local `aa800a2`. The
+previous unpushed legend/simulation and public-care/discovery commits remain
+included; no separate push of the earlier branch is necessary.
+
+- Frontend lint, **171 tests across 22 files**, production build and **113 backend
+  tests** pass. The existing large-bundle advisory and Starlette/httpx deprecation
+  warning remain; no dependencies were added.
+- All five browser suites pass: workspace UI, connected optimization, connected
+  simulation, hospital/HNI and assistant. Optimization uses Playwright Chromium;
+  the remaining suites use Chrome.
+- The workspace suite measures play, reset, range, day/week, next-day and speed
+  centers within 1.5 px across desktop, tablet, phone and landscape. A focused
+  inspection measured identical centers at 1440/1024/768/390/320 px. The compact
+  legend’s title/actions align, and its desktop gap above playback is at least
+  8 px. Screenshot: `ui-compact-legend-playback-desktop.png`.
+- Provider selection works by visible label and native radio arrow keys. The
+  optional key disclosure and disabled save guard remain functional. Dialogs
+  fit 1440/390/320/844 px viewports. No live Google Maps key is supplied, and
+  switching actual keyed Google rendering is not claimed.
+- A separate touch-enabled 390 px browser context confirms coarse-pointer
+  behavior, public assistant opening/closing, an unscrolled empty conversation,
+  and facility visibility controls. It is emulation, not a physical-device test.
+  Screenshot: `ui-assistant-touch-phone.png`.
+- Connected optimization verifies the existing keyboard fleet range, real
+  XGBoost/CP-SAT requests, manual replanning, saved draft publication, public
+  refresh and service-outage behavior without fabricated allocations.
+- Connected simulation retains Manual HNI **43.67060777020463** and Optimized HNI
+  **43.60322274720275**, host/neighbor service effects, clinic markers and the
+  shared timeline. Hospital checks retain 681 polygons and 56 mapped hospitals.
+- Assistant checks preserve reading position and jump-to-latest for existing
+  conversations, common local commands, provider-error recovery and responsive
+  behavior. External model responses are fixtures; live inference is not claimed.
+- The same map instance persists through public/admin tools and dialogs. Scoring,
+  model artifacts, data, authentication and publication permissions are unchanged.
+  No push or deployment has been performed.
+
+All screenshot artifacts are ignored under `frontend/test-results/` and can be
+regenerated with `npm run test:ui`. See the [exact file/behavior inventory](UI_REFINEMENT.md#map-experience-finishing-pass).
+
 ## Transparent icons and map discovery — 2026-10-26
 
 - Frontend lint, **171 tests across 22 files**, production build and **113

@@ -272,3 +272,68 @@ button still opens its existing approved-clinic dialog.
 
 The public panel continues to use the same map instance. No additional request,
 publication permission, routing, HNI calculation or model input is introduced.
+
+## Map experience finishing pass
+
+Work continues on `feat/omcm-maps-experience-polish`, created directly from
+`aa800a2`. It includes the two previously unpushed commits (`b416f3d` and
+`aa800a2`); publishing this new branch includes those changes automatically.
+The earlier branch does not need a separate push or pull request.
+
+The design retains [Google Maps’ focus on readable place information](https://blog.google/products-and-platforms/products/maps/google-maps-updates-summer-travel-2024/)
+and uses [Carbon’s slider anatomy](https://www.carbondesignsystem.com/building-blocks/core/components/slider/guidelines)
+as a reference for separating captions, controls and value labels. These are
+custom refinements to the existing CSS and native controls, not imported design
+libraries. Teal signals care and active planning tools; data-layer and selected
+boundary colors keep their original meanings.
+
+### Alignment and interaction decisions
+
+- An inherited 15 px bottom margin on labels was shifting the speed control
+  7.5 px off center. Scoped label-spacing resets remove that mismatch from
+  playback, panels and layer controls without restyling the legacy pages.
+- The playback caption sits above a single control row. Play, reset, slider,
+  day/week output, next-day action and speed all share the same vertical center.
+  Tick labels sit below the rail, and the legend leaves a visible gap above
+  playback. On phones and tablets, the caption/ticks give way to larger usable
+  control targets in the existing compact card.
+- Playback exposes its actual playing, paused, updating or complete state.
+  Seeking still revisits reached days through the existing shared store;
+  advancing still uses Play or Next day and respects weekly placement windows.
+- The minimized legend uses balanced padding, restrained type and an aligned
+  expand action. Position reset, drag, resize clamping and map data are unchanged.
+- Map settings puts the active provider first, with native radio cards for the
+  existing engine choices. Optional browser-key setup moves into a disclosure.
+  Existing key storage, fallback, clear and reload behavior are unchanged.
+- Fleet size has an explicitly associated label/value and visible 1–5 scale, using the original native
+  range and the same draft invalidation callback. Municipality rows align rank,
+  community name and score in fixed columns without changing ranking math.
+- Empty assistant conversations open at the top; starting a new conversation
+  clears stale jump-to-latest feedback. Existing reading-position preservation
+  still applies after messages arrive.
+- Public visit cards, map search, form fields, hospital popups and the assistant
+  share consistent reading edges, surface shapes and feedback. Noninteractive
+  information is not styled as an action. Hover motion is limited to fine
+  pointers; touch and keyboard focus remain usable. Reduced-motion preferences
+  suppress entrance movement and hover/press transforms.
+- Tablet tools show their compact labels together instead of hiding the last
+  action in horizontal overflow. Desktop panel expansion remains limited to
+  its intended viewport rules, preventing a selected-place summary from
+  covering a sheet heading.
+
+| File | Exact change |
+| --- | --- |
+| `frontend/src/features/simulation/SimulationPlayback.tsx` | Separate playback status/caption from the aligned control row; clarify the existing history-seeking behavior for assistive technology. Keep timing, seek, speed and advancement callbacks. |
+| `frontend/src/features/map/components/LagunaMap.tsx` | Group actual map-provider status, replace the engine select with native radio choices and put optional key setup in a shared disclosure. Preserve map rendering and all storage/fallback behavior. |
+| `frontend/src/features/optimization/ClinicCountInput.tsx` | Add a labeled output, correct singular/plural units, progress styling and a 1–5 scale to the existing range. Preserve invalidation and fleet state updates. |
+| `frontend/src/features/municipalities/MunicipalityRanking.tsx` | Add section/column context and stable hooks for aligned place-name rows. Preserve ordering, shared ranks, scores and selection actions. |
+| `frontend/src/styles/map-workspace.css` | Rework the playback geometry; refine minimized legend, tablet tools, map/provider surfaces, controls, rows, popups, hover/press/focus feedback and reduced-motion behavior. |
+| `frontend/src/features/chatbot/ChatbotPanel.tsx` | Start empty/reset conversations at the top and reset latest-reply feedback, while retaining reading position for existing conversations. |
+| `frontend/src/styles/assistant.css` | Match card elevation and header surface; refine task-icon feedback and composer/send interactions, including reduced motion. |
+| `frontend/scripts/workspace-ui-browser.mjs` | Measure all six playback control centers at desktop/tablet/phone/landscape sizes, verify compact-legend alignment/gap, and exercise provider selection and optional-key disclosure across responsive dialogs; use a touch-enabled phone context to verify the public assistant and facility controls. |
+| `docs/UI_REFINEMENT.md`, `docs/VERIFICATION.md` | Document inherited commits, exact file/behavior changes, design references and final checks. |
+
+No score weight, XGBoost artifact, allocation objective, simulation deduction,
+dataset, API contract, authentication setting or publication permission changes.
+The public view still receives only published care information, and administrator
+tools continue to open in place on the same map.

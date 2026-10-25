@@ -186,3 +186,22 @@
   .assistant-message-tools button { min-height: 44px; }
   .assistant-brand-mark { width: 34px; height: 34px; border-radius: 10px; }
 }
+
+/* Interaction feedback follows the same small motion scale as the map cards. */
+.assistant-widget { box-shadow: 0 3px 10px #213d4112, 0 16px 44px #213d4122; }
+.assistant-widget-heading { background: linear-gradient(180deg, #fff, #fcfdfc); }
+.assistant-task-icon, .assistant-task-list > button > svg { transition: background-color 160ms ease, color 160ms ease, transform 180ms ease; }
+.assistant-widget .assistant-composer { transition: border-color 150ms ease, box-shadow 180ms ease, background-color 150ms ease; }
+.assistant-widget .assistant-composer:focus-within { background: #fff; border-color: #11766f; box-shadow: 0 0 0 2px #11766f26; }
+.assistant-widget .assistant-composer textarea:focus-visible { outline: none; }
+.assistant-widget .assistant-send { transition: background-color 160ms ease, transform 180ms ease, box-shadow 180ms ease; }
+@media (hover: hover) and (pointer: fine) {
+  .assistant-task-list > button:hover:not(:disabled) .assistant-task-icon { background: #e0eee5; color: #106954; }
+  .assistant-task-list > button:hover:not(:disabled) > svg { transform: translate(2px,-2px); color: #11766f; }
+  .assistant-widget .assistant-send:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 3px 8px #11766f30; }
+}
+.assistant-widget .assistant-send:active:not(:disabled) { transform: scale(.95); }
+@media (prefers-reduced-motion: reduce) {
+  .assistant-task-icon, .assistant-task-list > button > svg, .assistant-widget .assistant-composer, .assistant-widget .assistant-send { transition: none; }
+  .assistant-task-list > button:hover:not(:disabled) > svg, .assistant-widget .assistant-send:is(:hover,:active) { transform: none; }
+}

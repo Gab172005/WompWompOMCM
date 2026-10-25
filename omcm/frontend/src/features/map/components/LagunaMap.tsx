@@ -10,7 +10,8 @@ import {
 } from "../../../services/googleMapsLoader";
 import { Modal } from "../../../components/ui/Modal";
 import { Button } from "../../../components/ui/Button";
-import { Settings2 } from "lucide-react";
+import { Check, KeyRound, Map, Settings2 } from "lucide-react";
+import { DisclosureCard } from "../../../components/ui/DisclosureCard";
 export function LagunaMap(props: MapProps) {
   const [ready, setReady] = useState(false),
     [error, setError] = useState("");
@@ -71,58 +72,104 @@ export function LagunaMap(props: MapProps) {
       )}
       {settings && (
         <Modal title="Map settings" onClose={() => setSettings(false)}>
-          <p>
-            OpenStreetMap works without an API key. Optionally use a
-            browser-restricted Google Maps key.
-          </p>
-          <label className="workspace-field">
-            Map engine
-            <select
-              value={engine}
-              onChange={(e) => setEngine(e.target.value as "auto" | "leaflet")}
+          <div className="map-preferences">
+            <div className="map-current-provider">
+              <Map size={19} aria-hidden="true" />
+              <div>
+                <strong>
+                  {google ? "Google Maps" : "OpenStreetMap"} is active
+                </strong>
+                <p>Choose the street map beneath your community layers.</p>
+              </div>
+            </div>
+            <fieldset className="map-provider-options">
+              <legend>Map provider</legend>
+              {(
+                [
+                  {
+                    value: "leaflet",
+                    title: "OpenStreetMap",
+                    detail: "Ready to use. No key needed.",
+                  },
+                  {
+                    value: "auto",
+                    title: "Google Maps",
+                    detail:
+                      "Uses your configured key, with OpenStreetMap as a fallback.",
+                  },
+                ] as const
+              ).map(({ value, title, detail }) => (
+                <label
+                  key={value}
+                  className={`map-provider-choice is-${value}`}
+                >
+                  <input
+                    type="radio"
+                    name="map-provider"
+                    aria-label={title}
+                    checked={engine === value}
+                    onChange={() => setEngine(value)}
+                  />
+                  <span className="provider-map-preview" aria-hidden="true">
+                    <i />
+                    <i />
+                    <Map size={20} />
+                  </span>
+                  <span className="provider-choice-copy">
+                    <strong>{title}</strong>
+                    <small>{detail}</small>
+                  </span>
+                  <span className="provider-choice-check" aria-hidden="true">
+                    {engine === value && <Check size={14} />}
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+            <DisclosureCard
+              title="Google Maps key"
+              description="Optional · saved in this browser"
+              icon={<KeyRound size={18} />}
             >
-              <option value="auto">Google Maps when configured</option>
-              <option value="leaflet">OpenStreetMap</option>
-            </select>
-          </label>
-          <label className="workspace-field">
-            Google Maps API key
-            <input
-              type="password"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              autoComplete="off"
-            />
-          </label>
-          <Button
-            disabled={!input.trim()}
-            onClick={() => {
-              setGoogleMapsApiKey(input);
-              setKey(input);
-              setError("");
-              setInput("");
-              setSettings(false);
-              window.location.reload();
-            }}
-          >
-            Save key and reload map
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              clearGoogleMapsApiKey();
-              setKey("");
-              setReady(false);
-              setEngine("leaflet");
-              setSettings(false);
-            }}
-          >
-            Clear saved key
-          </Button>
-          <p className="workspace-note">
-            The optional key is saved in this browser’s local storage. Restrict
-            it to your app’s origins in Google Cloud.
-          </p>
+              <label className="workspace-field">
+                Google Maps API key
+                <input
+                  type="password"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  autoComplete="off"
+                />
+              </label>
+              <Button
+                disabled={!input.trim()}
+                onClick={() => {
+                  setGoogleMapsApiKey(input);
+                  setKey(input);
+                  setError("");
+                  setInput("");
+                  setSettings(false);
+                  window.location.reload();
+                }}
+              >
+                Save key and reload map
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  clearGoogleMapsApiKey();
+                  setKey("");
+                  setReady(false);
+                  setEngine("leaflet");
+                  setSettings(false);
+                }}
+              >
+                Clear saved key
+              </Button>
+              <p className="workspace-note">
+                The optional key is saved in this browser’s local storage.
+                Restrict it to your app’s origins in Google Cloud.
+              </p>
+            </DisclosureCard>
+          </div>
         </Modal>
       )}
     </>

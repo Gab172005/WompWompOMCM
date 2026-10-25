@@ -161,6 +161,27 @@ try {
         .click();
     return panel;
   }
+  async function playbackAlignment() {
+    const centers = await page
+      .getByRole("region", { name: "Simulation playback" })
+      .evaluate((element) =>
+        [
+          ".playback-play",
+          ".playback-rewind",
+          ".workspace-timeline input",
+          "output",
+          ".playback-next",
+          ".playback-speed select",
+        ].map((selector) => {
+          const box = element.querySelector(selector).getBoundingClientRect();
+          return box.top + box.height / 2;
+        }),
+      );
+    expect(
+      Math.max(...centers) - Math.min(...centers),
+      "Playback controls must share the slider's center line",
+    ).toBeLessThanOrEqual(1.5);
+  }
   await page.goto("http://127.0.0.1:5186", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".barangay-boundary")).toHaveCount(681, {
     timeout: 90000,
@@ -619,6 +640,26 @@ try {
     .getByRole("button", { name: "Reset legend to default position" })
     .click();
   await mapLegend.getByRole("button", { name: "Minimize map legend" }).click();
+  const compactCenters = await mapLegend.evaluate((element) =>
+    [".workspace-legend-minimized-info", ".workspace-legend-actions"].map(
+      (selector) => {
+        const box = element.querySelector(selector).getBoundingClientRect();
+        return box.y + box.height / 2;
+      },
+    ),
+  );
+  expect(Math.abs(compactCenters[0] - compactCenters[1])).toBeLessThanOrEqual(
+    1.5,
+  );
+  await playbackAlignment();
+  const compactLegend = await mapLegend.boundingBox();
+  const desktopClock = await page
+    .getByRole("region", { name: "Simulation playback" })
+    .boundingBox();
+  expect(
+    desktopClock.y - compactLegend.y - compactLegend.height,
+  ).toBeGreaterThanOrEqual(8);
+  await shot("compact-legend-playback-desktop");
   await mapLegend.getByRole("button", { name: "Expand map legend" }).click();
   await mapLegend.getByRole("button", { name: "Hide map symbols" }).click();
   await panel.locator('summary[aria-label="How to compare"]').click();
@@ -642,6 +683,7 @@ try {
   ]) {
     await page.setViewportSize(size);
     await noOverflow();
+    await playbackAlignment();
     const sheet = await withinViewport(panel);
     const playback = await withinViewport(
       page.getByRole("region", { name: "Simulation playback" }),
@@ -895,7 +937,42 @@ try {
     exact: true,
   });
   await withinViewport(settings);
+  await settings.getByText("OpenStreetMap", { exact: true }).click();
+  await expect(
+    settings.getByRole("radio", { name: "OpenStreetMap", exact: true }),
+  ).toBeChecked();
+  await settings
+    .getByRole("radio", { name: "OpenStreetMap", exact: true })
+    .focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(
+    settings.getByRole("radio", { name: "Google Maps", exact: true }),
+  ).toBeChecked();
+  await expect(
+    settings.getByText("OpenStreetMap is active", { exact: true }),
+  ).toBeVisible();
+  await expect(settings.getByLabel("Google Maps API key")).toBeHidden();
+  await settings.locator('summary[aria-label="Google Maps key"]').click();
+  await expect(settings.getByLabel("Google Maps API key")).toBeVisible();
+  await expect(
+    settings.getByRole("button", { name: "Save key and reload map" }),
+  ).toBeDisabled();
   await shot("map-settings-desktop");
+  for (const size of [
+    { width: 390, height: 844 },
+    { width: 320, height: 740 },
+    { width: 844, height: 390 },
+  ]) {
+    await page.setViewportSize(size);
+    await withinViewport(settings);
+    expect(
+      await settings.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth + 1,
+      ),
+    ).toBe(true);
+    await shot(`map-settings-${size.width}`);
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await settings.getByRole("button", { name: "Close dialog" }).click();
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page
@@ -922,6 +999,52 @@ try {
   expect(await search.evaluate((element) => element.scrollLeft)).toBe(0);
   await shot("assistant-public-desktop");
   await assistant.getByRole("button", { name: "Close assistant" }).click();
+  const touchPage = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  touchPage.on("pageerror", (error) => errors.push(error.message));
+  await touchPage.route("https://tile.openstreetmap.org/**", (route) =>
+    route.abort(),
+  );
+  await touchPage.goto("http://127.0.0.1:5186");
+  await expect(touchPage.locator(".barangay-boundary")).toHaveCount(681);
+  expect(
+    await touchPage.evaluate(() => matchMedia("(pointer: coarse)").matches),
+  ).toBe(true);
+  await touchPage.getByRole("button", { name: "Ask OMCM", exact: true }).tap();
+  const touchAssistant = touchPage.getByRole("region", {
+    name: "OMCM assistant",
+    exact: true,
+  });
+  await expect(touchAssistant).toBeVisible();
+  expect(
+    await touchAssistant
+      .locator(".assistant-chat-log")
+      .evaluate((element) => element.scrollTop),
+  ).toBe(0);
+  expect(
+    await touchPage.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await touchPage.screenshot({
+    path: join(artifacts, "ui-assistant-touch-phone.png"),
+    animations: "disabled",
+  });
+  await touchAssistant.getByRole("button", { name: "Close assistant" }).tap();
+  await touchPage
+    .getByRole("button", { name: "Map layers", exact: true })
+    .tap();
+  await expect(
+    touchPage.getByRole("region", { name: "Map filters" }),
+  ).toBeVisible();
+  await touchPage
+    .getByRole("checkbox", { name: "Hospitals", exact: true })
+    .uncheck();
+  await expect(touchPage.locator(".hospital-marker-custom")).toHaveCount(0);
+  await touchPage.close();
   expect(errors, logs).toEqual([]);
   console.log(
     "Workspace UI browser checks passed: public empty/published care, search, sign-in/password visibility, aligned planner fields, keyboard disclosures, access filtering/reset, responsive scenario comparisons, view-aware assistant tasks/composer, favicons, keyboard/viewport-safe pickers, desktop/tablet/mobile/landscape sheets with tap/swipe resizing, playback, assistant focus, filters, settings, reduced motion and one persistent map. Screenshots:",

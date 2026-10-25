@@ -108,6 +108,12 @@ export function ChatbotPanel({
   }, []);
   useLayoutEffect(() => {
     if (!history.current) return;
+    if (!s.messages.length) {
+      history.current.scrollTop = 0;
+      followLatest.current = true;
+      setHasNewReply(false);
+      return;
+    }
     if (followLatest.current)
       history.current.scrollTop = history.current.scrollHeight;
     else setHasNewReply(true);
