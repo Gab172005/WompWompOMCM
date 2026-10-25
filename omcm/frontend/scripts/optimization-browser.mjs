@@ -339,6 +339,7 @@ try {
   await expect(
     fresh.getByRole("meter", { name: "Healthcare need out of 100" }),
   ).toHaveCount(0);
+  await fresh.locator(".care-visit-information summary").first().click();
   await expect(fresh.getByText(/Planned service area:/).first()).toBeVisible();
   await expect(fresh.locator("body")).not.toContainText(
     "Forecast target date:",

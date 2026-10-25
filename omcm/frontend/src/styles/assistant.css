@@ -156,3 +156,33 @@
 @media (prefers-reduced-motion: reduce) {
   .assistant-widget, .assistant-widget *, .assistant-launcher { animation: none !important; transition: none !important; }
 }
+
+/* Replies separate the answer from map receipts and recovery actions. */
+.assistant-widget:focus { outline: none; }
+.assistant-brand-mark { display: block; width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0; }
+.assistant-widget .workspace-chat-message { border-radius: 15px; padding: 14px; }
+.assistant-widget .workspace-chat-message.assistant { background: #fff; border-color: #e0e8e7; }
+.assistant-widget .workspace-chat-message.user { background: #edf5f3; border: 0; border-radius: 15px 15px 4px 15px; }
+.assistant-message-author { display: block; font-size: 10px; font-weight: 500; color: #60717a; margin-bottom: 7px; }
+.assistant-widget .workspace-chat-message.has-error { border-color: #ead6cb; background: #fffaf6; }
+.assistant-widget .workspace-chat-message .assistant-message-error { color: #814737; }
+.assistant-action-disclosure { margin-top: 12px; border-top: 1px solid #e4ece9; }
+.assistant-action-disclosure summary { display: flex; align-items: center; gap: 6px; min-height: 44px; list-style: none; color: #33766a; font-size: 11px; cursor: pointer; }
+.assistant-action-disclosure summary::-webkit-details-marker { display: none; }
+.assistant-action-disclosure summary > span { flex: 1; }
+.assistant-action-disclosure summary > svg:last-child { transition: transform 150ms ease; }
+.assistant-action-disclosure[open] summary > svg:last-child { transform: rotate(180deg); }
+.assistant-action-list { margin: 0 0 8px; color: #60717a; font-size: 11px; }
+.assistant-message-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin-top: 10px; }
+.assistant-message-tools button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 8px; border: 0; border-radius: 8px; background: #f2f6f5; color: #42665e; font: inherit; font-size: 10px; }
+.assistant-message-tools button:hover { background: #e6f0ec; }
+.assistant-message-tools > span { color: #60717a; font-size: 10px; }
+.assistant-progress { display: flex; align-items: center; gap: 8px; color: #496d64; }
+.assistant-progress svg { animation: assistant-working 1s linear infinite; }
+.assistant-jump-row { display: flex; justify-content: center; flex-shrink: 0; padding: 6px 12px; border-top: 1px solid #e4ece9; background: #fff; }
+.assistant-jump-row > button { display: flex; align-items: center; gap: 7px; min-height: 36px; padding: 8px 12px; border: 1px solid #d7e6e0; border-radius: 24px; background: #f2f8f5; color: #216b5b; font: inherit; font-size: 11px; }
+@keyframes assistant-working { to { transform: rotate(360deg); } }
+@media (max-width: 760px) {
+  .assistant-message-tools button { min-height: 44px; }
+  .assistant-brand-mark { width: 34px; height: 34px; border-radius: 10px; }
+}

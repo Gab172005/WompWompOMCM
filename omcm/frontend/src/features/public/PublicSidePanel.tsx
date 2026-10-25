@@ -1,13 +1,17 @@
 import {
   AlertTriangle,
   ArrowLeft,
-  Clock,
+  Check,
+  ChevronRight,
+  CloudRain,
+  Users,
   HeartPulse,
   MapPin,
   ShieldAlert,
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { isBrowserDemo } from "../../services/api";
 import { SheetHandle } from "../../components/ui/SheetHandle";
 import { useAppStore } from "../../store/useAppStore";
 import { BARANGAYS_BY_PSGC, distanceKm } from "../../services/providedData";
@@ -17,6 +21,8 @@ import {
   PanelExpandButton,
   PlaceHeader,
 } from "../municipalities/PlaceDetails";
+import { DisclosureCard } from "../../components/ui/DisclosureCard";
+import { PublicClinicCard } from "./PublicClinicCard";
 import { PublicVisitSummary } from "./PublicVisitSummary";
 import {
   assignedCommunities,
@@ -31,7 +37,6 @@ export function PublicSidePanel() {
     selectedBarangayPsgc,
     selectedScheduleDate,
     publishedSchedules,
-    selectedClinicId,
     selectMunicipality,
   } = useAppStore();
 
@@ -145,196 +150,154 @@ export function PublicSidePanel() {
 
         {(selectedBarangay || selectedMunicipality) && (
           <section
-            className="workspace-subcard public-community-card"
+            className="public-community-card"
             aria-label="Selected community care"
           >
-            <div className="eyebrow">
-              {selectedBarangay
-                ? "BARANGAY CARE GUIDE"
-                : "MUNICIPALITY CARE GUIDE"}
-            </div>
-            <h3>Community & nearby care</h3>
-            <p className="workspace-note">
-              Population:{" "}
-              {(
-                selectedBarangay?.population ??
-                selectedMunicipality?.population ??
-                0
-              ).toLocaleString()}{" "}
-              residents
-              {selectedBarangay
-                ? ` · ${selectedBarangay.households.toLocaleString()} households`
-                : ""}
-            </p>
-            <button
-              type="button"
-              className="workspace-text-button"
-              onClick={() => selectMunicipality(null)}
-            >
-              <ArrowLeft size={14} aria-hidden="true" /> Clear community
-              selection
-            </button>
-
-            <h4>Nearest approved mobile clinic</h4>
-            {nearestClinic && schedule ? (
-              <div className="public-nearest-clinic">
-                <strong>
-                  {nearestClinic.clinicId} · {nearestClinic.siteName}
-                </strong>
-                <span>
-                  {nearestClinic.municipality} ·{" "}
-                  {nearestClinic.distance.toFixed(1)} km straight-line distance
-                </span>
-                {targetMunicipalityName === nearestClinic.municipality && (
-                  <span className="badge">Located in your municipality</span>
-                )}
-                <small>
-                  Hours: {schedule.startTime}–{schedule.endTime} PH Time ·{" "}
-                  {nearestClinic.capacity} daily appointments
-                </small>
-                <div className="public-service-tags">
-                  {schedule.services.map((service) => (
-                    <span className="public-service-tag" key={service}>
-                      {service}
-                    </span>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  className="workspace-text-button"
-                  onClick={() =>
-                    useAppStore.setState({
-                      selectedClinicId: nearestClinic.clinicId,
-                    })
-                  }
-                >
-                  Inspect {nearestClinic.clinicId} on map
-                </button>
+            <div className="care-community-heading">
+              <div>
+                <span className="care-kicker">YOUR COMMUNITY</span>
+                <h3>
+                  Care near{" "}
+                  {selectedBarangay?.name ?? selectedMunicipality?.name}
+                </h3>
               </div>
+              <button
+                type="button"
+                className="icon-button"
+                title="Clear community selection"
+                aria-label="Clear community selection"
+                onClick={() => selectMunicipality(null)}
+              >
+                <ArrowLeft size={17} aria-hidden="true" />
+              </button>
+            </div>
+            <div className="care-community-facts">
+              <span>
+                <Users size={14} aria-hidden="true" />
+                {(
+                  selectedBarangay?.population ??
+                  selectedMunicipality?.population ??
+                  0
+                ).toLocaleString()}{" "}
+                residents
+              </span>
+              {selectedBarangay && (
+                <span>
+                  {selectedBarangay.households.toLocaleString()} households
+                </span>
+              )}
+            </div>
+            <h4 className="care-subheading">Nearest scheduled mobile clinic</h4>
+
+            {nearestClinic && schedule ? (
+              <button
+                type="button"
+                className="care-nearest-location"
+                aria-haspopup="dialog"
+                onClick={() =>
+                  useAppStore.setState({
+                    selectedClinicId: nearestClinic.clinicId,
+                  })
+                }
+              >
+                <span className="care-location-icon">
+                  <MapPin size={18} aria-hidden="true" />
+                </span>
+                <span>
+                  <strong>{nearestClinic.siteName}</strong>
+                  <small>
+                    {nearestClinic.municipality} ·{" "}
+                    {nearestClinic.distance.toFixed(1)} km straight line
+                  </small>
+                  {targetMunicipalityName === nearestClinic.municipality && (
+                    <small className="care-local-context">
+                      In your municipality
+                    </small>
+                  )}
+                </span>
+                <ChevronRight size={17} aria-hidden="true" />
+              </button>
             ) : (
               <p className="workspace-note">
-                No approved mobile clinic is scheduled for{" "}
-                {selectedScheduleDate}.
+                {!publicData && !isBrowserDemo()
+                  ? "Published locations have not been confirmed yet. Check the visit updates above."
+                  : `No approved mobile clinic is scheduled for ${selectedScheduleDate}.`}
               </p>
-            )}
-
-            {targetPoint && targetMunicipalityName && (
-              <NearbyCare
-                point={targetPoint}
-                municipality={targetMunicipalityName}
-                origin={selectedBarangay ? "barangay" : "municipality"}
-              />
             )}
           </section>
         )}
 
-        <section aria-label="Approved mobile clinics">
-          <h3>
-            <MapPin size={16} aria-hidden="true" /> Approved Mobile Clinics (
-            {clinics.length})
-          </h3>
-          {schedule && clinics.length > 0 ? (
-            clinics.map((clinic) => {
+        {schedule && clinics.length > 0 && (
+          <section
+            className="care-clinic-list"
+            aria-label="Approved mobile clinics"
+          >
+            <div className="care-list-heading">
+              <div>
+                <span className="care-kicker">CLINIC LOCATIONS</span>
+                <h3>Approved mobile clinics</h3>
+              </div>
+              <span className="care-count">{clinics.length}</span>
+            </div>
+            {clinics.map((clinic) => {
               const communities = assignedCommunities(
                 publicData,
                 selectedScheduleDate,
                 clinic.siteId,
               );
               return (
-                <article
+                <PublicClinicCard
                   key={clinic.clinicId}
-                  className={`workspace-subcard public-clinic-card ${selectedClinicId === clinic.clinicId ? "is-active" : ""}`}
-                >
-                  <div className="public-clinic-header">
-                    <strong>
-                      {clinic.clinicId} · {clinic.siteName}
-                    </strong>
-                    <span
-                      className={`badge ${schedule.status === "Emergency Override" ? "badge-danger" : ""}`}
-                    >
-                      {schedule.status}
-                    </span>
-                  </div>
-                  <p className="public-clinic-location">
-                    {clinic.municipality}, Laguna
-                  </p>
-                  <p className="public-clinic-hours">
-                    <Clock size={14} aria-hidden="true" />
-                    <span>
-                      {schedule.startTime}–{schedule.endTime} · Philippine time
-                    </span>
-                  </p>
-                  <div className="public-service-tags">
-                    {schedule.services.map((service) => (
-                      <span className="public-service-tag" key={service}>
-                        {service}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="workspace-note">
-                    {communities.length
-                      ? `Planned service area: ${communities.join(", ")}.`
-                      : "Service-area details will be confirmed by the LGU."}{" "}
-                    Daily capacity: {clinic.capacity} appointments.
-                  </p>
-                  <button
-                    type="button"
-                    className="workspace-text-button"
-                    onClick={() =>
-                      useAppStore.setState({
-                        selectedClinicId: clinic.clinicId,
-                      })
-                    }
-                  >
-                    View clinic details
-                  </button>
-                </article>
+                  clinic={clinic}
+                  schedule={schedule}
+                  communities={communities}
+                />
               );
-            })
-          ) : (
-            <div className="workspace-subcard public-empty-schedule">
-              <strong>
-                No mobile clinics announced for {selectedScheduleDate}
-              </strong>
-              <p className="workspace-note">
-                Visits will appear once the LGU confirms a schedule. Search your
-                community for nearby verified hospitals while waiting for an
-                announcement.
-              </p>
-            </div>
-          )}
-        </section>
+            })}
+          </section>
+        )}
 
-        <section
-          className="workspace-subcard public-advisories-card"
-          aria-label="Public health advisories"
-        >
-          <h3>
-            <ShieldAlert size={16} aria-hidden="true" /> Public Health
-            Advisories
-          </h3>
-          <span className="badge">DEMO ADVISORIES · NOT LIVE ALERTS</span>
-          <ul className="public-advisory-list">
-            <li>
-              <strong>Before visiting:</strong> Check the published date,
-              opening hours, and available services for your community’s
-              assigned mobile clinic.
-            </li>
-            <li>
-              <strong>Weather & flood disruptions:</strong> Monitor official LGU
-              and PDRRMO channels during heavy rainfall for safe road access and
-              revised staging sites.
-            </li>
-            <li>
-              <strong>Preventive care:</strong> Ask the mobile health team about
-              blood pressure checks, maternal and child health, and dengue or
-              leptospirosis prevention.
-            </li>
-          </ul>
-          <p className="workspace-note">
-            Demonstration only. These schedules and advisories are synthetic
-            decision-support examples, not live DOH or LGU emergency feeds.
-          </p>
+        {targetPoint && targetMunicipalityName && (
+          <NearbyCare
+            point={targetPoint}
+            municipality={targetMunicipalityName}
+            origin={selectedBarangay ? "barangay" : "municipality"}
+          />
+        )}
+
+        <section aria-label="Public health advisories">
+          <DisclosureCard
+            title="Before your visit"
+            description="Hours, services and weather updates"
+            icon={<ShieldAlert size={18} />}
+          >
+            <ul className="care-checklist">
+              <li>
+                <Check size={17} aria-hidden="true" />
+                <div>
+                  <strong>Check the visit details</strong>
+                  <p>
+                    Confirm the date, opening hours and listed services before
+                    leaving.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <CloudRain size={17} aria-hidden="true" />
+                <div>
+                  <strong>Watch for local updates</strong>
+                  <p>
+                    Follow official LGU and PDRRMO channels for weather
+                    disruptions and location changes.
+                  </p>
+                </div>
+              </li>
+            </ul>
+            <p className="map-evidence-note">
+              Demonstration information, not a live health advisory or emergency
+              feed. Clinic schedules here are prototype examples.
+            </p>
+          </DisclosureCard>
         </section>
       </div>
     </aside>

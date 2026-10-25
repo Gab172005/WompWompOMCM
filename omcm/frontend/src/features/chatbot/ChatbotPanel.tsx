@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAssistantStore } from "../../store/useAssistantStore";
 import { ChatMessage } from "./ChatMessage";
+import { BARANGAYS_BY_PSGC } from "../../services/providedData";
+import { LAGUNA_BASE_DATA } from "../../services/lagunaData";
 import { useAppStore } from "../../store/useAppStore";
 import {
   ArrowUp,
@@ -11,11 +13,29 @@ import {
   ChartNoAxesCombined,
   CircleHelp,
   Square,
+  ArrowDown,
+  LoaderCircle,
 } from "lucide-react";
 
 export function ChatbotPanel() {
   const [input, setInput] = useState("");
   const s = useAssistantStore();
+  const selectedPsgc = useAppStore((state) => state.selectedPsgc);
+  const selectedBarangayPsgc = useAppStore(
+    (state) => state.selectedBarangayPsgc,
+  );
+  const selectedBarangay = selectedBarangayPsgc
+    ? BARANGAYS_BY_PSGC.get(selectedBarangayPsgc)
+    : undefined;
+  const selectedTown = LAGUNA_BASE_DATA.find(
+    (town) => town.psgc === selectedPsgc,
+  );
+  const placeName = selectedBarangay
+    ? `${selectedBarangay.name}, ${selectedBarangay.municipality}`
+    : selectedTown?.name;
+  const placeQuery = placeName?.replace(/,/g, "") ?? "Los Baños";
+  const followLatest = useRef(true);
+  const [hasNewReply, setHasNewReply] = useState(false);
   const isAdmin = useAppStore((state) => state.viewMode === "admin");
   const suggestions = isAdmin
     ? [
@@ -42,14 +62,18 @@ export function ChatbotPanel() {
         {
           icon: MapPin,
           title: "Find nearby hospitals",
-          detail: "Start with Los Baños, or type your town",
-          message: "Show Los Baños and its nearest hospitals",
+          detail: placeName
+            ? `Around ${placeName}`
+            : "Start with Los Baños, or type your town",
+          message: `Show ${placeQuery} and the nearest hospitals`,
         },
         {
           icon: MapPin,
           title: "Explore your community",
-          detail: "Find Bay on the Laguna map",
-          message: "Show Bay",
+          detail: placeName
+            ? `Learn about ${placeName}`
+            : "Find Bay on the Laguna map",
+          message: `Show ${placeName ? placeQuery : "Bay"}`,
         },
         {
           icon: CircleHelp,
@@ -65,14 +89,31 @@ export function ChatbotPanel() {
   const history = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
-    inputRef.current?.focus();
+    if (window.matchMedia?.("(max-width: 760px), (pointer: coarse)").matches)
+      inputRef.current
+        ?.closest<HTMLElement>(".assistant-widget")
+        ?.focus({ preventScroll: true });
+    else inputRef.current?.focus({ preventScroll: true });
   }, []);
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (!history.current) return;
+    if (followLatest.current)
+      history.current.scrollTop = history.current.scrollHeight;
+    else setHasNewReply(true);
+  }, [s.messages, s.status]);
+  const latestQuestion = [...s.messages]
+    .reverse()
+    .find((message) => message.sender === "user")?.text;
+  function jumpToLatest() {
+    followLatest.current = true;
+    setHasNewReply(false);
     if (history.current)
       history.current.scrollTop = history.current.scrollHeight;
-  }, [s.messages, s.status]);
+  }
   function send(value: string) {
     if (!value.trim() || s.busy) return;
+    followLatest.current = true;
+    setHasNewReply(false);
     setInput("");
     if (inputRef.current) inputRef.current.style.height = "auto";
     void s.send(value, {
@@ -84,6 +125,13 @@ export function ChatbotPanel() {
     <>
       <div
         ref={history}
+        onScroll={(event) => {
+          const element = event.currentTarget;
+          followLatest.current =
+            element.scrollHeight - element.scrollTop - element.clientHeight <
+            64;
+          if (followLatest.current) setHasNewReply(false);
+        }}
         className="workspace-chat-log assistant-chat-log"
         role="log"
         aria-label="Planning conversation"
@@ -129,15 +177,38 @@ export function ChatbotPanel() {
             </p>
           </div>
         )}
-        {s.messages.map((m) => (
-          <ChatMessage key={m.id} message={m} />
-        ))}
+        {s.messages
+          .filter((message) => message.text || message.actions?.length)
+          .map((message) => (
+            <ChatMessage
+              key={message.id}
+              message={message}
+              onRetry={
+                !s.busy &&
+                message.error &&
+                !message.actions?.length &&
+                message.id === s.messages.at(-1)?.id &&
+                latestQuestion
+                  ? () => send(latestQuestion)
+                  : undefined
+              }
+            />
+          ))}
         {s.busy && (
           <p role="status" className="assistant-progress">
-            {s.status}
+            <LoaderCircle size={15} aria-hidden="true" />
+            {s.status || "Finding an answer…"}
           </p>
         )}
       </div>
+      {hasNewReply && (
+        <div className="assistant-jump-row">
+          <button type="button" onClick={jumpToLatest}>
+            <ArrowDown size={14} aria-hidden="true" />
+            Jump to latest message
+          </button>
+        </div>
+      )}
       <form
         className="assistant-form"
         onSubmit={(e) => {
@@ -157,7 +228,11 @@ export function ChatbotPanel() {
               e.target.style.height = "auto";
               e.target.style.height = `${Math.min(e.target.scrollHeight, 144)}px`;
             }}
-            placeholder="Ask about a place or clinic plan…"
+            placeholder={
+              isAdmin
+                ? "Ask about a place or clinic plan…"
+                : "Ask about your community or clinic visits…"
+            }
             onKeyDown={(e) => {
               if (
                 e.key === "Enter" &&
@@ -192,7 +267,11 @@ export function ChatbotPanel() {
           )}
         </div>
         <div className="assistant-composer-hint">
-          <span>Sample planning data</span>
+          <span>
+            {input.length >= 3600
+              ? `${4000 - input.length} characters left`
+              : "Sample planning data"}
+          </span>
           <span>Enter to send · Shift + Enter for a new line</span>
         </div>
       </form>

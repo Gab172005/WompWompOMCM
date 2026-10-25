@@ -5,7 +5,7 @@ import {
   useRef,
   useCallback,
 } from "react";
-import { Bot, GripVertical, MessageCircle, RotateCcw, X } from "lucide-react";
+import { GripVertical, MessageCircle, RotateCcw, X } from "lucide-react";
 import { useAssistantStore } from "../../store/useAssistantStore";
 import { ChatbotPanel } from "./ChatbotPanel";
 import "../../styles/assistant.css";
@@ -221,6 +221,7 @@ export function AssistantWidget() {
     <section
       className="assistant-widget"
       aria-label="OMCM assistant"
+      tabIndex={-1}
       style={
         visibleViewport
           ? {
@@ -235,7 +236,13 @@ export function AssistantWidget() {
     >
       <header className="assistant-widget-heading">
         <div>
-          <Bot size={22} aria-hidden="true" />
+          <img
+            src="/omcm-icon.svg?v=2"
+            className="assistant-brand-mark"
+            width="38"
+            height="38"
+            alt=""
+          />
           <div>
             <h2>OMCM assistant</h2>
             <span>Places, care and planning</span>

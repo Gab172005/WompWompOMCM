@@ -7,6 +7,7 @@ import {
   renderHook,
   screen,
 } from "@testing-library/react";
+import { PublicClinicCard } from "../../frontend/src/features/public/PublicClinicCard";
 import { PublicVisitSummary } from "../../frontend/src/features/public/PublicVisitSummary";
 import {
   PUBLIC_REFRESH_MS,
@@ -112,6 +113,44 @@ describe("public approved visits", () => {
     ).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Today" }));
     expect(useAppStore.getState().selectedScheduleDate).toBe(today);
+  });
+
+  it("lets readers select every published day directly", () => {
+    useAppStore.setState({ publishedSchedules: publicSchedules(data) });
+    usePublicScheduleStore.setState({
+      data,
+      lastSynced: new Date().toISOString(),
+    });
+    render(<PublicVisitSummary />);
+    const days = screen
+      .getByRole("group", { name: "Choose published visit" })
+      .querySelectorAll("button");
+    expect(days).toHaveLength(3);
+    fireEvent.click(days[2]);
+    expect(useAppStore.getState().selectedScheduleDate).toBe(
+      addIsoDays(today, 6),
+    );
+    expect(days[2]).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("selects an approved clinic on the map without exposing planner explanations", () => {
+    const schedule = publicSchedules(data)[today];
+    const clinic = schedule.plan.clinics[0];
+    render(
+      <PublicClinicCard
+        clinic={clinic}
+        schedule={schedule}
+        communities={["Anos"]}
+      />,
+    );
+    const action = screen.getByRole("button", {
+      name: `View ${clinic.clinicId} visit details`,
+    });
+    fireEvent.click(action);
+    expect(useAppStore.getState().selectedClinicId).toBe(clinic.clinicId);
+    expect(action).toHaveAttribute("aria-haspopup", "dialog");
+    expect(screen.queryByText("Saved deployment")).toBeNull();
+    expect(screen.queryByText(/XGBoost|HNI|priority-weighted/)).toBeNull();
   });
 
   it("does not invent neighboring service communities", () => {

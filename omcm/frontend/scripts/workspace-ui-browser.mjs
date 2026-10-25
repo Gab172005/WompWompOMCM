@@ -229,7 +229,62 @@ try {
   await expect(
     publicPanel.getByText("1 clinic announced", { exact: true }),
   ).toBeVisible();
+  const clinicAction = publicPanel
+    .getByRole("button", { name: /^View MC-.* visit details$/ })
+    .first();
+  await clinicAction.click();
+  const visitDialog = page.getByRole("dialog", { name: /^MC-/ });
+  await expect(
+    visitDialog.getByRole("region", { name: "Approved clinic visit" }),
+  ).toBeVisible();
+  await expect(
+    visitDialog.getByText(/not a booking or a live count/),
+  ).toBeVisible();
+  await expect(
+    visitDialog.getByText(/XGBoost|Healthcare Need|Forecast target/),
+  ).toHaveCount(0);
+  await shot("public-visit-dialog-desktop");
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    await withinViewport(visitDialog);
+    await noOverflow();
+    await shot(`public-visit-dialog-${width}`);
+  }
+  await visitDialog.getByRole("button", { name: "Close dialog" }).click();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await publicPanel.locator(".care-visit-information summary").first().click();
+  await expect(
+    publicPanel.getByText(/Capacity is a planning estimate/).first(),
+  ).toBeVisible();
   await shot("public-visit-desktop");
+  for (const size of [
+    { width: 390, height: 844 },
+    { width: 320, height: 740 },
+    { width: 844, height: 390 },
+  ]) {
+    await page.setViewportSize(size);
+    const expander = publicPanel.getByRole("button", {
+      name: "Expand place details",
+    });
+    if (await expander.isVisible()) await expander.click();
+    await publicPanel
+      .locator(".public-clinic-card")
+      .first()
+      .scrollIntoViewIfNeeded();
+    expect(
+      await publicPanel
+        .locator(".public-clinic-card")
+        .first()
+        .evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
+    ).toBe(true);
+    await noOverflow();
+    await shot(`public-clinic-${size.width}`);
+    const reduce = publicPanel.getByRole("button", {
+      name: "Collapse place details",
+    });
+    if (await reduce.isVisible()) await reduce.click();
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
 
   await page
     .getByRole("button", { name: "Admin View", exact: true })
