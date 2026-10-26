@@ -182,6 +182,42 @@ try {
       "Playback controls must share the slider's center line",
     ).toBeLessThanOrEqual(1.5);
   }
+  async function visitAlignment(panel) {
+    const layout = await panel
+      .locator(".public-visit-summary")
+      .evaluate((element) => {
+        const center = (node) => {
+          const box = node.getBoundingClientRect();
+          return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+        };
+        const title = element.querySelector(".public-visit-heading h3");
+        const refresh = element.querySelector(".public-visit-heading button");
+        const icon = element.querySelector(
+          ".care-empty-icon, .care-confirmation-icon",
+        );
+        const empty = element.querySelector(".care-empty-visit");
+        return {
+          heading: refresh ? Math.abs(center(title).y - center(refresh).y) : 0,
+          iconX: icon
+            ? Math.abs(center(icon).x - center(icon.querySelector("svg")).x)
+            : 0,
+          iconY: icon
+            ? Math.abs(center(icon).y - center(icon.querySelector("svg")).y)
+            : 0,
+          emptyTitle: empty
+            ? Math.abs(center(icon).y - center(empty.querySelector("strong")).y)
+            : 0,
+          textEdge: empty
+            ? Math.abs(
+                empty.querySelector("strong").getBoundingClientRect().left -
+                  empty.querySelector("p").getBoundingClientRect().left,
+              )
+            : 0,
+        };
+      });
+    for (const [name, offset] of Object.entries(layout))
+      expect(offset, `Public visit ${name} alignment`).toBeLessThanOrEqual(1.5);
+  }
   await page.goto("http://127.0.0.1:5186", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".barangay-boundary")).toHaveCount(681, {
     timeout: 90000,
@@ -241,7 +277,21 @@ try {
   await expect(
     publicPanel.getByRole("region", { name: "Published clinic visits" }),
   ).toBeVisible();
+  await expect(
+    publicPanel.getByText(/No clinic visits announced/),
+  ).toBeVisible();
+  await visitAlignment(publicPanel);
   await shot("public-empty-desktop");
+  await page.getByRole("button", { name: "Zoom in", exact: true }).hover();
+  await expect(
+    page.getByRole("tooltip", { name: "Zoom in", exact: true }),
+  ).toBeVisible();
+  await withinViewport(page.getByRole("tooltip"));
+  await shot("map-navigation-hint-desktop");
+  await page
+    .getByRole("button", { name: "Zoom in", exact: true })
+    .press("Escape");
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
   const search = page.getByRole("combobox", {
     name: "Find municipality or barangay",
   });
@@ -268,6 +318,7 @@ try {
       element.scrollTop = 0;
     });
     await withinViewport(publicPanel);
+    await visitAlignment(publicPanel);
     expect(
       await publicPanel.evaluate(
         (element) => element.scrollWidth <= element.clientWidth + 1,
@@ -357,6 +408,7 @@ try {
   await expect(
     publicPanel.getByText("1 clinic announced", { exact: true }),
   ).toBeVisible();
+  await visitAlignment(publicPanel);
   await expect(
     publicPanel
       .getByRole("region", { name: "Nearest published clinic visit" })
@@ -419,10 +471,19 @@ try {
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
 
-  await page
+  const adminSwitch = page
     .getByRole("button", { name: "Admin View", exact: true })
-    .first()
-    .click();
+    .first();
+  await adminSwitch.hover();
+  await expect(
+    page.getByRole("tooltip", { name: "Sign in to use planning tools" }),
+  ).toBeVisible();
+  await withinViewport(page.getByRole("tooltip"));
+  await shot("view-switch-hint-desktop");
+  await adminSwitch.press("Escape");
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  await adminSwitch.focus();
+  await adminSwitch.press("Enter");
   const login = page.getByRole("dialog", { name: "Administrator Sign-In" });
   await shot("login-desktop");
   await login.getByLabel("Administrator username").fill(username);
@@ -441,6 +502,14 @@ try {
     .getByRole("button", { name: "Sign in to Admin View", exact: true })
     .click();
   await expect(page.locator(".workspace")).toHaveClass(/is-admin-view/);
+  await page.getByRole("button", { name: "Sign out", exact: true }).hover();
+  await expect(
+    page.getByRole("tooltip", { name: /Sign out of/ }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Sign out", exact: true })
+    .press("Escape");
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
   await shot("admin-details-desktop");
   await search.fill("Dambo Pangil");
   await page.getByRole("option", { name: /^Dambo, Pangil Barangay/ }).click();
@@ -829,6 +898,41 @@ try {
     .getByText("No clinics deployed in this scenario yet.", { exact: false })
     .scrollIntoViewIfNeeded();
   await shot("deployment-history-mobile");
+  await panel.locator(".workspace-panel-body").evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  await panel.getByRole("button", { name: /^No intervention/ }).click();
+  for (let day = 2; day <= 30; day++)
+    await page.getByRole("button", { name: "Next day", exact: true }).click();
+  const earlierUpdates = panel.locator('summary[aria-label="Earlier updates"]');
+  await earlierUpdates.scrollIntoViewIfNeeded();
+  await earlierUpdates.press("Enter");
+  await expect(
+    panel.locator(".simulation-earlier-activity .simulation-activity-item"),
+  ).toHaveCount(25);
+  for (const size of [
+    { width: 390, height: 844 },
+    { width: 320, height: 740 },
+    { width: 1440, height: 1000 },
+  ]) {
+    await page.setViewportSize(size);
+    await earlierUpdates.scrollIntoViewIfNeeded();
+    expect(
+      await panel
+        .locator(".simulation-earlier-activity")
+        .evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
+    ).toBe(true);
+    await shot(`earlier-updates-${size.width}`);
+  }
+  await earlierUpdates.press("Enter");
+  await page.getByRole("button", { name: "Return to Day 1" }).click();
+  await panel.locator(".workspace-panel-body").evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  await panel
+    .getByRole("button", { name: /^Manual clinic allocation/ })
+    .click();
+  await page.setViewportSize({ width: 390, height: 844 });
   await panel.getByRole("button", { name: "Reduce panel height" }).click();
   await page
     .getByRole("button", { name: "Planning help", exact: true })
@@ -1013,6 +1117,15 @@ try {
   expect(
     await touchPage.evaluate(() => matchMedia("(pointer: coarse)").matches),
   ).toBe(true);
+  await touchPage
+    .getByRole("button", { name: "Admin View", exact: true })
+    .first()
+    .tap();
+  await expect(
+    touchPage.getByRole("dialog", { name: "Administrator Sign-In" }),
+  ).toBeVisible();
+  await expect(touchPage.getByRole("tooltip")).toHaveCount(0);
+  await touchPage.getByRole("button", { name: "Stay in Public View" }).tap();
   await touchPage.getByRole("button", { name: "Ask OMCM", exact: true }).tap();
   const touchAssistant = touchPage.getByRole("region", {
     name: "OMCM assistant",

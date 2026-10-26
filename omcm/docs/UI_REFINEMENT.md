@@ -337,3 +337,76 @@ No score weight, XGBoost artifact, allocation objective, simulation deduction,
 dataset, API contract, authentication setting or publication permission changes.
 The public view still receives only published care information, and administrator
 tools continue to open in place on the same map.
+
+## Public-panel alignment and consistent actions
+
+This pass follows the merged map-experience refinement (PR #11). It stays on
+`feat/omcm-maps-experience-polish`; its remaining changes can be pushed together
+and reviewed in a new pull request targeting `main`.
+
+### Findings and corrections
+
+| Active interface | Review and correction |
+| --- | --- |
+| Published public visits | Move the “Published visits” caption above the title/action row, so refresh aligns with the actual heading. Use explicit grid rows for the empty-state symbol, title and explanation. Override the older span rule that left the calendar/check artwork off center. Keep checking, empty, published and delayed-update states distinct. |
+| Public/Admin controls | Use stable icon hit areas, distinguish sign-out feedback, and provide short hints for pointer and keyboard users. Escape dismisses a hint while retaining focus. Touch activates the existing action directly. Sign-in, view switching and sign-out handlers are unchanged. |
+| Map navigation | Reuse those hints for refocus and zoom. Keep zoom-group corners rounded while allowing hints outside the group instead of clipping them. Preserve the original map/store callbacks. |
+| Simulation activity/history | Replace the native “Show 25 earlier updates” triangle/text treatment with the shared compact disclosure: history icon, count, actual day range and trailing chevron. Preserve all daily rows, reverse chronological order and history calculations. |
+| Optimizer evidence | Reuse compact disclosures for served communities and allocation evidence. Keep assignment counts, modeled travel, solver notes, eligibility and publishing logic unchanged. |
+| Other active workflows | Recheck search and selection, layer choices, legend, planning fields, place pickers, approval, assistant, settings and public clinic dialogs through the existing connected browser suites at desktop, tablet, phone and landscape sizes. |
+
+The shared disclosure remains native HTML: Enter/Space toggle it, and all content
+stays in the existing panel’s scroll flow. No extra nested scroll area or page
+navigation is introduced. Hints supplement accessible control names and do not
+replace the controls themselves. Their entrance motion respects reduced-motion
+preferences.
+
+| File | Exact change |
+| --- | --- |
+| `frontend/src/features/public/PublicVisitSummary.tsx` | Separate the caption from the heading/action row and place the empty-state title and explanation in explicit grid cells. Preserve schedule/date/refresh state logic. |
+| `frontend/src/components/ui/MapActionButton.tsx` | Add a reusable native button with pointer/focus hints, Escape dismissal and hint cleanup on activation/blur/leave. Forward existing action callbacks and accessible names. |
+| `frontend/src/components/layout/MapControls.tsx` | Apply shared hints to details, role switching and sign-out; announce sign-in as a dialog action when required. Keep all existing authentication/navigation callbacks. |
+| `frontend/src/components/layout/MapNavigation.tsx` | Apply left-side hints to the unchanged refocus/zoom actions. |
+| `frontend/src/components/ui/DisclosureCard.tsx` | Add optional compact presentation and contextual class names to the existing native disclosure. |
+| `frontend/src/features/simulation/SimulationResults.tsx` | Present earlier activity with the compact disclosure, its real count and day range. No activity/HNI calculations change. |
+| `frontend/src/features/optimization/PlacementRecommendations.tsx` | Use compact evidence/community disclosures around existing backend results. |
+| `frontend/src/styles/map-workspace.css` | Correct public alignment and symbol specificity, style hints and role-action feedback, prevent zoom hint clipping, and align compact disclosure/activity elements across viewports. |
+| `frontend/scripts/workspace-ui-browser.mjs` | Measure public heading/symbol/text alignment, verify role/zoom hints and Escape, exercise touch sign-in and a full 30-day run with 25 earlier updates, and capture desktop/phone history layouts. |
+| `../README.md` | Explain the public/admin entry points, primary map controls, simulation timeline, phone sheets and current transparent project icon. |
+| `README.md` | Add the shared icon and current public care, assistant, provider, scenario/playback and history workflows. Preserve setup instructions, hosted credentials and methodology. |
+| `docs/UI_REFINEMENT.md`, `docs/VERIFICATION.md` | Record exact changes, covered interactions and verification results. |
+
+Both READMEs describe the interface people see, without development-conversation
+step labels. Local links, anchors and image references are checked. The icon
+files themselves are unchanged in this pass; the guides now describe the
+transparent care-waypoint artwork already used by the website.
+
+## Simulation reset and rewind
+
+The reset action now sits near the scenario choices instead of after all
+results and methodology. A restart icon replaces the misleading Play symbol.
+Its review dialog explains that resetting clears simulation placements, draft
+locations, recommendations and all three histories, while retaining the fleet,
+conditions, selected scenario, map metric and speed.
+
+Opening the review pauses playback. Keep this run, close and Escape dismiss it
+without discarding the run. Reset all scenarios calls the existing forecast
+store reset and stops the legacy playback flag. It then focuses the selected
+Day 1 scenario, scrolls the sheet back to the scenario choices and announces
+completion. Feedback is tied to the resulting run object so it disappears after
+subsequent advancement or a new run. Ordinary planning drafts and published
+schedules are outside this action. Return to Day 1 remains a separate rewind
+that preserves reached history.
+
+| File | Exact change |
+| --- | --- |
+| `frontend/src/features/simulation/SimulationResetControl.tsx` | Add the reset entry, paused review/cancel flow, explicit clear/keep summary, call the existing reset action, restore useful focus and show non-stale completion feedback. |
+| `frontend/src/features/simulation/SimulationPanel.tsx` | Move reset near the scenario chooser, remove the old bottom button and its unused Play import. |
+| `frontend/src/styles/map-workspace.css` | Style the entry, review, action buttons and feedback for desktop/phone layouts; center the native dialog despite the simulation panel’s child-margin rule. |
+| `frontend/scripts/simulation-browser.mjs` | Test cancel versus confirm using actually deployed manual/optimized clinics, verify clearing all runs and markers, retaining settings, restoring baseline data and removing stale feedback; check centered dialogs at 1440/390/320/844 px. |
+| `../README.md`, `README.md`, `docs/SIMULATION_MODE.md` | Explain reset versus rewind, kept settings, paused cancellation and phone behavior. |
+| `docs/UI_REFINEMENT.md`, `docs/VERIFICATION.md` | Record exact behavior, affected files and verification evidence. |
+
+No backend, HNI deduction, weight, model, forecast-store contract, persistence or
+authentication change is introduced. Existing request cancellation and stale
+response guards remain authoritative.

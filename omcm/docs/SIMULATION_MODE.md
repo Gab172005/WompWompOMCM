@@ -8,6 +8,18 @@ snapshots share one viewed day. Playback advances all scenarios, pauses at Days
 8, 15 and 22, and stops on Day 30. Scrubbing reviews reached days only. Collapse
 the sheet to retain the clinics, colors and timeline while inspecting the map.
 
+**Return to Day 1** only rewinds the viewed day and preserves reached history.
+**Reset simulation**, near the scenario chooser, opens a review dialog and pauses
+playback. Cancel/close/Escape keep the run intact. Confirming **Reset all
+scenarios** calls the existing store reset: it cancels pending service requests,
+clears all three placement/activity histories, drafts and recommendations,
+rebuilds the baseline timelines and returns to Day 1 with no deployed clinics.
+Fleet count, conditions, selected scenario, metric and playback speed remain.
+Published schedules and ordinary clinic-planning drafts are unaffected. Focus
+returns to the selected scenario, and completion feedback disappears when the
+run changes. The same modal is scrollable and bounded on phones and landscape
+screens. Reset introduces no new HNI calculation or backend endpoint.
+
 The reproducible experiment begins on 2026-10-24 in Manila time, seed 42, across
 681 barangays. Changing conditions or fleet size resets every run and cancels
 pending requests. The fleet is 1–10 clinics. Each scenario permits one placement

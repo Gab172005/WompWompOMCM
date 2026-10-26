@@ -426,7 +426,13 @@ try {
   expect(synchronizedDay).toEqual([2, 2, 2]);
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await panel.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished.catch(() => {}))));
+  await panel.evaluate((element) =>
+    Promise.all(
+      element
+        .getAnimations()
+        .map((animation) => animation.finished.catch(() => {})),
+    ),
+  );
   await expect(panel).toBeVisible();
   expect(
     await page.evaluate(
@@ -454,6 +460,138 @@ try {
   ).toBeVisible();
   await panel.getByRole("button", { name: "Expand tool panel" }).click();
   await expect(panel.locator(".workspace-panel-body")).toBeVisible();
+  const beforeReset = await page.evaluate(async () => {
+    const { useForecastStore } = await import("/src/store/useForecastStore.ts");
+    const s = useForecastStore.getState();
+    return {
+      settings: {
+        k: s.k,
+        conditions: s.conditions,
+        strategy: s.strategy,
+        metric: s.metric,
+        speed: s.speed,
+      },
+      runs: Object.values(s.runs).map((run) => ({
+        day: run.day,
+        reached: run.reached,
+        history: run.history,
+      })),
+    };
+  });
+  const resetTrigger = panel.getByRole("button", {
+    name: "Reset 30-day simulation",
+    exact: true,
+  });
+  await resetTrigger.click();
+  const resetDialog = page.getByRole("dialog", {
+    name: "Reset 30-day simulation?",
+    exact: true,
+  });
+  await expect(
+    resetDialog.getByRole("button", { name: "Close dialog" }),
+  ).toBeFocused();
+  for (const size of [
+    { width: 1440, height: 1000 },
+    { width: 390, height: 844 },
+    { width: 320, height: 740 },
+    { width: 844, height: 390 },
+  ]) {
+    await page.setViewportSize(size);
+    await resetDialog.evaluate((element) =>
+      Promise.all(
+        element
+          .getAnimations()
+          .map((animation) => animation.finished.catch(() => {})),
+      ),
+    );
+    const box = await resetDialog.boundingBox();
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(size.width + 1);
+    expect(box.y + box.height).toBeLessThanOrEqual(size.height + 1);
+    expect(
+      Math.abs(box.x + box.width / 2 - size.width / 2),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(box.y + box.height / 2 - size.height / 2),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      await resetDialog.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth + 1,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: `/tmp/omcm-simulation-reset-${size.width}.png`,
+      animations: "disabled",
+    });
+  }
+  await resetDialog.getByRole("button", { name: "Keep this run" }).click();
+  await expect(resetDialog).toHaveCount(0);
+  expect(
+    await page.evaluate(async () => {
+      const { useForecastStore } =
+        await import("/src/store/useForecastStore.ts");
+      return Object.values(useForecastStore.getState().runs).map((run) => ({
+        day: run.day,
+        reached: run.reached,
+        history: run.history,
+      }));
+    }),
+  ).toEqual(beforeReset.runs);
+  await expect(page.locator(".clinic-staging-marker")).toHaveCount(3);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await resetTrigger.click();
+  await resetDialog
+    .getByRole("button", { name: "Reset all scenarios", exact: true })
+    .click();
+  await expect(resetDialog).toHaveCount(0);
+  await expect(page.locator(".clinic-staging-marker")).toHaveCount(0);
+  const cleared = await page.evaluate(async () => {
+    const { useForecastStore } = await import("/src/store/useForecastStore.ts");
+    const s = useForecastStore.getState();
+    return {
+      settings: {
+        k: s.k,
+        conditions: s.conditions,
+        strategy: s.strategy,
+        metric: s.metric,
+        speed: s.speed,
+      },
+      runs: Object.values(s.runs).map((run) => ({
+        day: run.day,
+        reached: run.reached,
+        history: run.history,
+      })),
+      draft: s.draft,
+      proposal: s.proposal,
+      playing: s.playing,
+      busy: s.applyBusy || s.recommendBusy,
+      baseline: Object.values(s.runs).every((run) =>
+        run.snapshots.every((snapshot) =>
+          snapshot.records.every(
+            (record) =>
+              record.serviceFraction === 0 && record.scenarioHni === record.hni,
+          ),
+        ),
+      ),
+    };
+  });
+  expect(cleared.settings).toEqual(beforeReset.settings);
+  expect(cleared.runs).toEqual(
+    Array.from({ length: 3 }, () => ({ day: 1, reached: 1, history: {} })),
+  );
+  expect(cleared.draft.every((value) => value === "")).toBe(true);
+  expect(cleared.proposal).toBeNull();
+  expect(cleared.playing).toBe(false);
+  expect(cleared.busy).toBe(false);
+  expect(cleared.baseline).toBe(true);
+  await expect(panel.getByText(/^Simulation reset\./)).toHaveCount(1);
+  await page.screenshot({
+    path: "/tmp/omcm-simulation-reset-complete.png",
+    animations: "disabled",
+  });
+  await page.getByRole("button", { name: "Next day", exact: true }).click();
+  await expect(panel.getByText(/^Simulation reset\./)).toHaveCount(0);
   expect(errors, logs).toEqual([]);
   console.log(
     "Simulation browser checks passed: rising baseline, authenticated manual evaluation, host/neighbor map impact, shared population-weighted HNI, real XGBoost/CP-SAT optimization no worse than manual, clinic markers, and mobile layout.",
