@@ -47,7 +47,9 @@ settings** chooses the basemap; OpenStreetMap works without a key.
 In Admin View, **Plan clinics** produces a draft for review and approval.
 **30-day simulation** rehearses alternative clinic plans without publishing
 visits: pick a scenario, use Play or Next day to advance, and drag the timeline
-to revisit elapsed days. Playback pauses at weekly placement windows.
+to revisit elapsed days. Playback pauses at weekly placement windows. **Reset
+simulation** starts a fresh comparison after reviewing what will be cleared;
+it keeps your settings and is separate from returning to Day 1.
 
 On phones, details open in a resizable bottom sheet. Tap its handle or swipe it
 up/down to change its height. Compact tool names include **Simulate** and **Ask

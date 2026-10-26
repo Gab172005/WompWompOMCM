@@ -109,6 +109,14 @@ days. Playback pauses at the start of each weekly placement window (Days 1, 8,
 15 and 22) so clinic decisions can be reviewed. **Return to Day 1** seeks through
 existing history; it does not erase the scenario runs.
 
+Use **Reset simulation** near the scenario choices to start fresh. Its review
+dialog explains the scope; **Keep this run**, Escape or the close button leaves
+history intact and playback paused. **Reset all scenarios** clears simulation
+clinics, draft locations, recommendations and daily history, then returns all
+three scenarios to Day 1. Fleet size, planning conditions, selected scenario,
+map metric and playback speed are kept. Published visits and clinic-planning
+drafts are separate from this reset. The same controls work in phone sheets.
+
 **Scenario activity** shows the latest five daily updates. Open **Earlier
 updates** for the remaining days; its count and day range describe the hidden
 history. The separate comparison and clinic-deployment disclosures show numeric

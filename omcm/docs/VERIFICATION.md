@@ -1,5 +1,30 @@
 # Verification record
 
+## Simulation reset review — 2026-10-26
+
+- Frontend lint, **171 tests across 22 files**, production build and **113 backend
+  tests** pass. Existing bundle-size and Starlette/httpx advisories remain.
+- Connected simulation and full workspace browser suites pass with Playwright
+  Chromium. The reset test uses actually applied manual and optimized clinics.
+- Cancel keeps current days, reached history and three deployed optimizer
+  markers. Confirm clears all three histories, drafts, proposals, busy/playing
+  flags and clinic markers, restores Day 1/reached Day 1, and keeps settings.
+  Every reset snapshot has zero service deduction and baseline HNI.
+- The reset dialog is centered within 1 px and fits 1440/390/320/844 px viewports.
+  Short screens scroll the native dialog body; phone actions stack at 320 px.
+  Captures: `/tmp/omcm-simulation-reset-1440.png`,
+  `/tmp/omcm-simulation-reset-320.png` and
+  `/tmp/omcm-simulation-reset-complete.png`.
+- Completion feedback disappears when a run advances again. Existing unit tests
+  still reject a late evaluation after reset. No reset endpoint or formula was
+  added: the interface invokes the existing forecast-store reset/cancellation.
+- The workspace suite retains public privacy, three scenario choices fitting
+  phone sheets, one map instance, aligned playback/legend and touch controls.
+- Both README guides and simulation methodology describe reset versus rewind;
+  30 local README links/anchors/image references resolve.
+
+See [file/behavior inventory](UI_REFINEMENT.md#simulation-reset-and-rewind).
+
 ## Public alignment and frontend interaction review — 2026-10-26
 
 This follows merged PR #11, with remaining changes on

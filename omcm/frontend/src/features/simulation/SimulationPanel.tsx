@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import {
   Activity,
   MapPin,
-  Play,
   Sparkles,
   SlidersHorizontal,
   CircleHelp,
@@ -14,6 +13,7 @@ import {
 import { DisclosureCard } from "../../components/ui/DisclosureCard";
 import { ScenarioBuilder } from "./ScenarioBuilder";
 import { SimulationResults } from "./SimulationResults";
+import { SimulationResetControl } from "./SimulationResetControl";
 import { useAppStore } from "../../store/useAppStore";
 import {
   STRATEGIES,
@@ -211,6 +211,8 @@ export function SimulationPanel() {
             </p>
           )}
       </section>
+
+      <SimulationResetControl />
 
       <section
         className="simulation-current-scenario"
@@ -543,15 +545,6 @@ export function SimulationPanel() {
           window. These are planning estimates, not patient counts.
         </p>
       </DisclosureCard>
-      <button
-        className="simulation-reset-button"
-        onClick={() => {
-          s.reset();
-          useAppStore.setState({ isPlaying: false });
-        }}
-      >
-        <Play size={14} aria-hidden="true" /> Reset 30-day simulation
-      </button>
     </div>
   );
 }

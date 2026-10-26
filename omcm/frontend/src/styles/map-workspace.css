@@ -3528,3 +3528,30 @@
 .workspace .map-zoom-buttons { overflow: visible; }
 .workspace .map-zoom-buttons > .map-icon-button:first-child { border-radius: 10px 10px 0 0; }
 .workspace .map-zoom-buttons > .map-icon-button:last-child { border-radius: 0 0 10px 10px; }
+
+/* Restart is a deliberate run action, distinct from timeline rewind. */
+.simulation-reset-entry { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-block: 1px solid #e2eae5; }
+.simulation-reset-entry > div { min-width: 0; }
+.simulation-reset-entry strong { display: block; color: #49665c; font-size: 11px; font-weight: 500; line-height: 1.5; }
+.workspace .simulation-reset-entry p { margin: 4px 0 0; color: #60717a; font-size: 10px; line-height: 1.6; }
+.workspace .simulation-reset-button { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; min-height: 44px; padding: 10px 12px; border: 1px solid #d7e3db; border-radius: 12px; color: #49665c; background: #fff; font-size: 11px; font-weight: 500; gap: 7px; }
+.workspace .simulation-reset-button:hover { border-color: #b2c9bd; color: #176e60; background: #f3f8f4; }
+.simulation-reset-review { display: grid; gap: 18px; }
+.simulation-reset-review-heading { display: flex; align-items: center; gap: 12px; }
+.simulation-reset-review-heading > span { display: grid; place-items: center; flex: 0 0 44px; height: 44px; border-radius: 14px; color: #956149; background: #fcf2eb; }
+.workspace-modal .simulation-reset-review h3 { font-size: 16px; font-weight: 500; line-height: 1.5; color: #263b43; }
+.workspace-modal .simulation-reset-review p { font-size: 12px; line-height: 1.7; margin: 0; }
+.workspace-modal .simulation-reset-review-heading p { font-size: 11px; margin-top: 4px; }
+.simulation-reset-kept { padding: 14px; border-radius: 13px; border: 1px solid #e0e9e3; background: #f6f9f7; }
+.simulation-reset-kept strong { display: block; font-size: 12px; font-weight: 500; color: #49665c; margin-bottom: 5px; }
+.simulation-reset-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.workspace-modal .simulation-reset-confirm { background: #a24b41; border-color: #a24b41; box-shadow: none; }
+.workspace-modal .simulation-reset-confirm:hover { background: #8c4038; border-color: #8c4038; }
+.workspace .simulation-reset-feedback { padding: 11px 13px; border-radius: 12px; border: 1px solid #cee3d8; background: #f1f8f4; color: #2a705d; font-size: 11px; line-height: 1.6; }
+@media (max-width: 360px) {
+  .simulation-reset-entry { align-items: stretch; flex-direction: column; gap: 10px; }
+  .workspace .simulation-reset-button { width: 100%; }
+  .simulation-reset-actions { grid-template-columns: minmax(0,1fr); }
+}
+/* Native dialogs must not inherit the panel's direct-child margin reset. */
+.workspace .simulation-panel > .workspace-modal { margin: auto; }
