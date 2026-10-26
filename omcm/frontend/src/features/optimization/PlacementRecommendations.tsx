@@ -1,6 +1,8 @@
 import type { Plan } from "../../types";
 import { useEffect, useRef } from "react";
 import { ManualPlacement } from "./ManualPlacement";
+import { FileText, Users } from "lucide-react";
+import { DisclosureCard } from "../../components/ui/DisclosureCard";
 import {
   BARANGAYS_BY_PSGC,
   MUNICIPALITY_HEALTHCARE_NEED,
@@ -29,9 +31,9 @@ export function PlacementRecommendations({ plan }: { plan: Plan }) {
         needs. Review local access and facility readiness before approving.
       </p>
       <p className="workspace-note">
-        The map previews illustrative HNI reductions around the proposed clinics,
-        using the simulator’s shared service assumptions. Appointment and travel
-        metrics below come from the backend allocation.
+        The map previews illustrative HNI reductions around the proposed
+        clinics, using the simulator’s shared service assumptions. Appointment
+        and travel metrics below come from the backend allocation.
       </p>
       <p className="workspace-note">
         Server draft {plan.plan_id} · {plan.metadata.region}
@@ -94,10 +96,13 @@ export function PlacementRecommendations({ plan }: { plan: Plan }) {
             )}
             <ManualPlacement clinic={clinic} clinics={clinics} />
             <p>{clinic.reason}</p>
-            <details>
-              <summary>
-                Communities served ({clinic.assignments.length})
-              </summary>
+            <DisclosureCard
+              title="Communities served"
+              description="Appointments and modeled travel"
+              badge={String(clinic.assignments.length)}
+              icon={<Users size={16} />}
+              compact
+            >
               <ul>
                 {clinic.assignments.map((assignment) => (
                   <li key={assignment.barangay_id}>
@@ -106,12 +111,17 @@ export function PlacementRecommendations({ plan }: { plan: Plan }) {
                   </li>
                 ))}
               </ul>
-            </details>
+            </DisclosureCard>
           </article>
         );
       })}
-      <details className="optimizer-method">
-        <summary>Model, scoring and allocation evidence</summary>
+      <DisclosureCard
+        className="optimizer-method"
+        title="Model and allocation evidence"
+        description="Assumptions behind this recommendation"
+        icon={<FileText size={16} />}
+        compact
+      >
         <ul>
           {plan.notes.map((note) => (
             <li key={note}>{note}</li>
@@ -121,7 +131,7 @@ export function PlacementRecommendations({ plan }: { plan: Plan }) {
           Weighted demand counts allocated appointments; it does not mean the
           entire barangay population is served.
         </p>
-      </details>
+      </DisclosureCard>
     </section>
   );
 }

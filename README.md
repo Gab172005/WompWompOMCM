@@ -27,10 +27,32 @@ no real patient records and is not a clinical diagnosis or live emergency system
   colors change on the map.
 - **Publish community visits:** administrators approve clinic schedules; Public
   View shows confirmed visits, services, hours and emergency notices.
-- **Ask for help:** find places and open map tools through the assistant.
+- **Ask for help:** find places and open map tools through the assistant. Close
+  it to return to the map; unfinished messages remain when you reopen it.
 
 Administrator tools open inside a single map workspace. Public View separates
 published care information from private planning scores and drafts.
+
+## Find your way around
+
+Start in **Public View** to search for a community, find nearby hospitals and
+read published clinic visits. Choose an announced date to inspect its locations,
+hours and services. A “no visits announced” message describes the selected date;
+it does not mean there are no hospitals nearby.
+
+Use **Map details** to show or hide facility types and read the legend for map
+symbols and sources. Administrators can also choose a map-color layer. **Map
+settings** chooses the basemap; OpenStreetMap works without a key.
+
+In Admin View, **Plan clinics** produces a draft for review and approval.
+**30-day simulation** rehearses alternative clinic plans without publishing
+visits: pick a scenario, use Play or Next day to advance, and drag the timeline
+to revisit elapsed days. Playback pauses at weekly placement windows.
+
+On phones, details open in a resizable bottom sheet. Tap its handle or swipe it
+up/down to change its height. Compact tool names include **Simulate** and **Ask
+OMCM**. On a keyboard, press `/` to focus place search; icon controls show hints
+on focus, and Escape dismisses a hint.
 
 ## Hosted demo sign-in
 
@@ -86,6 +108,14 @@ omcm/
 - [Simulation scenarios and formulas](omcm/docs/SIMULATION_MODE.md)
 - [Data sources and limitations](omcm/datasets/SOURCES.md)
 - [Verification](omcm/docs/VERIFICATION.md) and [deployment](omcm/docs/VERCEL_DEPLOYMENT.md)
+
+## Project icon
+
+The transparent care-waypoint mark combines a medical map pin with routes to
+neighboring communities. The website and these guides use the same
+[SVG source](omcm/frontend/public/omcm-icon.svg), with PNG and ICO variants for
+browsers and touch devices. Icon declarations live in
+[the frontend entry page](omcm/frontend/index.html).
 
 ## Contributing
 

@@ -41,17 +41,15 @@ export function PublicVisitSummary() {
       className="public-visit-summary"
       aria-label="Published clinic visits"
     >
+      <span className="care-kicker">PUBLISHED VISITS</span>
       <div className="public-visit-heading">
-        <div>
-          <span className="care-kicker">PUBLISHED VISITS</span>
-          <h3>
-            {selectedScheduleDate === today
-              ? "Clinics today"
-              : selectedScheduleDate < today
-                ? "Past clinic visit"
-                : "Upcoming clinic visit"}
-          </h3>
-        </div>
+        <h3>
+          {selectedScheduleDate === today
+            ? "Clinics today"
+            : selectedScheduleDate < today
+              ? "Past clinic visit"
+              : "Upcoming clinic visit"}
+        </h3>
         {!isBrowserDemo() && (
           <button
             type="button"
@@ -155,19 +153,17 @@ export function PublicVisitSummary() {
             <span className="care-empty-icon">
               <CalendarClock size={20} aria-hidden="true" />
             </span>
-            <div>
-              <strong>
-                No clinic visits announced for{" "}
-                {selectedScheduleDate === today
-                  ? "today"
-                  : visitDate(selectedScheduleDate)}
-              </strong>
-              <p>
-                {futureDays.length
-                  ? "Choose an announced date above, or explore nearby hospitals below."
-                  : "An approved visit will appear here when published. Nearby hospitals are still listed on the map."}
-              </p>
-            </div>
+            <strong>
+              No clinic visits announced for{" "}
+              {selectedScheduleDate === today
+                ? "today"
+                : visitDate(selectedScheduleDate)}
+            </strong>
+            <p>
+              {futureDays.length
+                ? "Choose an announced date above, or explore nearby hospitals below."
+                : "An approved visit will appear here when published. Nearby hospitals are still listed on the map."}
+            </p>
           </div>
         )}
       </div>

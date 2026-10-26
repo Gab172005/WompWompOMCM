@@ -1,13 +1,15 @@
 import { LocateFixed, Minus, Plus } from "lucide-react";
 import { useAppStore } from "../../store/useAppStore";
+import { MapActionButton } from "../ui/MapActionButton";
 
 export function MapNavigation() {
   return (
     <nav className="map-navigation" aria-label="Map navigation">
-      <button
+      <MapActionButton
         className="map-icon-button map-recenter"
         aria-label="Recenter Laguna map"
-        title="Recenter Laguna"
+        hint="Show all Laguna"
+        hintSide="left"
         onClick={() =>
           useAppStore.setState((s) => ({
             recenterTrigger: s.recenterTrigger + 1,
@@ -17,28 +19,30 @@ export function MapNavigation() {
         }
       >
         <LocateFixed size={21} aria-hidden="true" />
-      </button>
+      </MapActionButton>
       <div className="map-zoom-buttons">
-        <button
+        <MapActionButton
           className="map-icon-button"
           aria-label="Zoom in"
-          title="Zoom in"
+          hint="Zoom in"
+          hintSide="left"
           onClick={() =>
             useAppStore.setState((s) => ({ zoomDelta: s.zoomDelta + 1 }))
           }
         >
           <Plus size={22} aria-hidden="true" />
-        </button>
-        <button
+        </MapActionButton>
+        <MapActionButton
           className="map-icon-button"
           aria-label="Zoom out"
-          title="Zoom out"
+          hint="Zoom out"
+          hintSide="left"
           onClick={() =>
             useAppStore.setState((s) => ({ zoomDelta: s.zoomDelta - 1 }))
           }
         >
           <Minus size={22} aria-hidden="true" />
-        </button>
+        </MapActionButton>
       </div>
     </nav>
   );

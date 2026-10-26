@@ -1,5 +1,45 @@
 # Verification record
 
+## Public alignment and frontend interaction review — 2026-10-26
+
+This follows merged PR #11, with remaining changes on
+`feat/omcm-maps-experience-polish` for a new pull request into `main`.
+
+- Frontend lint, **171 tests across 22 files**, production build and **113 backend
+  tests** pass. The existing large-bundle and Starlette/httpx advisories remain.
+- The connected workspace suite measures public heading/refresh alignment,
+  calendar/check symbol centering and the shared title/body text edge within
+  1.5 px, including empty and published states at desktop/phone sizes.
+- Pointer hints for administrator entry, sign-out and zoom appear within the
+  viewport; Escape dismisses them. Keyboard Enter still opens the real sign-in
+  dialog. A separate coarse-pointer phone context opens sign-in by tap without
+  displaying a hover hint, and retains existing assistant/facility checks.
+- A complete 30-day run through the real Next day control produces **25 earlier
+  activity rows**. The native compact disclosure opens/closes with Enter, retains
+  its actual count/day range and fits 1440/390/320 px. No simulation arithmetic
+  or history generation changes are involved.
+- The workspace suite passes with Playwright Chromium. One earlier Chrome run
+  closed its context during verification; the identical full Chromium run
+  completed. Captures include `ui-earlier-updates-320.png`,
+  `ui-view-switch-hint-desktop.png` and `ui-public-casile-empty-320.png`.
+- Connected optimizer and simulation suites pass real backend allocation,
+  manual replan, publication/public refresh, outage handling and host/neighbor
+  service impacts. Simulation retains Manual HNI **43.67060777020463** and
+  Optimized HNI **43.60322274720275**.
+- All five browser suites pass: workspace UI, connected optimization, connected
+  simulation, hospital/HNI and assistant. Hospital checks retain 681 polygons
+  and 56 mapped hospitals.
+- Assistant checks pass local tools, provider-action fixtures, reading-position
+  preservation, failure/retry and mobile behavior. Live external inference is
+  not claimed.
+- Both READMEs describe the current icon, public/admin controls, provider setup,
+  responsive sheets, assistant behavior, shared timeline and activity history.
+  **30 local links, anchors and image references** resolve.
+
+Authentication, model artifacts, weights, datasets and publication permissions
+are unchanged. No push or deployment is performed by this pass. See the
+[exact file/behavior inventory](UI_REFINEMENT.md#public-panel-alignment-and-consistent-actions).
+
 ## Map experience finishing pass — 2026-10-26
 
 Branch: `feat/omcm-maps-experience-polish`, based on local `aa800a2`. The

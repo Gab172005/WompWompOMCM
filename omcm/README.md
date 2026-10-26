@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="frontend/public/omcm-icon.svg" width="64" height="64" alt="OMCM care waypoint and connected communities icon" />
+</p>
+
 # OMCM · Optimized Mobile Clinic Mapper
 
 OMCM is a decision-support prototype for mobile healthcare planning in Laguna,
@@ -14,14 +18,58 @@ local government unit. These are the geographic units used throughout the app.
 | Public View | Find communities and nearby facilities; see approved clinic dates, hours, services and emergency notices. |
 | Admin View | Inspect healthcare need, generate and review clinic plans, publish visits and rehearse alternative allocations. |
 
-Search for a place in the floating search bar. Open a result to see its details.
-Map layers and the legend explain the information shown. On smaller screens,
-details open in a bottom sheet that can be expanded or reduced.
+Search for a place in the floating search bar. Choose a result to open its
+details and highlight it on the map. Press `/` to focus search when you are not
+already typing in a field or using a dialog. **All Laguna** clears the public
+community selection; the map navigation control can refocus the province.
 
-Administrators use **Plan clinics**, **30-day simulation** and **Planning help**
-without leaving the map. Selecting a tool changes the panel, not the page. The
-assistant offers shortcuts for the current view and selected community, with
-copyable replies, failure recovery and a control to return to the latest message.
+| Control | How to use it |
+| --- | --- |
+| Map details | Toggle hospitals, mobile clinics and mapped fixed clinics independently. Admin View also offers color previews for need, population, hazards and sample illness rates. |
+| Legend | Read symbols or switch to Data & guidance for definitions and sources. Minimize, restore or drag it when you need more map space. |
+| Plan clinics | Set available units, appointment capacity and access constraints; generate and review a backend draft before publishing. |
+| 30-day simulation / Simulate | Compare three clinic plans on one clock. Its own HNI / Uncovered need control determines the simulation colors. |
+| Planning help / Ask OMCM | Ask about places or use shortcuts appropriate to the current view and selected community. |
+| Map settings | Choose a basemap. OpenStreetMap needs no key; optional Google Maps key setup is inside its own disclosure. |
+
+Administrators open tools in place without leaving the map. **Public View**
+shows published visits and public facility information. The shield in the search
+bar opens administrator sign-in or returns a signed-in administrator to planning.
+From Admin View, the globe opens Public View; the exit icon signs out. Hover or
+keyboard-focus these icons for a hint. Escape dismisses the hint, and touch
+users activate the control directly.
+
+On smaller screens, details open in a bottom sheet. Tap its handle or swipe
+up/down to expand or reduce it; use the close button to return to the map.
+Compact tool labels keep the main actions visible on phones and tablets.
+Motion follows the device’s reduced-motion preference.
+
+### Finding public care
+
+Search a barangay or municipality for its community facts and nearest listed
+hospitals. Open a hospital’s source record to inspect its verification and
+capacity reference. Straight-line distances do not represent travel times.
+
+**Clinics today** summarizes the current Philippine date. When future visits
+are published, select an announced date from the date choices. Open **Location
+& visit details** on an approved clinic to read its services, hours and planned
+service area. Empty dates, checking status and delayed updates are distinguished;
+no announced clinic visit does not imply that nearby hospitals are unavailable.
+**Before your visit** contains supporting guidance.
+
+### Using the assistant
+
+The assistant can find places, open tools and explain information through the
+existing validated actions. Public shortcuts focus on care and locations;
+administrator shortcuts also include need scores and planning. Close/reopen it
+to retain the conversation and unfinished message. New conversation clears both;
+changing the view or signed-in identity clears history and drafts.
+
+On desktop, Enter sends and Shift + Enter inserts a line break. Copy a reply,
+inspect its completed map actions, or use Try again when offered after a failed
+request. When reading an older answer, new replies do not pull you away; use the
+latest-message control to return. Empty conversations start at the top. Opening
+the assistant on a phone does not automatically summon the keyboard.
 
 ### Planning and publishing visits
 
@@ -53,6 +101,18 @@ Clinic markers show placements. Lighter red indicates lower estimated need in
 served areas; areas outside their reach retain the shared baseline. Scenario
 cards, a trend chart, comparisons and deployment history explain the changes.
 Simulation placements do not publish community schedules.
+
+Use **Play** or **Next day** to advance all three scenarios together. The day
+and week display, playback status and speed control describe the same clock.
+Dragging the timeline revisits days already reached; it does not calculate future
+days. Playback pauses at the start of each weekly placement window (Days 1, 8,
+15 and 22) so clinic decisions can be reviewed. **Return to Day 1** seeks through
+existing history; it does not erase the scenario runs.
+
+**Scenario activity** shows the latest five daily updates. Open **Earlier
+updates** for the remaining days; its count and day range describe the hidden
+history. The separate comparison and clinic-deployment disclosures show numeric
+outcomes and applied placements for the selected scenario.
 
 More areas reached does not necessarily mean a larger reduction in need.
 Population, existing need, reach and capacity all matter. The simulation solver
@@ -205,6 +265,15 @@ optimization and approval. Public tools omit private planning fields and drafts;
 assistant history clears when identity or view changes. Bundled synthetic data
 can still be inspected in browser assets: this prototype is not a confidential
 record system.
+
+## Website identity
+
+The care-waypoint icon represents a medical location reaching neighboring
+communities. Its canvas and cross cutout are transparent. Edit the
+[SVG source](frontend/public/omcm-icon.svg) and keep its PNG/ICO variants in
+`frontend/public/` consistent. The browser/touch icon links are declared in
+[frontend/index.html](frontend/index.html); the assistant and repository guides
+use the same mark.
 
 ## Deployment and project guide
 

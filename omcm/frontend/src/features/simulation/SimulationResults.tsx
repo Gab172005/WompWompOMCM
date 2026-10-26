@@ -168,8 +168,14 @@ function ScenarioActivity({
         ))}
       </ol>
       {earlier.length > 0 && (
-        <details className="simulation-earlier-activity">
-          <summary>Show {earlier.length} earlier updates</summary>
+        <DisclosureCard
+          className="simulation-earlier-activity"
+          title="Earlier updates"
+          description={`Days ${earlier.at(-1)!.day}–${earlier[0].day} · newest first`}
+          badge={String(earlier.length)}
+          icon={<History size={16} />}
+          compact
+        >
           <ol className="simulation-activity-list">
             {earlier.map((row) => (
               <li
@@ -210,7 +216,7 @@ function ScenarioActivity({
               </li>
             ))}
           </ol>
-        </details>
+        </DisclosureCard>
       )}
     </section>
   );

@@ -16,6 +16,7 @@ import { MunicipalitySearch } from "../../features/municipalities/MunicipalitySe
 import { MapSelectionStatus } from "../../features/municipalities/MapSelectionStatus";
 import { useAssistantStore } from "../../store/useAssistantStore";
 import { MapFilterChips } from "../../features/filters/MapFilterChips";
+import { MapActionButton } from "../ui/MapActionButton";
 
 export function MapControls() {
   const {
@@ -39,15 +40,16 @@ export function MapControls() {
   return (
     <>
       <div className="map-search-card">
-        <button
+        <MapActionButton
           className="map-icon-button"
           aria-label="Show or hide community details"
           aria-expanded={sidePanelOpen && !panel}
-          title={
-            isPublic
-              ? "Community care & schedules"
-              : "Community details and healthcare needs"
+          hint={
+            sidePanelOpen && !panel
+              ? "Hide community details"
+              : "Show community details"
           }
+          hintSide="below-start"
           onClick={() => {
             if (panel) openPanel(null);
             useAppStore.setState({
@@ -56,14 +58,19 @@ export function MapControls() {
           }}
         >
           <Menu size={21} aria-hidden="true" />
-        </button>
+        </MapActionButton>
         <MunicipalitySearch />
         {isPublic ? (
-          <button
+          <MapActionButton
             type="button"
             className="map-icon-button map-public-button"
             aria-label="Admin View"
-            title="Switch to Admin View"
+            hint={
+              adminUser
+                ? "Switch to Admin View"
+                : "Sign in to use planning tools"
+            }
+            aria-haspopup={adminUser ? undefined : "dialog"}
             onClick={() => {
               if (adminUser) {
                 setViewMode("admin");
@@ -74,26 +81,26 @@ export function MapControls() {
             }}
           >
             <ShieldCheck size={20} aria-hidden="true" />
-          </button>
+          </MapActionButton>
         ) : (
           <>
-            <button
+            <MapActionButton
               type="button"
               className="map-icon-button map-public-button"
               aria-label="Public View"
-              title="Switch to Public View"
+              hint="View published community visits"
               onClick={() => {
                 setViewMode("public");
                 navigate("/public");
               }}
             >
               <Globe size={20} aria-hidden="true" />
-            </button>
-            <button
+            </MapActionButton>
+            <MapActionButton
               type="button"
               className="map-icon-button map-signout-button"
               aria-label="Sign out"
-              title={`Sign out (${adminUser})`}
+              hint={`Sign out of ${adminUser ?? "Admin View"}`}
               onClick={() => {
                 clearCredentials();
                 signOutAdmin();
@@ -101,7 +108,7 @@ export function MapControls() {
               }}
             >
               <LogOut size={18} aria-hidden="true" />
-            </button>
+            </MapActionButton>
           </>
         )}
       </div>
