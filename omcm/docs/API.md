@@ -368,3 +368,16 @@ return 503. Unknown identifiers return 422. Results are marked Google-map-only,
 not saved to plans and not asserted to avoid simulated closures. The current
 Leaflet map and optimizer never call this adapter automatically. No existing
 request models, bundled JSON schemas or publication behavior changed.
+
+
+## Saved planning work (administrator only)
+
+- `GET /api/planning/plans?limit=20&offset=0`: returns `plans`, `total` and
+  `storage`. Each summary includes `plan_id`, `created_at`, `status`,
+  `clinic_count` and clinic `locations`. Limit is 1–50; offset is nonnegative.
+- `GET /api/planning/plans/{plan_id}`: returns the exact stored `PlanResult`
+  including its ID and inputs; missing IDs return 404.
+
+Both require existing server-verified Basic authentication and return
+`Cache-Control: no-store`. Reading does not generate or publish a plan. Public
+`GET /api/schedules` continues to expose published snapshots only.

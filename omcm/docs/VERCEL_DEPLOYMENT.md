@@ -18,9 +18,42 @@ A successful health check alone does not verify candidate loading or model
 inference: verify sign-in, authenticated catalog load, optimize, approval and a
 fresh public session. Local verification does not deploy the hosted project.
 
-Public schedules have no-store responses. Vercel `/tmp` SQLite is still temporary
-and unshared between instances. Durable shared schedules require persistent
-storage/hosting; this branch does not change the database model.
+Public schedules and private saved-plan reads have no-store responses. Set the
+backend's `DATABASE_URL` to use shared PostgreSQL; otherwise Vercel uses temporary,
+unshared SQLite. Existing plan/schedule fields and publication rules are unchanged.
+
+## Shared plans and schedules with Neon PostgreSQL
+
+The backend supports PostgreSQL through Psycopg 3. No frontend database key or
+new authentication service is needed. Local development keeps SQLite unless
+`DATABASE_URL` is configured.
+
+1. In the **backend Vercel project**, open Storage and connect a Neon PostgreSQL
+   database through Marketplace (or connect an existing PostgreSQL database).
+2. Ensure its pooled connection URL is assigned to the backend environment as
+   `DATABASE_URL`, including the provider's TLS parameters. Use a separate test
+   database/branch for Preview deployments; keep Production on its own database.
+   Never put the connection string in a `VITE_` variable or commit it.
+3. Deploy this backend revision so `requirements.txt` installs `psycopg[binary]`.
+   Startup creates the existing five tables if absent; it never drops or clears
+   existing records. `OMCM_DATABASE_PATH` is ignored while `DATABASE_URL` is set.
+4. Check `/api/health`: storage should report `engine: "postgresql"` and
+   `temporary: false`. That reports the configured adapter; successful startup,
+   saved-work reads and publication verify the database connection.
+5. Sign in → **Plan clinics** → generate a plan. Reload and sign in again, then
+   reopen it under **Saved plans & deployments → Plans**. Publish a visit and
+   verify it under **Deployments** and in a fresh Public View browser.
+6. Redeploy/restart the backend and repeat the reads. Both browsers must see the
+   same published visit. A configured PostgreSQL failure produces an error;
+   the app never silently writes a replacement temporary SQLite database.
+
+Switching databases does **not** copy old SQLite rows. Keep a backup of a local
+persistent database before switching. Records already lost from Vercel's scratch
+filesystem cannot be recovered by this adapter. No remote database was provisioned
+or hosted deployment changed during local verification.
+
+Implementation references: [Psycopg connection/transaction lifecycle](https://www.psycopg.org/psycopg3/docs/basic/usage.html),
+[Neon pooled connections](https://neon.com/docs/connect/connection-pooling).
 
 ## Verified failure and code fix
 
