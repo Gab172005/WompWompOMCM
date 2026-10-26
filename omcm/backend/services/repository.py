@@ -1,4 +1,4 @@
-"""SQLite repository boundary; replace this adapter when adopting PostgreSQL."""
+"""Shared repository: PostgreSQL when configured, local SQLite otherwise."""
 import json
 import os
 import sqlite3
@@ -8,6 +8,26 @@ from pathlib import Path
 from datetime import datetime, timezone
 from uuid import uuid4
 from contextlib import contextmanager
+
+
+def postgres_url():
+    return (os.getenv("DATABASE_URL") or "").strip()
+
+
+class PostgresConnection:
+    """Adapt the repository's small parameterized SQL interface to Psycopg."""
+
+    def __init__(self, connection):
+        self.connection = connection
+
+    def execute(self, query, parameters=()):
+        # All queries are repository-owned SQL; values remain bound parameters.
+        return self.connection.execute(query.replace("?", "%s"), parameters)
+
+    def executescript(self, script):
+        for statement in script.split(";"):
+            if statement.strip():
+                self.connection.execute(statement)
 
 
 def database_path():
@@ -26,6 +46,8 @@ def database_path():
 
 
 def storage_info():
+    if postgres_url():
+        return {"engine": "postgresql", "temporary": False}
     path = database_path()
     temporary = path == ":memory:" or (
         os.getenv("VERCEL") == "1"
@@ -37,6 +59,16 @@ def storage_info():
 
 @contextmanager
 def connect():
+    url = postgres_url()
+    if url:
+        import psycopg
+        from psycopg.rows import dict_row
+        # Short-lived connections work with Neon transaction pooling. A failed
+        # configured database must never silently fall back to temporary SQLite.
+        with psycopg.connect(url, row_factory=dict_row, connect_timeout=10,
+                             prepare_threshold=None) as connection:
+            yield PostgresConnection(connection)
+        return
     path = database_path()
     if isinstance(path, Path):
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -58,6 +90,8 @@ def initialize():
             "restarts. Use a persistent database for durable server publication."
         )
     with connect() as db:
+        if postgres_url():
+            db.execute("SELECT pg_advisory_xact_lock(?)", (7041742025,))
         db.executescript("""
         CREATE TABLE IF NOT EXISTS plans (id TEXT PRIMARY KEY, payload TEXT NOT NULL, created_at TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS schedules (date TEXT PRIMARY KEY, payload TEXT NOT NULL, updated_at TEXT NOT NULL);
@@ -85,13 +119,38 @@ def get_plan(plan_id):
     return json.loads(row["payload"]) if row else None
 
 
+def list_plans(limit=20, offset=0):
+    """Summaries only: full risk/assignment records are loaded on demand."""
+    with connect() as db:
+        total = db.execute("SELECT COUNT(*) AS total FROM plans").fetchone()["total"]
+        rows = db.execute(
+            "SELECT id, payload, created_at FROM plans ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
+            (limit, offset),
+        ).fetchall()
+    plans = []
+    for row in rows:
+        payload = json.loads(row["payload"])
+        clinics = payload["optimized"]["clinics"]
+        plans.append(dict(
+            plan_id=row["id"], created_at=row["created_at"],
+            status=payload.get("status", "draft"), clinic_count=len(clinics),
+            locations=[clinic["name"] for clinic in clinics],
+        ))
+    return dict(plans=plans, total=total, storage=storage_info())
+
+
 def publish(payload, actor, emergency_notice=None):
     stamp = now()
     payload.update(updated_at=stamp, approved_at=stamp)
     action = "emergency_override" if emergency_notice else "approve"
     with connect() as db:
         # Serialize approvals so concurrent ordinary requests cannot overwrite a date.
-        db.execute("BEGIN IMMEDIATE")
+        if postgres_url():
+            # Serialize publication checks across instances; an ordinary
+            # approval must not overwrite another concurrent approval.
+            db.execute("SELECT pg_advisory_xact_lock(?)", (7041742026,))
+        else:
+            db.execute("BEGIN IMMEDIATE")
         if emergency_notice is None and db.execute("SELECT 1 FROM schedules WHERE date=?", (payload["date"],)).fetchone():
             raise ValueError("A schedule is already published for this date. Use the confirmed emergency override to replace it.")
         db.execute("INSERT INTO schedules VALUES (?, ?, ?) ON CONFLICT(date) DO UPDATE SET payload=excluded.payload, updated_at=excluded.updated_at", (payload["date"], json.dumps(payload), stamp))

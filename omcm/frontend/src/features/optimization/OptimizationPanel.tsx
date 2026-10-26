@@ -14,11 +14,13 @@ import { DeploymentApproval } from "./DeploymentApproval";
 import { RoadExclusions } from "./RoadExclusions";
 import { DisclosureCard } from "../../components/ui/DisclosureCard";
 import { Button } from "../../components/ui/Button";
+import { SavedPlanningWork, SavedDeploymentDetails } from "./SavedPlanningWork";
 
 export function OptimizationPanel() {
   const {
     config,
     result,
+    deployment,
     busy,
     error,
     catalogError,
@@ -34,6 +36,8 @@ export function OptimizationPanel() {
   }, [loadCatalog]);
   return (
     <>
+      <SavedPlanningWork />
+      <SavedDeploymentDetails />
       <div className="optimizer-intro">
         <span className="eyebrow">
           <Crosshair size={15} aria-hidden="true" /> CLINIC ALLOCATION
@@ -229,7 +233,7 @@ export function OptimizationPanel() {
           Calculating suggested locations and estimated appointments…
         </p>
       )}
-      {!result && !busy && (
+      {!result && !deployment && !busy && (
         <p className="workspace-note">
           Choose your constraints and generate a draft. Clinic markers appear
           only after a successful backend response.

@@ -11,6 +11,7 @@ import {
   useAppStore,
 } from "../../store/useAppStore";
 import { Button } from "../../components/ui/Button";
+import { usePublicScheduleStore } from "../../store/usePublicScheduleStore";
 export const SCHEDULE_WINDOW_DAYS = 7;
 
 export function DeploymentApproval({ plan }: { plan: Plan }) {
@@ -43,14 +44,27 @@ export function DeploymentApproval({ plan }: { plan: Plan }) {
   const matches = Boolean(publishedMessage);
   const noticeLength = emergencyNotice.trim().length;
   const blockers = [
-    ...(!plan.plan_id || !plan.optimized.clinics.length ? ["Generate a clinic plan first."] : []),
+    ...(!plan.plan_id || !plan.optimized.clinics.length
+      ? ["Generate a clinic plan first."]
+      : []),
     ...(!services.length ? ["Select at least one service."] : []),
     ...(!date || date < (emergency ? today : tomorrow) || date > latestDate
-      ? [`Choose a date from ${emergency ? today : tomorrow} to ${latestDate}.`] : []),
-    ...(!startTime || !endTime || endTime <= startTime ? ["Choose a closing time after the opening time."] : []),
-    ...(forecastTarget && forecastTarget !== tomorrow ? ["This forecast is out of date. Generate a fresh plan before publishing."] : []),
-    ...(emergency && noticeLength < 10 ? ["Write a public emergency notice of at least 10 characters."] : []),
-    ...(emergency && !confirmed ? ["Check the emergency revision confirmation box."] : []),
+      ? [`Choose a date from ${emergency ? today : tomorrow} to ${latestDate}.`]
+      : []),
+    ...(!startTime || !endTime || endTime <= startTime
+      ? ["Choose a closing time after the opening time."]
+      : []),
+    ...(forecastTarget && forecastTarget !== tomorrow
+      ? [
+          "This forecast is out of date. Generate a fresh plan before publishing.",
+        ]
+      : []),
+    ...(emergency && noticeLength < 10
+      ? ["Write a public emergency notice of at least 10 characters."]
+      : []),
+    ...(emergency && !confirmed
+      ? ["Check the emergency revision confirmation box."]
+      : []),
   ];
 
   function toggleService(service: string, checked: boolean) {
@@ -102,6 +116,7 @@ export function DeploymentApproval({ plan }: { plan: Plan }) {
       setPublishedMessage(
         `Published ${result.status.toLowerCase()} schedule for ${result.date} (${result.clinics.length} clinics). Public View now displays this deployment.`,
       );
+      void usePublicScheduleStore.getState().refresh();
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "Schedule publication failed.",
@@ -148,11 +163,15 @@ export function DeploymentApproval({ plan }: { plan: Plan }) {
           {forecastTarget && (
             <p className="workspace-note">
               Latest demand estimate: {forecastTarget}. You may book this plan
-              through {latestDate}; later bookings use this same estimate, not
-              a forecast for their date. Review conditions before deployment.
+              through {latestDate}; later bookings use this same estimate, not a
+              forecast for their date. Review conditions before deployment.
             </p>
           )}
-          {!forecastTarget && <p className="workspace-note">Choose a booking date within the next 7 days.</p>}
+          {!forecastTarget && (
+            <p className="workspace-note">
+              Choose a booking date within the next 7 days.
+            </p>
+          )}
         </label>
 
         <div className="approval-time-grid">
@@ -261,9 +280,17 @@ export function DeploymentApproval({ plan }: { plan: Plan }) {
         )}
 
         {!matches && blockers.length > 0 && (
-          <div id={requirementsId} className="approval-requirements" role="status">
+          <div
+            id={requirementsId}
+            className="approval-requirements"
+            role="status"
+          >
             <strong>Before you can publish</strong>
-            <ul>{blockers.map((message) => <li key={message}>{message}</li>)}</ul>
+            <ul>
+              {blockers.map((message) => (
+                <li key={message}>{message}</li>
+              ))}
+            </ul>
           </div>
         )}
 

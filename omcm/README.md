@@ -77,6 +77,19 @@ the assistant on a phone does not automatically summon the keyboard.
 2. Open **Plan clinics** and set the fleet, capacity and access constraints.
 3. Generate recommendations, inspect suggested sites and adjust the draft if needed.
 4. Approve the visit with its date, hours and services. Only approval publishes it.
+5. Use **Saved plans & deployments** at the top of the panel to reopen an earlier
+   plan or inspect a published deployment's date, hours, services and map locations.
+   Reopening a plan restores its fleet/constraints; it never republishes it.
+
+Plans are saved automatically by the backend. After a page reload, sign in again
+and select **Plans** to resume reviewing one. Published visits appear under
+**Deployments** and remain available to Public View. An old forecast must be
+regenerated before publication. Simulation runs are still temporary practice.
+
+For shared work across devices and backend restarts, connect Neon/PostgreSQL and
+set the backend's `DATABASE_URL`; see [durable storage setup](docs/VERCEL_DEPLOYMENT.md#shared-plans-and-schedules-with-neon-postgresql).
+Local SQLite continues to work without it. Vercel's temporary SQLite cannot
+provide durable saved work, and the admin panel identifies that configuration.
 
 The planner considers **681 barangays across 30 Laguna LGUs**. It requests actual
 backend allocations and displays a failure if the service cannot complete the
@@ -288,7 +301,9 @@ use the same mark.
 Deploy the frontend from `omcm/frontend` and backend from `omcm/backend`. Set the
 frontend API base and backend CORS/authentication settings, then rebuild each
 project. Vercel `/tmp` SQLite is temporary and unshared; durable publication
-requires persistent hosting/storage. See [deployment](docs/VERCEL_DEPLOYMENT.md).
+requires shared PostgreSQL configured through `DATABASE_URL` (or persistent SQLite
+hosting). The adapter is included; the hosted database still needs to be connected.
+See [deployment](docs/VERCEL_DEPLOYMENT.md).
 
 | Directory | Contents |
 | --- | --- |

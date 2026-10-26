@@ -410,3 +410,20 @@ that preserves reached history.
 No backend, HNI deduction, weight, model, forecast-store contract, persistence or
 authentication change is introduced. Existing request cancellation and stale
 response guards remain authoritative.
+
+## Saved work and timeline hierarchy
+
+The planner starts with **Saved plans & deployments**: separate choices,
+location previews, selected-row cues, refresh, plan pagination and deployment
+detail. Lists scroll inside the panel; phones retain touch targets. See
+[saved work](SAVED_WORK.md) for the file inventory and storage setup.
+
+The timeline puts day/week in its caption and aligns Play, Return to Day 1,
+the rail, Next day and speed on one control row. Desktop stops sit below the
+rail. Phones use a Next day icon and compact caption; the simulation sheet
+reserves the actual playback-card height. HNI, weights, timing and reset
+behavior are unchanged.
+
+Files: `frontend/src/features/simulation/SimulationPlayback.tsx`,
+`frontend/src/styles/map-workspace.css`, and
+`frontend/scripts/workspace-ui-browser.mjs` (alignment and non-overlap checks).

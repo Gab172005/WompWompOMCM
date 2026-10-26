@@ -56,7 +56,7 @@ try {
         ? ".venv/Scripts/python.exe"
         : ".venv/bin/python",
     );
-  const api = start(
+  const startApi = () => start(
     python,
     ["-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8007"],
     backend,
@@ -68,6 +68,7 @@ try {
       OMCM_ADMIN_PASSWORD: password,
     },
   );
+  let api = startApi();
   await ready("http://127.0.0.1:8007/api/health", api);
   const vite = start(
     process.execPath,
@@ -186,6 +187,23 @@ try {
   await expect(
     panel.getByRole("region", { name: "Backend allocation results" }),
   ).toContainText(plan.plan_id);
+  // A reload destroys credentials and transient Zustand drafts. Recover only
+  // after signing in, from the real authenticated saved-plan endpoint.
+  await stop(api);
+  api = startApi();
+  await ready("http://127.0.0.1:8007/api/health", api);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByLabel("Administrator username").fill(username);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign in to Admin View" }).click();
+  await page.getByRole("button", { name: "Plan clinics", exact: true }).click();
+  const savedWork = page.getByRole("region", { name: "Your saved work" });
+  await savedWork.getByRole("button", { name: /^Plans / }).click();
+  await savedWork.getByRole("button", { name: new RegExp(`${plan.plan_id}$`) }).click();
+  await expect(panel.getByRole("region", { name: "Backend allocation results" })).toContainText(plan.plan_id);
+  await expect(page.getByLabel("Daily capacity per clinic")).toHaveValue("70");
+  await expect(page.getByLabel("Maximum modeled travel minutes")).toHaveValue("20");
+  await expect(page.locator(".clinic-staging-marker")).toHaveCount(2);
   await expect(panel).toContainText(
     "Municipality’s estimated healthcare need (map)",
   );
@@ -317,6 +335,26 @@ try {
       .getByRole("status")
       .filter({ hasText: "Published approved schedule" }),
   ).toContainText("Published approved schedule");
+  await stop(api);
+  api = startApi();
+  await ready("http://127.0.0.1:8007/api/health", api);
+  await savedWork.getByRole("button", { name: /^Deployments / }).click();
+  await savedWork.getByRole("button").filter({ hasText: "08:00–17:00 PH" }).first().click();
+  await expect(panel.getByRole("region", { name: "Selected deployment" })).toContainText("published clinic locations");
+  await expect(page.locator(".clinic-staging-marker")).toHaveCount(2);
+  await page.locator(".clinic-staging-marker").first().click();
+  await expect(page.locator(".leaflet-popup-content")).toContainText(schedule.date);
+  await page.keyboard.press("Escape");
+  await savedWork.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: join(frontend, "test-results/saved-work-desktop.png") });
+  await page.setViewportSize({ width: 320, height: 740 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await savedWork.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: join(frontend, "test-results/saved-work-mobile.png") });
+  await panel.getByRole("region", { name: "Selected deployment" }).screenshot({ path: join(frontend, "test-results/saved-deployment-mobile.png") });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await panel.getByRole("button", { name: "Review original plan" }).click();
+  await expect(panel.getByRole("region", { name: "Backend allocation results" })).toContainText(plan.plan_id);
   await panel.getByRole("button", { name: "Preview Public View" }).click();
   await expect(page.locator(".workspace")).toHaveClass(/is-public-view/);
   await expect(page.locator(".clinic-staging-marker")).toHaveCount(2);
@@ -460,7 +498,7 @@ try {
   await expect(page.locator(".clinic-staging-marker")).toHaveCount(0);
   expect(errors).toEqual([]);
   console.log(
-    "Connected optimizer browser checks passed: real FastAPI/XGBoost/CP-SAT requests, flood-affected barangay map overlay, manual replan, saved draft approval, fresh public schedule, mobile layout, no hardcoded fallback when backend stops.",
+    "Connected optimizer browser checks passed: real FastAPI/XGBoost/CP-SAT requests, flood-affected barangay map overlay, manual replan, saved-plan recovery after backend restart/reload, published-deployment review, saved draft approval, fresh public schedule, mobile layout, no hardcoded fallback when backend stops.",
   );
 } catch (error) {
   const failedPage = browser?.contexts()[0]?.pages()[0];

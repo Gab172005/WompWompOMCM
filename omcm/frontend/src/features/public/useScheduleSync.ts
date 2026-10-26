@@ -9,7 +9,7 @@ export function useScheduleSync() {
   const viewMode = useAppStore((s) => s.viewMode);
   const { error, lastSynced, refresh, cancel } = usePublicScheduleStore();
   useEffect(() => {
-    if (isBrowserDemo() || viewMode !== "public") return;
+    if (isBrowserDemo()) return;
     const update = () => {
       if (!document.hidden) void refresh();
     };

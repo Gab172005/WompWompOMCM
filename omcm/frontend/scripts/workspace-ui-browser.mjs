@@ -169,7 +169,6 @@ try {
           ".playback-play",
           ".playback-rewind",
           ".workspace-timeline input",
-          "output",
           ".playback-next",
           ".playback-speed select",
         ].map((selector) => {

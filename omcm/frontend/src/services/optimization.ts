@@ -1,4 +1,10 @@
-import type { Allocation, Barangay, Plan, PublicData } from "../types";
+import type {
+  Allocation,
+  Barangay,
+  Plan,
+  PublicData,
+  Schedule,
+} from "../types";
 import type { ClinicPlan, PublishedSchedule } from "../types/clinic";
 import { BARANGAYS_BY_PSGC } from "./providedData";
 
@@ -75,6 +81,14 @@ const EMPTY_ALLOCATION: Allocation = {
 };
 export const EMPTY_PLAN = allocationToMapPlan(EMPTY_ALLOCATION);
 
+export function scheduleToMapPlan(schedule: Schedule): ClinicPlan {
+  return allocationToMapPlan({
+    ...EMPTY_ALLOCATION,
+    clinics: schedule.clinics,
+    solver_status: "PUBLISHED",
+  });
+}
+
 /** Public responses contain approved locations only; never copy draft risk data. */
 export function publicSchedules(
   data: PublicData,
@@ -96,11 +110,7 @@ export function publicSchedules(
           null,
         approvedBy: "LGU administrator",
         updatedAt: schedule.updated_at,
-        plan: allocationToMapPlan({
-          ...EMPTY_ALLOCATION,
-          clinics: schedule.clinics,
-          solver_status: "PUBLISHED",
-        }),
+        plan: scheduleToMapPlan(schedule),
       } as PublishedSchedule,
     ]),
   );

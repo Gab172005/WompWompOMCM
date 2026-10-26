@@ -45,6 +45,10 @@ symbols and sources. Administrators can also choose a map-color layer. **Map
 settings** chooses the basemap; OpenStreetMap works without a key.
 
 In Admin View, **Plan clinics** produces a draft for review and approval.
+**Saved plans & deployments** reopens saved plans and displays published clinic
+locations, dates, hours and services on the same map. Shared storage across
+browsers and restarts uses a backend PostgreSQL connection (`DATABASE_URL`);
+see [setup instructions](omcm/docs/VERCEL_DEPLOYMENT.md#shared-plans-and-schedules-with-neon-postgresql).
 **30-day simulation** rehearses alternative clinic plans without publishing
 visits: pick a scenario, use Play or Next day to advance, and drag the timeline
 to revisit elapsed days. Playback pauses at weekly placement windows. **Reset

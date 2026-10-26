@@ -8,6 +8,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "backend"))
 from main import app
 
 
+@pytest.fixture(autouse=True)
+def isolate_database_environment(monkeypatch):
+    # A developer's configured shared database must never receive test writes.
+    # PostgreSQL tests explicitly opt in through OMCM_TEST_DATABASE_URL and use
+    # a disposable schema, rather than inheriting DATABASE_URL from the shell.
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+
 @pytest.fixture
 def demo_data(monkeypatch):
     from services import data
