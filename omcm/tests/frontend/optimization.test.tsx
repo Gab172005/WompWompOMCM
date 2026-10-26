@@ -10,7 +10,11 @@ import { MemoryRouter } from "react-router-dom";
 import { OptimizationPanel } from "../../frontend/src/features/optimization/OptimizationPanel";
 import { DeploymentApproval } from "../../frontend/src/features/optimization/DeploymentApproval";
 import { useOptimizationStore } from "../../frontend/src/store/useOptimizationStore";
-import { addIsoDays, getManilaToday, useAppStore } from "../../frontend/src/store/useAppStore";
+import {
+  addIsoDays,
+  getManilaToday,
+  useAppStore,
+} from "../../frontend/src/store/useAppStore";
 import {
   clearCredentials,
   enableBrowserDemo,
@@ -109,40 +113,112 @@ afterEach(() => {
 });
 
 describe("connected optimization", () => {
+  it("reopens exact server records and restores their fleet constraints", async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify(plan)));
+    vi.stubGlobal("fetch", fetcher);
+    await useOptimizationStore.getState().reopen("server-draft-test");
+    expect(fetcher.mock.calls[0]).toBeDefined();
+    expect(useOptimizationStore.getState().result).toEqual(plan);
+    expect(useOptimizationStore.getState().config).toEqual(plan.inputs);
+    expect(useAppStore.getState().clinicCount).toBe(plan.inputs.clinic_count);
+    expect(useOptimizationStore.getState().deployment).toBeNull();
+  });
+
+  it("discards a reopened plan arriving after sign-out invalidates work", async () => {
+    let release!: (value: Response) => void;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            release = resolve;
+          }),
+      ),
+    );
+    const pending = useOptimizationStore.getState().reopen("server-draft-test");
+    useOptimizationStore.getState().invalidate();
+    release(new Response(JSON.stringify(plan)));
+    await pending;
+    expect(useOptimizationStore.getState().result).toBeNull();
+    expect(useOptimizationStore.getState().busy).toBe(false);
+  });
   it("allows a booking seven days ahead while identifying the original next-day estimate", () => {
     const today = getManilaToday();
     const tomorrow = addIsoDays(today, 1);
-    render(<MemoryRouter><DeploymentApproval plan={{ ...plan, notes: [`Forecast target date: ${tomorrow}`] }} /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <DeploymentApproval
+          plan={{ ...plan, notes: [`Forecast target date: ${tomorrow}`] }}
+        />
+      </MemoryRouter>,
+    );
     const date = screen.getByLabelText("Deployment date");
     expect(date).toHaveAttribute("min", tomorrow);
     expect(date).toHaveAttribute("max", addIsoDays(today, 7));
     fireEvent.change(date, { target: { value: addIsoDays(today, 7) } });
-    expect(screen.getByRole("button", { name: "Approve & publish schedule" })).toBeEnabled();
-    expect(screen.getByText(/later bookings use this same estimate/)).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Approve & publish schedule" }),
+    ).toBeEnabled();
+    expect(
+      screen.getByText(/later bookings use this same estimate/),
+    ).toBeVisible();
     fireEvent.change(date, { target: { value: addIsoDays(today, 8) } });
-    expect(screen.getByRole("button", { name: "Approve & publish schedule" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Approve & publish schedule" }),
+    ).toBeDisabled();
   });
 
   it("explains and clears both emergency publication blockers", () => {
-    render(<MemoryRouter><DeploymentApproval plan={plan} /></MemoryRouter>);
-    fireEvent.click(screen.getByRole("checkbox", { name: /Emergency schedule override/ }));
-    const button = screen.getByRole("button", { name: "Confirm emergency override" });
-    fireEvent.change(screen.getByLabelText("Public emergency notice"), { target: { value: "hello" } });
+    render(
+      <MemoryRouter>
+        <DeploymentApproval plan={plan} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: /Emergency schedule override/ }),
+    );
+    const button = screen.getByRole("button", {
+      name: "Confirm emergency override",
+    });
+    fireEvent.change(screen.getByLabelText("Public emergency notice"), {
+      target: { value: "hello" },
+    });
     expect(button).toBeDisabled();
     expect(screen.getByText(/5\/10 characters minimum/)).toBeVisible();
-    expect(screen.getByText("Check the emergency revision confirmation box.")).toBeVisible();
-    fireEvent.change(screen.getByLabelText("Public emergency notice"), { target: { value: "Clinic relocated to the barangay hall." } });
+    expect(
+      screen.getByText("Check the emergency revision confirmation box."),
+    ).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Public emergency notice"), {
+      target: { value: "Clinic relocated to the barangay hall." },
+    });
     expect(button).toBeDisabled();
-    fireEvent.click(screen.getByRole("checkbox", { name: "I confirm this emergency revision and public notice." }));
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: "I confirm this emergency revision and public notice.",
+      }),
+    );
     expect(button).toBeEnabled();
     expect(screen.queryByText("Before you can publish")).toBeNull();
-    fireEvent.change(screen.getByLabelText("Public emergency notice"), { target: { value: "hello     " } });
+    fireEvent.change(screen.getByLabelText("Public emergency notice"), {
+      target: { value: "hello     " },
+    });
     expect(button).toBeDisabled();
   });
 
   it("asks for a fresh plan when a dated forecast has expired", () => {
-    render(<MemoryRouter><DeploymentApproval plan={{ ...plan, notes: [`Forecast target date: ${getManilaToday()}`] }} /></MemoryRouter>);
-    expect(screen.getByRole("button", { name: "Approve & publish schedule" })).toBeDisabled();
+    render(
+      <MemoryRouter>
+        <DeploymentApproval
+          plan={{
+            ...plan,
+            notes: [`Forecast target date: ${getManilaToday()}`],
+          }}
+        />
+      </MemoryRouter>,
+    );
+    expect(
+      screen.getByRole("button", { name: "Approve & publish schedule" }),
+    ).toBeDisabled();
     expect(screen.getByText(/forecast is out of date/)).toBeVisible();
   });
   it("posts current constraints even in demo mode and renders server metrics", async () => {
@@ -150,9 +226,15 @@ describe("connected optimization", () => {
       async (url: string) =>
         new Response(
           JSON.stringify(
-            url.endsWith("/clinics")
-              ? { sites: plan.optimized.clinics, roads: [] }
-              : plan,
+            url.includes("/planning/plans?")
+              ? {
+                  plans: [],
+                  total: 0,
+                  storage: { engine: "sqlite", temporary: false },
+                }
+              : url.endsWith("/clinics")
+                ? { sites: plan.optimized.clinics, roads: [] }
+                : plan,
           ),
           { status: 200 },
         ),

@@ -90,6 +90,7 @@ export function AppLayout() {
   const isPublic = state.viewMode !== "admin" || !state.adminUser;
   const publicSchedule =
     state.publishedSchedules[state.selectedScheduleDate] ?? null;
+  const savedDeployment = useOptimizationStore((s) => s.deployment);
   const displayedClinics = isPublic
     ? (publicSchedule?.plan.clinics ?? [])
     : forecastOverlay
@@ -142,9 +143,11 @@ export function AppLayout() {
           zoomDelta={state.zoomDelta}
           publicMode={isPublic}
           publicScheduleInfo={
-            publicSchedule
-              ? `${publicSchedule.date} · ${publicSchedule.startTime}–${publicSchedule.endTime} PH Time · ${publicSchedule.status}`
-              : ""
+            !isPublic && savedDeployment && state.panel === "optimization"
+              ? `${savedDeployment.date} · ${savedDeployment.start_time}–${savedDeployment.end_time} PH Time · ${savedDeployment.status}`
+              : isPublic && publicSchedule
+                ? `${publicSchedule.date} · ${publicSchedule.startTime}–${publicSchedule.endTime} PH Time · ${publicSchedule.status}`
+                : ""
           }
         />
         <MapControls />

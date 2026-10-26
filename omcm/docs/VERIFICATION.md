@@ -1,3 +1,35 @@
+# Saved-work persistence and timeline refinement — 2026-10-26
+
+- Frontend lint, 173 tests across 22 files and production build pass.
+- Backend: 120 tests pass with `OMCM_TEST_DATABASE_URL` pointing at an isolated
+  PostgreSQL 17 server. This includes both SQLite and PostgreSQL saved-work cases;
+  no PostgreSQL cases were skipped in that run.
+- Private reads enforce authentication/no-store, return exact allocations and
+  settings, paginate summaries and reject missing IDs. Records survive a new
+  application lifespan. Concurrent ordinary approvals yield 200/409; configured
+  PostgreSQL failure does not fall back to scratch SQLite.
+- Connected optimizer browser passes on SQLite and PostgreSQL. The PostgreSQL
+  run includes actual FastAPI restarts before reopening a draft and after
+  publication, a fresh browser public read, saved deployment review, original
+  plan restoration, date-labeled map popups and 320px layout checks. Real
+  XGBoost/CP-SAT is used; allocations are not mocked.
+- Connected simulation browser passes with the existing HNI results and reset flow.
+- Workspace browser passes desktop/tablet/phone/landscape alignment, caption,
+  slider/control center lines, sheet/playback non-overlap, public isolation,
+  reduced-motion and existing map interactions.
+- A temporary local PostgreSQL cluster was used for verification. No hosted Neon
+  resource or deployment was created. Connecting `DATABASE_URL` and redeploying
+  the backend remains a hosted setup step, documented in
+  [deployment](VERCEL_DEPLOYMENT.md#shared-plans-and-schedules-with-neon-postgresql).
+- Existing build chunk-size and Starlette/httpx advisories remain non-blocking.
+  HNI weights/models, patient-data boundaries and authentication are unchanged.
+
+Artifacts (ignored): `frontend/test-results/saved-work-desktop.png`,
+`saved-work-mobile.png`, `saved-deployment-mobile.png` and the workspace suite's
+responsive screenshots. See [saved work](SAVED_WORK.md) for the file inventory.
+
+---
+
 # Verification record
 
 ## Simulation reset review — 2026-10-26

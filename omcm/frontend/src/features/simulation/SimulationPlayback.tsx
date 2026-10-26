@@ -31,6 +31,11 @@ export function SimulationPlayback() {
         <span>
           30-day timeline <small>All scenarios</small>
         </span>
+        <output aria-live="off" aria-label="Current simulation day">
+          Day {run.day}
+          <small>/30</small>
+          <span className="playback-week">Week {week}</span>
+        </output>
         <span
           className={`playback-state${s.playing ? " is-playing" : ""}`}
           role="status"
@@ -96,13 +101,6 @@ export function SimulationPlayback() {
             ))}
           </span>
         </label>
-        <output aria-live="off">
-          <span>
-            Day {run.day}
-            <small>/30</small>
-          </span>
-          <small className="playback-week">Week {week}</small>
-        </output>
         <button
           type="button"
           aria-label="Next day"

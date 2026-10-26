@@ -11,7 +11,7 @@ Internal tool changes update Zustand panel state and retain the map canvas.
 `useAppStore` owns view, sign-in state, search selection, layer toggles and public
 schedule selection. Backend credentials stay in memory. Connected startup does
 not restore an administrator login or approved schedules from local storage.
-`useOptimizationStore` owns transient authenticated backend drafts, cancellation,
+`useOptimizationStore` owns the current authenticated backend plan, saved-work reopening, cancellation,
 constraints and candidate catalogs. `useForecastStore` owns the three independent
 simulation histories and shared viewing/reached day. `usePublicScheduleStore`
 fetches confirmed published visits, cancels stale requests and retains the last
@@ -90,8 +90,21 @@ remain available; public notices identify the office rather than a login name.
 publication accepts tomorrow through Day 7 with a fresh next-day forecast draft;
 the booking date is distinct from the forecast date. Today's revisions require a
 confirmed emergency override and a trimmed notice of at least 10 characters. Publication is transactional. Neither a new draft nor a
-simulation mutates a public deployment. Vercel scratch SQLite enables startup
-but is temporary and not shared between instances. It is not durable storage.
+simulation mutates a public deployment. `DATABASE_URL` selects shared PostgreSQL
+through Psycopg; absent that value, local SQLite or Vercel scratch SQLite is used.
+Scratch storage is temporary and unshared. PostgreSQL publication uses a
+transaction-scoped advisory lock to serialize duplicate approval checks. Both
+adapters use the same five-table structure and bound SQL parameters. A failed
+configured PostgreSQL connection never falls back to SQLite.
+
+The authenticated `GET /api/planning/plans` endpoint returns paginated summaries;
+`GET /api/planning/plans/{plan_id}` reopens the exact stored allocation and inputs.
+The admin map panel lists drafts and published deployments separately. Selecting
+a deployment maps its published snapshot, not a newly generated recommendation.
+Schedule synchronization runs in both views; only published schedules enter the
+public store. Administrator identity/credentials and private plan payloads are not
+restored from browser local storage. Reauthentication is expected after reload.
+The simulator remains transient; it never creates deployment records.
 
 ## Evidence boundaries
 

@@ -59,11 +59,13 @@ export function ClinicMarkers({
               </strong>
               <p>
                 Up to {c.capacity} estimated appointments/day ·{" "}
-                {publicMode
-                  ? publicScheduleInfo || "Approved mobile clinic"
-                  : simulationActive
-                    ? "Simulated position"
-                    : "Suggested clinic location"}
+                {publicScheduleInfo
+                  ? publicScheduleInfo
+                  : publicMode
+                    ? "Approved mobile clinic"
+                    : simulationActive
+                      ? "Simulated position"
+                      : "Suggested clinic location"}
               </p>
             </Popup>
           </Marker>

@@ -2,11 +2,12 @@ import { create } from "zustand";
 import { backendApi, hasCredentials } from "../services/api";
 import { defaultConfig } from "../services/defaults";
 import { useAppStore } from "./useAppStore";
-import type { Config, Plan, Road, Site } from "../types";
+import type { Config, Plan, Road, Schedule, Site } from "../types";
 
 interface OptimizationState {
   config: Config;
   result: Plan | null;
+  deployment: Schedule | null;
   sites: Site[];
   roads: Road[];
   busy: boolean;
@@ -16,6 +17,8 @@ interface OptimizationState {
   invalidate: () => void;
   loadCatalog: () => Promise<void>;
   generate: (manualSites?: string[] | null) => Promise<void>;
+  reopen: (planId: string) => Promise<void>;
+  showDeployment: (schedule: Schedule) => void;
 }
 
 let controller: AbortController | undefined;
@@ -26,10 +29,11 @@ function cancel() {
   controller = undefined;
 }
 
-/** Transient server drafts: no local-storage replay or browser allocation fallback. */
+/** Server-verified work only; no browser allocation or local-storage replay. */
 export const useOptimizationStore = create<OptimizationState>((set, get) => ({
   config: { ...defaultConfig, max_travel_minutes: 25 },
   result: null,
+  deployment: null,
   sites: [],
   roads: [],
   busy: false,
@@ -40,13 +44,53 @@ export const useOptimizationStore = create<OptimizationState>((set, get) => ({
     set({
       config: { ...get().config, ...changes },
       result: null,
+      deployment: null,
       error: "",
       busy: false,
     });
   },
   invalidate: () => {
     cancel();
-    set({ result: null, error: "", busy: false });
+    set({ result: null, deployment: null, error: "", busy: false });
+  },
+  showDeployment: (deployment) => {
+    cancel();
+    set({ deployment, result: null, error: "", busy: false });
+    useAppStore.setState({
+      selectedScheduleDate: deployment.date,
+      selectedClinicId: null,
+      showClinics: true,
+    });
+  },
+  reopen: async (planId) => {
+    cancel();
+    const current = revision;
+    controller = new AbortController();
+    set({ result: null, deployment: null, error: "", busy: true });
+    try {
+      const result = await backendApi<Plan>(
+        `/planning/plans/${encodeURIComponent(planId)}`,
+        undefined,
+        AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]),
+      );
+      if (current !== revision || !useAppStore.getState().adminUser) return;
+      set({ result, config: structuredClone(result.inputs), busy: false });
+      useAppStore.setState({
+        clinicCount: result.inputs.clinic_count,
+        activeMetric: "score",
+        selectedClinicId: null,
+        showClinics: true,
+      });
+    } catch (error) {
+      if (current === revision)
+        set({
+          busy: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Could not reopen this plan.",
+        });
+    }
   },
   loadCatalog: async () => {
     try {
@@ -92,9 +136,13 @@ export const useOptimizationStore = create<OptimizationState>((set, get) => ({
       clinic_count: useAppStore.getState().clinicCount,
       manual_sites: manualSites,
     });
-    set({ result: null, busy: true, error: "" });
+    set({ result: null, deployment: null, busy: true, error: "" });
     try {
-      const result = await backendApi<Plan>("/planning/optimize", request, signal);
+      const result = await backendApi<Plan>(
+        "/planning/optimize",
+        request,
+        signal,
+      );
       if (current !== revision) return;
       if (
         !result.plan_id ||
