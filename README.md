@@ -1,132 +1,62 @@
 <p align="center">
-  <img src="omcm/frontend/public/omcm-icon.svg" width="76" height="76" alt="OMCM care waypoint and connected communities icon" />
+  <img src="omcm/frontend/public/omcm-icon.svg" width="72" height="72" alt="OMCM" />
 </p>
 
-# OMCM · Optimized Mobile Clinic Mapper
+# OMCM — Optimized Mobile Clinic Mapper
 
-**A map-based workspace for planning mobile healthcare in Laguna, Philippines.**
+A map-based application for planning mobile healthcare in Laguna, Philippines.
+Local government teams can compare community needs, choose clinic locations,
+and publish approved visits. Residents can find nearby facilities and clinic
+schedules through Public View.
 
-OMCM helps local government teams compare community healthcare needs, choose
-mobile clinic locations and publish approved visits. Residents can use the same
-map to find nearby facilities and confirmed clinic schedules.
+OMCM is a research prototype using public geographic and facility data alongside
+synthetic health, weather, and demand records. It contains no real patient records.
 
-This is a research and demonstration prototype. It combines public geography and
-facility sources with synthetic health, weather and demand records. It contains
-no real patient records and is not a clinical diagnosis or live emergency system.
+## Features
 
-## What you can do
+- Search 681 barangays across 30 cities and municipalities on an interactive map.
+- Compare communities using a transparent Healthcare Need Index (HNI).
+- Generate capacity-aware clinic plans using XGBoost predictions and optimization.
+- Compare no intervention, manual placement, and optimized placement over 30 days.
+- Reopen saved plans and publish clinic dates, hours, services, and emergency notices.
+- Find places and use map tools through an optional AI assistant.
 
-- **Explore Laguna:** search municipalities and barangays, inspect local details
-  and find mapped hospitals and fixed clinics.
-- **Understand need:** compare communities using a Healthcare Need Index that
-  accounts for illness, facility access and community conditions.
-- **Plan mobile clinics:** set fleet size, appointment capacity, travel limits and
-  access restrictions, then review locations selected by the backend solver.
-- **Compare three scenarios:** rehearse 30 days with no intervention, manual
-  placement or optimized placement. Watch clinic markers, service areas and need
-  colors change on the map.
-- **Publish community visits:** administrators approve clinic schedules; Public
-  View shows confirmed visits, services, hours and emergency notices.
-- **Ask for help:** find places and open map tools through the assistant. Close
-  it to return to the map; unfinished messages remain when you reopen it.
+Admin tools open on the same map. Public View shows approved visits and public
+facility information; planning and publication require administrator sign-in.
 
-Administrator tools open inside a single map workspace. Public View separates
-published care information from private planning scores and drafts.
+## Getting started
 
-## Find your way around
+You need Node.js 22.18+ and Python 3.12–3.14. Run the frontend and backend locally
+using the [setup guide](omcm/README.md#local-setup). Administrator accounts are
+configured on the backend; ask the deployment owner for hosted access.
 
-Start in **Public View** to search for a community, find nearby hospitals and
-read published clinic visits. Choose an announced date to inspect its locations,
-hours and services. A “no visits announced” message describes the selected date;
-it does not mean there are no hospitals nearby.
-
-Use **Map details** to show or hide facility types and read the legend for map
-symbols and sources. Administrators can also choose a map-color layer. **Map
-settings** chooses the basemap; OpenStreetMap works without a key.
-
-In Admin View, **Plan clinics** produces a draft for review and approval.
-**Saved plans & deployments** reopens saved plans and displays published clinic
-locations, dates, hours and services on the same map. Shared storage across
-browsers and restarts uses a backend PostgreSQL connection (`DATABASE_URL`);
-see [setup instructions](omcm/docs/VERCEL_DEPLOYMENT.md#shared-plans-and-schedules-with-neon-postgresql).
-**30-day simulation** rehearses alternative clinic plans without publishing
-visits: pick a scenario, use Play or Next day to advance, and drag the timeline
-to revisit elapsed days. Playback pauses at weekly placement windows. **Reset
-simulation** starts a fresh comparison after reviewing what will be cleared;
-it keeps your settings and is separate from returning to Day 1.
-
-On phones, details open in a resizable bottom sheet. Tap its handle or swipe it
-up/down to change its height. Compact tool names include **Simulate** and **Ask
-OMCM**. On a keyboard, press `/` to focus place search; icon controls show hints
-on focus, and Escape dismisses a hint.
-
-## Hosted demo sign-in
-
-For the Vercel demonstration, choose **Admin View** and enter:
-
-- **Username:** `admin`
-- **Password:** `laguna-admin-2026`
-
-These credentials are for the hosted demo. Local sign-in uses the credentials
-configured in `backend/.env`.
-
-## How it works
-
-1. A fixed, transparent weighted index describes relative healthcare need.
-2. XGBoost estimates next-day illness and appointment demand using sample history
-   and weather. It predicts demand; it does not choose clinic locations itself.
-3. A capacity-aware optimization solver selects clinic sites and service
-   assignments under the chosen constraints.
-4. A separate simulation compares capacity-limited clinic effects on host
-   communities and reachable neighbors using the same calculation for manual
-   and optimized placements.
-
-The connected planner considers **681 barangays across 30 Laguna cities and
-municipalities**. Travel follows estimated barangay connections; it is not a
-verified provincial road network. Planning points, forecasts and service effects
-need validation before operational use.
-
-## Run the project
-
-You need **Node.js 22+**, **Python 3.12 or 3.14**, and two
-terminals: one for FastAPI and one for Vite. Administrator access also requires
-backend credentials configured locally. The frontend alone cannot run the
-connected optimizer.
-
-Follow the [installation and configuration guide](omcm/README.md#run-locally).
-The local application opens at **http://127.0.0.1:5173/**.
-
-## Repository guide
+## Project structure
 
 ```text
 omcm/
-├── frontend/     React, TypeScript, Vite and map interface
-├── backend/      FastAPI, XGBoost inference, optimization and simulation
-├── datasets/     Source inputs and provenance
-├── docs/         Methodology, API, deployment and verification guides
-└── tests/        Additional project tests
+├── frontend/   React, TypeScript, and Vite map interface
+├── backend/    FastAPI, forecasting, optimization, and storage
+├── datasets/   Source data and attribution
+├── docs/       User and developer guides
+└── tests/      Frontend and backend tests
 ```
 
-- [Project guide and developer setup](omcm/README.md)
-- [Architecture](omcm/docs/ARCHITECTURE.md)
-- [Healthcare Need Index](omcm/docs/BALANCED_HNI.md)
-- [Prediction and clinic allocation](omcm/docs/OPTIMIZATION_ALLOCATION.md)
-- [Simulation scenarios and formulas](omcm/docs/SIMULATION_MODE.md)
-- [Data sources and limitations](omcm/datasets/SOURCES.md)
-- [Verification](omcm/docs/VERIFICATION.md) and [deployment](omcm/docs/VERCEL_DEPLOYMENT.md)
+The frontend uses React, Zustand, and Leaflet, with an optional Google Maps
+renderer. The backend uses FastAPI, XGBoost, OR-Tools, and SQLite or PostgreSQL.
 
-## Project icon
+## Documentation
 
-The transparent care-waypoint mark combines a medical map pin with routes to
-neighboring communities. The website and these guides use the same
-[SVG source](omcm/frontend/public/omcm-icon.svg), with PNG and ICO variants for
-browsers and touch devices. Icon declarations live in
-[the frontend entry page](omcm/frontend/index.html).
+- [Setup and development](omcm/README.md)
+- [Using the app](omcm/docs/user-guide.md)
+- [Architecture](omcm/docs/architecture.md)
+- [Scoring, forecasting, and simulation](omcm/docs/methodology.md)
+- [API reference](omcm/docs/api.md)
+- [Deployment](omcm/docs/deployment.md)
+- [Data sources and attribution](omcm/datasets/SOURCES.md)
 
-## Contributing
+## Scope
 
-Use a feature branch, inspect existing work and preserve the single-map layout.
-Keep health records synthetic and document any methodology changes. Run frontend
-lint, tests and production build, plus the backend test suite, before committing.
-The [project guide](omcm/README.md#development-and-checks) lists the commands and
-browser checks.
+Predictions and clinic effects are demonstration estimates, not validated clinical
+forecasts. Travel follows estimated community links rather than a complete road
+network. Facility records do not establish current operating status or available
+beds. Shared records across hosted instances require a persistent database.

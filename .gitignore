@@ -1,3 +1,23 @@
-# macOS Finder metadata, at any directory depth.
+# Local dependencies and build output.
+.venv/
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Local configuration, databases, logs, and test artifacts.
+.env
+.env.*
+!.env.example
+*.db
+*.db-*
+*.log
+__pycache__/
+.pytest_cache/
+test-results/
+route-cache/
+
+# Operating-system files and local development notes.
 .DS_Store
 .DS_store
+/codex-session.md
+/refactor-omcm.txt
