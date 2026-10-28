@@ -107,10 +107,8 @@ run its offline checks. Do not edit generated data or model files by hand.
 | Gray map area | No usable displayed value, or land excluded from clinic placement; gray is not zero need. |
 | Assistant provider unavailable | Check backend chat settings; supported local commands remain available. |
 
-## Working on the project
+## Contributing
 
-Use a feature branch, keep application changes focused, and run the checks above
-before opening a pull request. Preserve data attribution and the distinction
-between synthetic estimates and observed records. Update the relevant guide
-when a workflow or configuration changes. Use Git history and pull requests for
-change history rather than adding implementation diaries to the documentation.
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for branch, review, and code/data
+conventions. The repository's PR template prompts for a summary, validation, and
+screenshots or setup notes where relevant.

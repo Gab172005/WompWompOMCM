@@ -24,11 +24,39 @@ synthetic health, weather, and demand records. It contains no real patient recor
 Admin tools open on the same map. Public View shows approved visits and public
 facility information; planning and publication require administrator sign-in.
 
-## Getting started
+## Quick start
 
-You need Node.js 22.18+ and Python 3.12–3.14. Run the frontend and backend locally
-using the [setup guide](omcm/README.md#local-setup). Administrator accounts are
-configured on the backend; ask the deployment owner for hosted access.
+Requirements: **Node.js 22.18+**, npm, and **Python 3.12–3.14**. Clone the
+repository and install the backend dependencies:
+
+```sh
+git clone https://github.com/Gab172005/WompWompOMCM.git
+cd WompWompOMCM/omcm/backend
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+```
+
+If you use nvm, run `nvm use` from the cloned repository root before starting
+the frontend. Copy `omcm/.env.example` to `omcm/backend/.env` if it does not exist. Set your
+local administrator username and a password of at least 12 characters, then run
+from `omcm/backend/`:
+
+```sh
+.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8000
+```
+
+In another terminal, from the repository root:
+
+```sh
+cd omcm/frontend
+npm ci
+npm run dev
+```
+
+Open **http://127.0.0.1:5173/**. Both servers are required for planning and sign-in.
+On Windows, use `.venv/Scripts/python.exe`; PowerShell setup/start scripts are
+also available. See the [development guide](omcm/README.md) for configuration,
+testing, and troubleshooting. Ask the deployment owner for hosted access.
 
 ## Project structure
 
@@ -60,3 +88,9 @@ Predictions and clinic effects are demonstration estimates, not validated clinic
 forecasts. Travel follows estimated community links rather than a complete road
 network. Facility records do not establish current operating status or available
 beds. Shared records across hosted instances require a persistent database.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow, code/data
+conventions, and pull request guidance. Report reproducible problems through
+[GitHub Issues](https://github.com/Gab172005/WompWompOMCM/issues).
